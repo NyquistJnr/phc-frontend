@@ -16,7 +16,7 @@ export default function ResetPasswordPage() {
           </Link>
 
           <div>
-            <h2 className="mb-3 font-display text-3xl font-bold text-[#1B1818] md:text-4xl">
+            <h2 className="mb-3 font-poppins text-4xl font-medium text-[#1B1818] md:text-5xl">
               Reset password
             </h2>
             <p className="text-sm text-[#645D5D] md:text-base">
@@ -27,7 +27,7 @@ export default function ResetPasswordPage() {
 
         <form className="space-y-6">
           <div className="space-y-2">
-            <label className="text-xs font-bold uppercase tracking-wider text-[#1B1818] md:text-sm">
+            <label className="text-xs font-medium font-poppins tracking-wider text-[#1B1818] md:text-sm">
               Email Address
             </label>
             <div className="relative">

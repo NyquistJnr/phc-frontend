@@ -8,16 +8,16 @@ export default function NewPasswordPage() {
     <AuthShell>
       <div className="space-y-8">
         <div className="space-y-4">
-          <Link
+          {/* <Link
             href="/reset-password/verify"
             className="inline-flex items-center gap-2 text-sm font-semibold text-[#006732] transition hover:text-[#005127]"
           >
             <ArrowLeft size={18} />
             <span>Back</span>
-          </Link>
+          </Link> */}
 
           <div>
-            <h2 className="mb-3 font-display text-3xl font-bold text-[#1B1818] md:text-4xl">
+            <h2 className="mb-3 font-poppins text-3xl font-medium text-[#1B1818] md:text-5xl">
               Set new password
             </h2>
             <p className="text-sm text-[#645D5D] md:text-base">
@@ -28,7 +28,7 @@ export default function NewPasswordPage() {
 
         <form className="space-y-6">
           <div className="space-y-2">
-            <label className="text-xs font-bold uppercase tracking-wider text-[#1B1818] md:text-sm">
+            <label className="text-xs font-medium font-poppins tracking-wider text-[#1B1818] md:text-sm">
               Old Password
             </label>
             <div className="relative">
@@ -47,7 +47,7 @@ export default function NewPasswordPage() {
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-bold uppercase tracking-wider text-[#1B1818] md:text-sm">
+            <label className="text-xs font-medium font-poppins tracking-wider text-[#1B1818] md:text-sm">
               New Password
             </label>
             <div className="relative">

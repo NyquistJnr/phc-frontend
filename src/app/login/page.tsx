@@ -8,7 +8,7 @@ export default function LoginPage() {
     <AuthShell>
       <div className="space-y-7 md:space-y-8">
             <div>
-              <h2 className="text-3xl md:text-4xl font-display font-bold text-[#1B1818] mb-3">
+              <h2 className="text-3xl md:text-6xl font-poppins font-medium text-[#1B1818] mb-3">
                 Welcome back!
               </h2>
               <p className="text-[#645D5D] text-sm md:text-base">
@@ -19,7 +19,7 @@ export default function LoginPage() {
             <form className="space-y-6">
               {/* Email */}
               <div className="space-y-2">
-                <label className="text-xs md:text-sm font-bold text-[#1B1818] uppercase tracking-wider">
+                <label className="text-xs md:text-sm font-poppins font-medium text-[#1B1818] tracking-wider">
                   Email Address
                 </label>
                 <div className="relative">
@@ -36,7 +36,7 @@ export default function LoginPage() {
 
               {/* Password */}
               <div className="space-y-2">
-                <label className="text-xs md:text-sm font-bold text-[#1B1818] uppercase tracking-wider">
+                <label className="text-xs md:text-sm font-poppins font-medium text-[#1B1818] tracking-wider">
                   Password
                 </label>
                 <div className="relative">
@@ -56,7 +56,7 @@ export default function LoginPage() {
 
               <button
                 type="submit"
-                className="w-full bg-[#D1D5DB] hover:bg-[#006732] text-white font-bold py-4 rounded-xl transition-all duration-300 shadow-md active:scale-[0.98] mt-2"
+                className="w-full bg-[#006732] hover:bg-[#006732]/90 text-white font-bold py-4 rounded-xl transition-all duration-300 shadow-md active:scale-[0.98] mt-2"
               >
                 Login
               </button>
