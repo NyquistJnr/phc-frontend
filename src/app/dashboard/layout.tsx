@@ -1,5 +1,4 @@
-import { Sidebar } from '@/src/components/adminDashboard/generics/sidebar';
-import  Header  from '@/src/components/adminDashboard/generics/header';
+import { Sidebar, SidebarProvider } from '@/src/components/adminDashboard/generics/sidebar';
 
 export default function DashboardLayout({
   children,
@@ -7,25 +6,16 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen bg-[#F6F7F9]">
-      
-      {/* 1. FIXED SIDEBAR */}
-      {/* We use a fixed width (w-64) to match your design */}
-      <Sidebar />
+    <SidebarProvider>
+      <div className="flex min-h-screen bg-[#F6F7F9] font-inter">
+        <Sidebar />
 
-      {/* 2. MAIN CONTENT AREA */}
-      {/* We add margin-left (ml-64) so the content isn't hidden under the fixed sidebar */}
-      <div className="flex flex-col flex-1 ml-64">
-        
-        {/* 3. PERSISTENT HEADER */}
-        {/* <Header title="PHC EHR System" /> */}
-
-        {/* 4. DYNAMIC PAGE CONTENT */}
-        <main>
-          {children}
-        </main>
-        
+        <div className="flex flex-col flex-1 ml-0 lg:ml-64">
+          <main>
+            {children}
+          </main>
+        </div>
       </div>
-    </div>
+    </SidebarProvider>
   );
 }

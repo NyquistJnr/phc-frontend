@@ -1,5 +1,7 @@
-import Head from 'next/head';
-import { Home, ChevronDown, CheckCircle2, AlertCircle } from 'lucide-react';
+"use client";
+
+import { ChevronDown, CheckCircle2, AlertCircle } from 'lucide-react';
+import Header from '@/src/components/adminDashboard/generics/header';
 
 const inputStyles = "block w-full border border-gray-200 rounded-xl px-5 py-3.5 text-base text-gray-900 placeholder:text-gray-400 focus:border-[#1AC073] focus:ring-[#1AC073]";
 const labelStyles = "absolute -top-2.5 left-4 bg-white px-1.5 text-xs text-gray-600 font-medium";
@@ -16,38 +18,27 @@ const rolesList = [
 ];
 
 export default function CreateUserPage() {
+  const breadcrumbs = [
+    { label: 'User Management' },
+    { label: 'Create User', active: true }
+  ];
+
   return (
-    <>
-      <Head>
-        <title>Create New User Account - PHC EHR System</title>
-      </Head>
+    <div className="flex-1 flex flex-col">
+      <Header title="User Management" breadcrumbs={breadcrumbs} />
 
-      <div className="max-w-8xl flex bg-[#F6F7F9]">
-
-        {/* Main Content Area */}
-        <main className="flex-1 flex flex-col">
-
-          {/* Page Content */}
-          <div className="flex-1 p-8">
-            {/* Breadcrumb */}
-            <div className="flex items-center gap-2 text-sm text-gray-500 mb-6">
-              <Home size={16} />
-              <span>/</span>
-              <span>User Management</span>
-              <span>/</span>
-              <span className="text-gray-800 font-medium">Create User</span>
-            </div>
+      <div className="flex-1 p-4 sm:p-8">
 
             {/* Title Section */}
-            <div className="mb-10">
-              <h2 className="text-3xl font-bold text-gray-900 mb-2">Create New User Account</h2>
+            <div className="mb-6 sm:mb-10">
+              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Create New User Account</h2>
               <p className="text-base text-gray-600 max-w-3xl">
                 Fill in the details below to create a new user account in the PHC EHR system.
               </p>
             </div>
 
             {/* Form Container */}
-            <form className="bg-white p-10 rounded-3xl shadow-sm border border-gray-100 space-y-12">
+            <form className="bg-white p-4 sm:p-10 rounded-2xl sm:rounded-3xl shadow-sm border border-gray-100 space-y-10 sm:space-y-12">
               
               {/* Personal Information Section */}
               <section className="space-y-6">
@@ -56,21 +47,18 @@ export default function CreateUserPage() {
                   <h3 className="text-xl font-semibold text-gray-900">Personal Information</h3>
                 </div>
 
-                <div className="grid grid-cols-2 gap-x-6 gap-y-7">
-                  {/* Full Name */}
-                  <div className="relative col-span-1">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-7">
+                  <div className="relative md:col-span-1">
                     <label className={labelStyles}>Full Name</label>
                     <input type="text" placeholder="e.g Dr Gilbert Nwosu" className={inputStyles} />
                   </div>
                   
-                  {/* Email */}
-                  <div className="relative col-span-1">
+                  <div className="relative md:col-span-1">
                     <label className={labelStyles}>Email Address</label>
                     <input type="email" placeholder="User@phc.gov.ng" className={inputStyles} />
                   </div>
 
-                  {/* Phone + Country Code */}
-                  <div className="grid grid-cols-[110px_1fr] gap-x-4 col-span-1">
+                  <div className="grid grid-cols-[110px_1fr] gap-x-4 md:col-span-1">
                     <div className="relative">
                       <label className={labelStyles}>Code</label>
                       <div className={`${inputStyles} flex items-center gap-2 cursor-pointer`}>
@@ -89,8 +77,7 @@ export default function CreateUserPage() {
                     </div>
                   </div>
 
-                  {/* Role Dropdown */}
-                  <div className="relative col-span-1">
+                  <div className="relative md:col-span-1">
                     <label className={labelStyles}>Role</label>
                     <div className={`${inputStyles} flex items-center cursor-pointer`}>
                       <span className="text-gray-400">select role</span>
@@ -114,8 +101,7 @@ export default function CreateUserPage() {
                     </div>
                   </div>
 
-                  {/* Assigned Facility */}
-                  <div className="relative col-span-2">
+                  <div className="relative md:col-span-2">
                     <label className={labelStyles}>Assigned Facility</label>
                     <div className={`${inputStyles} flex items-center cursor-pointer`}>
                       <span className="text-gray-400">Select Facility</span>
@@ -150,20 +136,18 @@ export default function CreateUserPage() {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex items-center gap-6 pt-6">
-                <button type="submit" className="px-10 py-3.5 bg-[#046C3F] text-white rounded-xl font-semibold flex items-center gap-2.5 shadow-md hover:bg-[#035a34] transition">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 pt-6">
+                <button type="submit" className="px-8 sm:px-10 py-3.5 bg-[#046C3F] text-white rounded-xl font-semibold flex items-center gap-2.5 shadow-md hover:bg-[#035a34] transition">
                   <span className='w-5 h-5 border-2 border-dashed border-white rounded-full flex items-center justify-center text-xs'>+</span>
                   Create & Invite User
                 </button>
-                <button type="button" className="px-10 py-3.5 bg-gray-200 text-gray-600 rounded-xl font-semibold hover:bg-gray-300 transition">
+                <button type="button" className="px-8 sm:px-10 py-3.5 bg-gray-200 text-gray-600 rounded-xl font-semibold hover:bg-gray-300 transition">
                   Cancel
                 </button>
               </div>
 
             </form>
           </div>
-        </main>
-      </div>
-    </>
+    </div>
   );
 }

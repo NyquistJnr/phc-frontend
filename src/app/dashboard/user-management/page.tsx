@@ -1,5 +1,5 @@
-import CreateUser from '@/src/components/adminDashboard/user-management/CreateUser';
+import UserManagement from '@/src/components/adminDashboard/user-management/ModifyUser';
 
 export default function UserManagementPage() {
-  return <CreateUser />;
+  return <UserManagement />;
 }

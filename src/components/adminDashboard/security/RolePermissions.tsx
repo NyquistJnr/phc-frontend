@@ -1,16 +1,11 @@
 "use client";
 import React, { useState } from 'react';
-import Head from 'next/head';
 import { 
-  ShieldCheck, 
   Save, 
-  RotateCcw, 
   CheckCircle2, 
   XCircle 
 } from 'lucide-react';
-// Import your modular components
 import Header from "@/src/components/adminDashboard/generics/header";
-import { Sidebar } from '@/src/components/adminDashboard/generics/sidebar';
 
 interface PermissionToggleProps {
   enabled: boolean;
@@ -56,32 +51,24 @@ export default function RolePermissionsPage() {
   ];
 
   return (
-    <>
-      <Head>
-        <title>Role Permissions | PHC EHR</title>
-      </Head>
+    <div className="flex-1 flex flex-col">
+      <Header title="Security" breadcrumbs={breadcrumbs} />
 
-      <div className="min-h-screen flex bg-[#F6F7F9]">
-        <Sidebar />
-
-        <main className="flex-1 flex flex-col">
-          <Header title="Security" breadcrumbs={breadcrumbs} />
-
-          <div className="flex-1 p-8 space-y-8">
-            <div className="mb-8">
-              <h2 className="text-3xl font-bold text-gray-900 mb-2">Role Permissions</h2>
+      <div className="flex-1 p-4 sm:p-8 space-y-6 sm:space-y-8">
+            <div className="mb-6 sm:mb-8">
+              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Role Permissions</h2>
               <p className="text-gray-500 font-medium">
                 Configure what each role can do using CRUDS permissions (Create, Read, Update, Delete, Suspend).
               </p>
             </div>
 
             {/* Role Selection Tabs */}
-            <div className="flex flex-wrap gap-3 mb-8">
+            <div className="flex flex-wrap gap-2 sm:gap-3 mb-6 sm:mb-8">
               {roles.map((role) => (
                 <button
                   key={role}
                   onClick={() => setActiveRole(role)}
-                  className={`px-6 py-2.5 rounded-xl font-medium transition-all border ${
+                  className={`px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl text-sm sm:text-base font-medium transition-all border ${
                     activeRole === role 
                       ? 'bg-[#046C3F] text-white border-[#046C3F] shadow-md' 
                       : 'bg-white text-gray-400 border-gray-100 hover:border-gray-200'
@@ -93,8 +80,8 @@ export default function RolePermissionsPage() {
             </div>
 
             {/* Permission Matrix Card */}
-            <div className="bg-white rounded-[32px] shadow-sm border border-gray-100 overflow-hidden">
-              <div className="p-8 border-b border-gray-50">
+            <div className="bg-white rounded-2xl sm:rounded-[32px] shadow-sm border border-gray-100 overflow-hidden">
+              <div className="p-4 sm:p-8 border-b border-gray-50">
                 <h3 className="text-center text-sm font-bold text-gray-600 uppercase tracking-widest">
                   Permission Matrix - {activeRole}
                 </h3>
@@ -151,19 +138,17 @@ export default function RolePermissionsPage() {
               </div>
 
               {/* Action Footer */}
-              <div className="p-10 bg-gray-50/30 flex justify-end gap-4 border-t border-gray-50">
-                <button className="px-10 py-3.5 bg-[#046C3F] text-white rounded-xl font-bold flex items-center gap-3 shadow-lg shadow-[#046C3F]/20 hover:bg-[#035a34] transition-all">
+              <div className="p-4 sm:p-10 bg-gray-50/30 flex flex-col sm:flex-row justify-end gap-4 border-t border-gray-50">
+                <button className="px-8 sm:px-10 py-3.5 bg-[#046C3F] text-white rounded-xl font-bold flex items-center justify-center gap-3 shadow-lg shadow-[#046C3F]/20 hover:bg-[#035a34] transition-all">
                   <Save size={20} />
                   Save Permissions
                 </button>
-                <button className="px-10 py-3.5 bg-white text-gray-500 border border-gray-200 rounded-xl font-bold flex items-center gap-3 hover:bg-gray-50 transition-all">
+                <button className="px-8 sm:px-10 py-3.5 bg-white text-gray-500 border border-gray-200 rounded-xl font-bold flex items-center justify-center gap-3 hover:bg-gray-50 transition-all">
                   Reset to Defaults
                 </button>
               </div>
             </div>
           </div>
-        </main>
-      </div>
-    </>
+    </div>
   );
 }

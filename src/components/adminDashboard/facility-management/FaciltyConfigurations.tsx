@@ -1,16 +1,16 @@
-import React from 'react';
-import Head from 'next/head';
+"use client";
+
+import React, { useState } from 'react';
 import { 
   Settings2, 
   ChevronDown, 
   CircleCheck, 
-  X,
   Fingerprint,
   MonitorCog
 } from 'lucide-react';
 import { LabeledInputProps, ToggleSwitchProps } from '../generics/types';
 import Header from "@/src/components/adminDashboard/generics/header";
-import { Sidebar } from '@/src/components/adminDashboard/generics/sidebar';
+import Toast from '@/src/components/adminDashboard/generics/Toast';
 
 const LabeledInput = ({ label, ...props }: LabeledInputProps) => {
   const inputStyles = "block w-full bg-white border border-gray-200 rounded-xl px-5 py-3.5 text-base text-gray-900 placeholder:text-gray-400 focus:border-[#1AC073] focus:ring-[#1AC073]";
@@ -45,31 +45,29 @@ const ToggleSwitch = ({ label, description, defaultChecked }: ToggleSwitchProps)
 );
 
 export default function FacilityConfigurationPage() {
+  const [toastVisible, setToastVisible] = useState(false);
+
   const breadcrumbs = [
     { label: 'Facility Management' },
     { label: 'Facility Configuration', active: true }
   ];
 
+  const handleSave = () => {
+    setToastVisible(true);
+  };
+
   return (
-    <>
-      <Head>
-        <title>Facility Configuration | PHC EHR</title>
-      </Head>
+    <div className="flex-1 flex flex-col">
+      <Header title="Facility Management" breadcrumbs={breadcrumbs} />
 
-      <div className="min-h-screen flex bg-[#F6F7F9]">
-        <Sidebar />
-
-        <main className="flex-1 flex flex-col">
-          <Header title="Facility Management" breadcrumbs={breadcrumbs} />
-
-          <div className="flex-1 p-8 space-y-8 max-w-5xl">
-            <div className="mb-8">
-              <h2 className="text-3xl font-bold text-gray-900 mb-2">Facility Configuration</h2>
+      <div className="flex-1 p-4 sm:p-8 space-y-6 sm:space-y-8 max-w-5xl">
+            <div className="mb-6 sm:mb-8">
+              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Facility Configuration</h2>
               <p className="text-gray-600 font-medium">Configure system-wide settings for the PHC EHR platform.</p>
             </div>
 
             {/* Patient ID Format Section */}
-            <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 space-y-8">
+            <div className="bg-white p-4 sm:p-8 rounded-2xl sm:rounded-3xl shadow-sm border border-gray-100 space-y-6 sm:space-y-8">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-[#E8F7F0] rounded-lg text-[#1AC073]">
                   <Fingerprint size={24} />
@@ -77,7 +75,7 @@ export default function FacilityConfigurationPage() {
                 <h3 className="text-xl font-bold text-gray-900">Patient ID Format</h3>
               </div>
 
-              <div className="grid grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <LabeledInput label="Prefix" value="PAT-PLT" />
                 <div className="relative">
                   <LabeledInput label="ID Length (digits)" type="select" value="6 digits" />
@@ -93,7 +91,7 @@ export default function FacilityConfigurationPage() {
                     ))}
                   </div>
                 </div>
-                <div className="col-span-2">
+                <div className="md:col-span-2">
                    <p className="text-xs font-bold text-gray-400 mb-2 uppercase tracking-wider">Preview</p>
                    <p className="text-lg font-bold text-[#1AC073]">PAT-PLT-000234</p>
                 </div>
@@ -101,7 +99,7 @@ export default function FacilityConfigurationPage() {
             </div>
 
             {/* System Preferences Section */}
-            <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 space-y-8">
+            <div className="bg-white p-4 sm:p-8 rounded-2xl sm:rounded-3xl shadow-sm border border-gray-100 space-y-6 sm:space-y-8">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-[#E8F7F0] rounded-lg text-[#1AC073]">
                   <MonitorCog size={24} />
@@ -109,7 +107,7 @@ export default function FacilityConfigurationPage() {
                 <h3 className="text-xl font-bold text-gray-900">System Preferences</h3>
               </div>
 
-              <div className="grid grid-cols-2 gap-6 mb-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 <LabeledInput label="Default Language" type="select" value="English" />
                 <LabeledInput label="Session Timeout" type="select" value="30 Minutes" />
               </div>
@@ -137,33 +135,25 @@ export default function FacilityConfigurationPage() {
                 />
               </div>
 
-              <div className="flex items-center gap-6 pt-6">
-                <button className="px-10 py-3.5 bg-[#046C3F] text-white rounded-xl font-semibold flex items-center gap-2.5 shadow-md">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 pt-6">
+                <button onClick={handleSave} className="px-8 sm:px-10 py-3.5 bg-[#046C3F] text-white rounded-xl font-semibold flex items-center gap-2.5 shadow-md">
                   <Settings2 size={20} />
                   Save Configuration
                 </button>
-                <button className="px-10 py-3.5 bg-gray-200 text-gray-600 rounded-xl font-semibold hover:bg-gray-300 transition">
+                <button className="px-8 sm:px-10 py-3.5 bg-gray-200 text-gray-600 rounded-xl font-semibold hover:bg-gray-300 transition">
                   Cancel
                 </button>
               </div>
             </div>
-
-            {/* Toast Notification */}
-            <div className="fixed bottom-10 right-10 flex items-start gap-4 p-5 bg-white rounded-2xl shadow-2xl border-l-4 border-l-[#1AC073] border border-gray-100 w-[380px]">
-              <div className="w-6 h-6 rounded-full bg-[#1AC073] flex items-center justify-center">
-                <CircleCheck className="text-white" size={16} />
-              </div>
-              <div className="flex-grow">
-                <p className="text-sm font-bold text-gray-900 mb-1">Configuration saved</p>
-                <p className="text-xs text-gray-500 leading-relaxed">Facility settings has been updated successfully.</p>
-              </div>
-              <button className="text-gray-400 hover:text-gray-600">
-                <X size={18} />
-              </button>
-            </div>
           </div>
-        </main>
-      </div>
-    </>
+
+      <Toast
+        type="success"
+        title="Configuration saved"
+        message="Facility settings has been updated successfully."
+        visible={toastVisible}
+        onClose={() => setToastVisible(false)}
+      />
+    </div>
   );
 }
