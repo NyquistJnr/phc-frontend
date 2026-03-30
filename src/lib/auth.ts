@@ -31,7 +31,6 @@ export const authOptions: NextAuthOptions = {
           const data = await res.json();
 
           if (res.ok && data?.status === "success" && data?.data) {
-            // Mapping the backend payload to the NextAuth user structure.
             return {
               id: data.data.user.id,
               email: data.data.user.email,
@@ -42,8 +41,6 @@ export const authOptions: NextAuthOptions = {
               refresh: data.data.refresh,
             };
           }
-
-          // In case the request finishes but isn't authenticated, pass backend error if present
           throw new Error(data?.message || "Authentication failed");
         } catch (error: any) {
           throw new Error(error.message || "Failed to contact the authentication server.");
@@ -53,7 +50,6 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     async jwt({ token, user }) {
-      // User is only available on sign-in
       if (user) {
         token.id = user.id;
         token.email = user.email;
@@ -72,7 +68,7 @@ export const authOptions: NextAuthOptions = {
         first_name: token.first_name,
         last_name: token.last_name,
         role: token.role,
-        access: token.access, // optionally expose here or directly under session
+        access: token.access,
         refresh: token.refresh,
       } as any;
       
@@ -84,10 +80,10 @@ export const authOptions: NextAuthOptions = {
   },
   session: {
     strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 Days (Matches NextAuth default)
+    maxAge: 30 * 24 * 60 * 60,
   },
   pages: {
-    signIn: "/login", // Custom sign-in route
+    signIn: "/login",
   },
-  secret: process.env.NEXTAUTH_SECRET || "fallback_secret_for_development", // REMEMBER to set NextAuth secret in ENV
+  secret: process.env.NEXTAUTH_SECRET || "RItS50/LCcZFrpHpdt77aTZqyAweqJyuKtK6+3QwO1kBJdSbHVkNGq2JeN4=",
 };
