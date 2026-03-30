@@ -6,24 +6,23 @@ import AuthShell from '@/src/components/auth-shell';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { toast } from 'react-toastify';
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
-      setError("Please fill in both fields");
+      toast.error("Please fill in both fields");
       return;
     }
 
     setLoading(true);
-    setError("");
 
     try {
       const result = await signIn("credentials", {
@@ -33,15 +32,14 @@ export default function LoginPage() {
       });
 
       if (result?.error) {
-        setError(result.error);
+        toast.error(result.error);
         setLoading(false);
       } else {
-        // Redirect on successful login
+        toast.success("Login successful! Redirecting...");
         router.push("/dashboard");
-        router.refresh();
       }
     } catch (err: any) {
-      setError("An unexpected error occurred.");
+      toast.error("An unexpected error occurred.");
       setLoading(false);
     }
   };
@@ -59,11 +57,6 @@ export default function LoginPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {error && (
-            <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm">
-              {error}
-            </div>
-          )}
           {/* Email */}
           <div className="space-y-2">
             <label className="text-xs md:text-sm font-poppins font-medium text-[#1B1818] tracking-wider">
