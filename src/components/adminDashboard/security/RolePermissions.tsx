@@ -31,19 +31,56 @@ const PermissionToggle = ({ enabled, onChange }: PermissionToggleProps) => (
   </button>
 );
 
+type PermissionKey = 'create' | 'read' | 'update' | 'delete' | 'suspend';
+
+const permissionKeys: PermissionKey[] = ['create', 'read', 'update', 'delete', 'suspend'];
+
+const roles = [
+  'IT Administrator', 'Officer in charge', 'Doctor', 
+  'Nurse', 'Lab Technician', 'Pharmacist', 'CHEW'
+];
+
+const modules = [
+  'User Management', 'Patient Registration', 'Consultation', 
+  'Lab Requests', 'Lab Results', 'Prescriptions', 
+  'Dispensing', 'Vitals Recording'
+];
+
+type RolePermissions = Record<string, Record<PermissionKey, boolean>>;
+
+function buildDefaultPermissions(): Record<string, RolePermissions> {
+  const defaults: Record<string, RolePermissions> = {};
+  for (const role of roles) {
+    const rolePerms: RolePermissions = {};
+    for (const mod of modules) {
+      rolePerms[mod] = { create: false, read: false, update: false, delete: false, suspend: false };
+    }
+    // IT Administrator defaults
+    if (role === 'IT Administrator') {
+      rolePerms['User Management'] = { create: true, read: true, update: true, delete: false, suspend: true };
+      rolePerms['Patient Registration'] = { create: false, read: true, update: false, delete: false, suspend: false };
+    }
+    defaults[role] = rolePerms;
+  }
+  return defaults;
+}
+
 export default function RolePermissionsPage() {
   const [activeRole, setActiveRole] = useState('IT Administrator');
-  
-  const roles = [
-    'IT Administrator', 'Officer in charge', 'Doctor', 
-    'Nurse', 'Lab Technician', 'Pharmacist', 'CHEW'
-  ];
+  const [allPermissions, setAllPermissions] = useState<Record<string, RolePermissions>>(buildDefaultPermissions);
 
-  const modules = [
-    'User Management', 'Patient Registration', 'Consultation', 
-    'Lab Requests', 'Lab Results', 'Prescriptions', 
-    'Dispensing', 'Vitals Recording'
-  ];
+  const togglePermission = (moduleName: string, key: PermissionKey) => {
+    setAllPermissions(prev => ({
+      ...prev,
+      [activeRole]: {
+        ...prev[activeRole],
+        [moduleName]: {
+          ...prev[activeRole][moduleName],
+          [key]: !prev[activeRole][moduleName][key],
+        },
+      },
+    }));
+  };
 
   const breadcrumbs = [
     { label: 'Security' },
@@ -88,49 +125,31 @@ export default function RolePermissionsPage() {
               </div>
 
               <div className="overflow-x-auto">
-                <table className="w-full">
+                <table className="w-full min-w-[640px]">
                   <thead>
-                    <tr className="text-left text-[11px] font-bold text-gray-400 uppercase tracking-[0.2em]">
-                      <th className="px-12 py-6">Module</th>
-                      <th className="px-6 py-6 text-center">Create</th>
-                      <th className="px-6 py-6 text-center">Read</th>
-                      <th className="px-6 py-6 text-center">Update</th>
-                      <th className="px-6 py-6 text-center">Delete</th>
-                      <th className="px-6 py-6 text-center">Suspend</th>
+                    <tr className="text-left text-gray-500 text-xs font-bold uppercase tracking-wider border-b border-gray-50">
+                      <th className="px-4 sm:px-12 py-4">Module</th>
+                      <th className="px-6 py-4 text-center">Create</th>
+                      <th className="px-6 py-4 text-center">Read</th>
+                      <th className="px-6 py-4 text-center">Update</th>
+                      <th className="px-6 py-4 text-center">Delete</th>
+                      <th className="px-6 py-4 text-center">Suspend</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
                     {modules.map((moduleName) => (
                       <tr key={moduleName} className="hover:bg-gray-50/50 transition-colors">
-                        <td className="px-12 py-6 text-sm font-semibold text-gray-600">{moduleName}</td>
-                        <td className="px-6 py-6">
-                          <div className="flex justify-center">
-                            <PermissionToggle enabled={moduleName === 'User Management'} onChange={() => {}} />
-                          </div>
-                        </td>
-                        <td className="px-6 py-6">
-                          <div className="flex justify-center">
-                            <PermissionToggle 
-                              enabled={moduleName === 'User Management' || moduleName === 'Patient Registration'} 
-                              onChange={() => {}} 
-                            />
-                          </div>
-                        </td>
-                        <td className="px-6 py-6">
-                          <div className="flex justify-center">
-                            <PermissionToggle enabled={moduleName === 'User Management'} onChange={() => {}} />
-                          </div>
-                        </td>
-                        <td className="px-6 py-6">
-                          <div className="flex justify-center">
-                            <PermissionToggle enabled={false} onChange={() => {}} />
-                          </div>
-                        </td>
-                        <td className="px-6 py-6">
-                          <div className="flex justify-center">
-                            <PermissionToggle enabled={moduleName === 'User Management'} onChange={() => {}} />
-                          </div>
-                        </td>
+                        <td className="px-4 sm:px-12 py-6 text-sm font-semibold text-gray-600">{moduleName}</td>
+                        {permissionKeys.map((key) => (
+                          <td key={key} className="px-6 py-6">
+                            <div className="flex justify-center">
+                              <PermissionToggle 
+                                enabled={allPermissions[activeRole][moduleName][key]} 
+                                onChange={() => togglePermission(moduleName, key)} 
+                              />
+                            </div>
+                          </td>
+                        ))}
                       </tr>
                     ))}
                   </tbody>

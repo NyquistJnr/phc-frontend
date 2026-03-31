@@ -35,7 +35,7 @@ export default function Toast({ type = 'success', title, message, visible, onClo
   const Icon = config.icon;
 
   return (
-    <div className={`fixed bottom-6 right-6 z-50 flex items-start gap-4 p-5 bg-white rounded-2xl shadow-2xl border-l-4 ${config.borderColor} border border-gray-100 w-[340px] sm:w-[380px] animate-slide-in-up`}>
+    <div className={`fixed bottom-4 left-4 right-4 sm:left-auto sm:bottom-6 sm:right-6 z-50 flex items-start gap-4 p-5 bg-white rounded-2xl shadow-2xl border-l-4 ${config.borderColor} border border-gray-100 sm:w-[380px] animate-slide-in-up`}>
       <div className={`w-6 h-6 shrink-0 rounded-full ${config.bgColor} flex items-center justify-center`}>
         <Icon className="text-white" size={16} />
       </div>

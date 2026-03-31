@@ -11,7 +11,7 @@ export interface AlertRowProps {
 
 export default function AlertRow({ title, desc, time, borderColor, bgColor, titleColor }: AlertRowProps) {
   return (
-    <div className={`flex justify-between items-center p-5 rounded-2xl border-l-4 ${borderColor} ${bgColor}`}>
+    <div className={`flex justify-between items-center p-3 sm:p-5 rounded-xl sm:rounded-2xl border-l-4 ${borderColor} ${bgColor}`}>
       <div>
         <h4 className={`text-sm font-bold ${titleColor} mb-1`}>{title}</h4>
         <p className="text-xs text-gray-500 font-medium">{desc}</p>

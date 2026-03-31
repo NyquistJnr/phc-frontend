@@ -59,14 +59,14 @@ export default function FacilityProfilePage() {
             <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6 sm:mb-8">PHC-PLT-ABWOR DYIS – Facility Profile</h2>
 
             {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-              <div className="bg-[#046C3F] text-white p-8 rounded-3xl shadow-sm">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-8">
+              <div className="bg-[#046C3F] text-white p-5 sm:p-8 rounded-2xl sm:rounded-3xl shadow-sm">
                 <p className="text-sm font-medium opacity-80 mb-2">Total Patients</p>
-                <p className="text-5xl font-bold">1,240</p>
+                <p className="text-3xl sm:text-5xl font-bold">1,240</p>
               </div>
-              <div className="bg-white text-gray-900 p-8 rounded-3xl shadow-sm border border-gray-100">
+              <div className="bg-white text-gray-900 p-5 sm:p-8 rounded-2xl sm:rounded-3xl shadow-sm border border-gray-100">
                 <p className="text-sm font-medium text-gray-500 mb-2">Staff Members</p>
-                <p className="text-5xl font-bold">27</p>
+                <p className="text-3xl sm:text-5xl font-bold">27</p>
               </div>
             </div>
 
