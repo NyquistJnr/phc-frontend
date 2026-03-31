@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { Search, Eye, Edit2 } from 'lucide-react';
 import Header from '@/src/components/adminDashboard/generics/header';
 import DataTable, { Column } from '@/src/components/adminDashboard/generics/DataTable';
@@ -28,6 +29,7 @@ const allFacilities: FacilityRow[] = Array(25).fill(null).map((_, i) => ({
 const ITEMS_PER_PAGE = 10;
 
 export default function FacilityDetails() {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [stateFilter, setStateFilter] = useState('All');
   const [lgaFilter, setLgaFilter] = useState('All');
@@ -68,8 +70,8 @@ export default function FacilityDetails() {
       key: 'action', label: 'Action',
       render: () => (
         <ActionMenu items={[
-          { label: 'View Details', icon: Eye, onClick: () => {} },
-          { label: 'Edit Facility', icon: Edit2, onClick: () => {} },
+          { label: 'View Details', icon: Eye, onClick: () => router.push('/dashboard/facility-management/edit') },
+          { label: 'Edit Facility', icon: Edit2, onClick: () => router.push('/dashboard/facility-management/edit') },
         ]} />
       ),
     },

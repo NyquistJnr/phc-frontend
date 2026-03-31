@@ -1,15 +1,18 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import Header from '@/src/components/adminDashboard/generics/header';
-import { Search, Edit2, UserX, KeyRound, UserCheck, Plus, RotateCcw } from 'lucide-react';
+import { Search, Edit2, UserX, KeyRound, UserCheck, Plus, RotateCcw, Calendar } from 'lucide-react';
 import DataTable, { Column } from '@/src/components/adminDashboard/generics/DataTable';
 import Pagination from '@/src/components/adminDashboard/generics/Pagination';
 import ActionMenu from '@/src/components/adminDashboard/generics/ActionMenu';
 import FilterDropdown from '@/src/components/adminDashboard/generics/FilterDropdown';
 import Toast from '@/src/components/adminDashboard/generics/Toast';
 import MetricCard from '@/src/components/adminDashboard/generics/MetricCard';
+import CustomDateFilter from '@/src/components/adminDashboard/generics/Date';
+import ResetPasswordModal from '@/src/components/adminDashboard/user-management/modals/resetModal';
 
 interface UserRow {
   [key: string]: unknown;
@@ -33,12 +36,28 @@ const allUsers: UserRow[] = Array(30).fill(null).map((_, i) => ({
 const ITEMS_PER_PAGE = 10;
 
 export default function UserManagement() {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
   const [currentPage, setCurrentPage] = useState(1);
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMsg, setToastMsg] = useState({ title: '', message: '', type: 'success' as const });
+  const [resetModalOpen, setResetModalOpen] = useState(false);
+  const [dateFilterOpen, setDateFilterOpen] = useState(false);
+  const dateFilterRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (dateFilterRef.current && !dateFilterRef.current.contains(e.target as Node)) {
+        setDateFilterOpen(false);
+      }
+    }
+    if (dateFilterOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [dateFilterOpen]);
 
   const activeCount = allUsers.filter(u => u.status === 'Active').length;
   const suspendedCount = allUsers.filter(u => u.status === 'Suspended').length;
@@ -93,11 +112,11 @@ export default function UserManagement() {
         const isSuspended = row.status === 'Suspended';
         return (
           <ActionMenu items={[
-            { label: 'Modify', icon: Edit2, onClick: () => showToast('Modify User', `Opening edit form for ${row.name}`) },
+            { label: 'Modify', icon: Edit2, onClick: () => router.push('/dashboard/user-management/modify-user') },
             isSuspended
               ? { label: 'Reactivate', icon: RotateCcw, onClick: () => showToast('User Reactivated', `${row.name} has been reactivated`) }
               : { label: 'Suspend', icon: UserX, onClick: () => showToast('User Suspended', `${row.name} has been suspended`), variant: 'danger' as const },
-            { label: 'Reset Password', icon: KeyRound, onClick: () => showToast('Password Reset', `Password reset email sent to ${row.name}`) },
+            { label: 'Reset Password', icon: KeyRound, onClick: () => setResetModalOpen(true) },
           ]} />
         );
       },
@@ -164,6 +183,24 @@ export default function UserManagement() {
                 selected={statusFilter}
                 onChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}
               />
+              <div className="relative" ref={dateFilterRef}>
+                <button
+                  onClick={() => setDateFilterOpen(!dateFilterOpen)}
+                  className={`px-3 sm:px-4 py-2 border rounded-lg text-xs font-semibold flex items-center gap-2 transition-colors ${
+                    dateFilterOpen
+                      ? 'border-[#046C3F] text-[#046C3F] bg-[#E8F7F0]'
+                      : 'border-gray-200 text-gray-600 bg-white hover:bg-gray-50'
+                  }`}
+                >
+                  <Calendar size={14} />
+                  Date
+                </button>
+                {dateFilterOpen && (
+                  <div className="absolute right-0 top-full mt-2 z-30">
+                    <CustomDateFilter />
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -178,6 +215,15 @@ export default function UserManagement() {
         message={toastMsg.message}
         visible={toastVisible}
         onClose={() => setToastVisible(false)}
+      />
+
+      <ResetPasswordModal
+        isOpen={resetModalOpen}
+        onClose={() => setResetModalOpen(false)}
+        onContinue={() => {
+          setResetModalOpen(false);
+          router.push('/dashboard/user-management/reset-password');
+        }}
       />
     </div>
   );
