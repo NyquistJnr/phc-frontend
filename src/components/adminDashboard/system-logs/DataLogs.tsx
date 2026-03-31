@@ -98,7 +98,7 @@ export default function DatabaseLogsPage() {
       <div className="p-4 sm:p-8">
         
         {/* Page Title & Export Container */}
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-8">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-6 sm:mb-8">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Database Logs</h1>
             <p className="text-gray-600">Monitor database queries, errors, and performance activities across the system.</p>

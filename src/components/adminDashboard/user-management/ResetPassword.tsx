@@ -19,7 +19,7 @@ export default function ResetPasswordView() {
 
         {/* Header Section */}
         <div className="mb-8 space-y-2">
-          <h1 className="text-3xl font-bold text-gray-900">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
             Set New Password for Dr. Abubakar Musa
           </h1>
           <p className="text-gray-500 text-lg">

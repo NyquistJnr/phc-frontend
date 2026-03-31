@@ -16,7 +16,7 @@ export default function SystemLogDetailsModal({ isOpen = true, onClose }: { isOp
       <div className="bg-white w-full max-w-2xl rounded-[24px] shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
         
         {/* Header */}
-        <div className="flex items-center justify-between p-8 pb-4">
+        <div className="flex items-center justify-between p-4 sm:p-8 pb-3 sm:pb-4">
           <h2 className="text-[22px] font-bold text-gray-900 tracking-tight">System Logs details</h2>
           <button 
             onClick={onClose}
@@ -28,7 +28,7 @@ export default function SystemLogDetailsModal({ isOpen = true, onClose }: { isOp
         </div>
 
         {/* Body Content */}
-        <div className="p-8 pt-2">
+        <div className="p-4 sm:p-8 pt-2">
           
           {/* Two Column Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">

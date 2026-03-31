@@ -137,7 +137,7 @@ export default function SystemLogsPage() {
         </div>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
           {/* Total Alerts */}
           <div className="bg-[#2A6543] rounded-2xl p-6 shadow-sm text-white relative overflow-hidden">
             <div className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center mb-8">

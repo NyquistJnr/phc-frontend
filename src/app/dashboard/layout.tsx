@@ -10,8 +10,8 @@ export default function DashboardLayout({
       <div className="flex min-h-screen bg-[#F6F7F9] font-inter">
         <Sidebar />
 
-        <div className="flex flex-col flex-1 ml-0 lg:ml-64">
-          <main>
+        <div className="flex flex-col flex-1 ml-0 lg:ml-64 min-w-0 overflow-x-clip">
+          <main className="min-w-0">
             {children}
           </main>
         </div>
