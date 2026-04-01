@@ -27,7 +27,12 @@ import Toast from "@/src/components/adminDashboard/generics/Toast";
 import MetricCard from "@/src/components/adminDashboard/generics/MetricCard";
 import CustomDateFilter from "@/src/components/adminDashboard/generics/Date";
 import ResetPasswordModal from "@/src/components/adminDashboard/user-management/modals/resetModal";
-import { useUsers, useUserStats, User } from "@/src/hooks/useUsers";
+import {
+  useUsers,
+  useUserStats,
+  useToggleUserStatus,
+  User,
+} from "@/src/hooks/useUsers";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -96,22 +101,6 @@ export default function UserManagement() {
     return () => clearTimeout(handler);
   }, [searchInput]);
 
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (
-        dateFilterRef.current &&
-        !dateFilterRef.current.contains(e.target as Node)
-      ) {
-        setDateFilterOpen(false);
-      }
-    }
-    if (dateFilterOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-      return () =>
-        document.removeEventListener("mousedown", handleClickOutside);
-    }
-  }, [dateFilterOpen]);
-
   const isActiveParam =
     statusFilter === "Active"
       ? true
@@ -120,11 +109,7 @@ export default function UserManagement() {
         : undefined;
 
   const { data: statsData } = useUserStats();
-  const {
-    data: usersData,
-    isLoading: isUsersLoading,
-    refetch,
-  } = useUsers({
+  const { data: usersData, isLoading: isUsersLoading } = useUsers({
     page: currentPage,
     pageSize: ITEMS_PER_PAGE,
     role: roleFilter === "All" ? undefined : mapRoleToApi(roleFilter),
@@ -133,6 +118,8 @@ export default function UserManagement() {
     startDate,
     endDate,
   });
+
+  const toggleStatusMutation = useToggleUserStatus();
 
   const users = usersData?.results || [];
   const totalPages = usersData?.total_pages || 1;
@@ -199,22 +186,49 @@ export default function UserManagement() {
               ? {
                   label: "Suspend",
                   icon: UserX,
-                  onClick: () =>
-                    showToast(
-                      "User Suspended",
-                      `${row.first_name} has been suspended`,
-                      "error",
-                    ),
+                  onClick: () => {
+                    toggleStatusMutation.mutate(
+                      { userId: row.id, isActive: false },
+                      {
+                        onSuccess: () =>
+                          showToast(
+                            "User Suspended",
+                            `${row.first_name} has been suspended`,
+                            "error",
+                          ),
+                        onError: (error: any) =>
+                          showToast(
+                            "Action Failed",
+                            error.message || "Failed to suspend user",
+                            "error",
+                          ),
+                      },
+                    );
+                  },
                   variant: "danger" as const,
                 }
               : {
                   label: "Reactivate",
                   icon: RotateCcw,
-                  onClick: () =>
-                    showToast(
-                      "User Reactivated",
-                      `${row.first_name} has been reactivated`,
-                    ),
+                  onClick: () => {
+                    toggleStatusMutation.mutate(
+                      { userId: row.id, isActive: true },
+                      {
+                        onSuccess: () =>
+                          showToast(
+                            "User Reactivated",
+                            `${row.first_name} has been reactivated`,
+                            "success",
+                          ),
+                        onError: (error: any) =>
+                          showToast(
+                            "Action Failed",
+                            error.message || "Failed to reactivate user",
+                            "error",
+                          ),
+                      },
+                    );
+                  },
                 },
             {
               label: "Reset Password",

@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useApi } from "./use-api";
 
 export interface User {
@@ -96,5 +96,51 @@ export function useUserStats() {
     },
     enabled: api.isAuthenticated && !api.isLoading,
     staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useToggleUserStatus() {
+  const api = useApi();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      userId,
+      isActive,
+    }: {
+      userId: string;
+      isActive: boolean;
+    }) => {
+      return await api.patch(`/api/v1/auth/users/${userId}/toggle-status/`, {
+        is_active: isActive,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      queryClient.invalidateQueries({ queryKey: ["userStats"] });
+    },
+  });
+}
+
+export function useInviteUser() {
+  const api = useApi();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload: {
+      first_name: string;
+      last_name: string;
+      middle_name: string;
+      email: string;
+      phone_number: string;
+      role: string;
+      is_active: boolean;
+    }) => {
+      return await api.post(`/api/v1/auth/invite/`, payload);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      queryClient.invalidateQueries({ queryKey: ["userStats"] });
+    },
   });
 }
