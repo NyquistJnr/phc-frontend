@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import {
   Users,
   AlertTriangle,
@@ -21,56 +20,38 @@ import Header from "@/src/components/adminDashboard/generics/header";
 import MetricCard from "@/src/components/adminDashboard/generics/MetricCard";
 import StatusRow from "@/src/components/adminDashboard/generics/StatusRow";
 import AlertRow from "@/src/components/adminDashboard/generics/AlertRow";
+import { useAuditLogs, AuditLog } from "@/src/hooks/useAuditLogs";
+
+const formatTimestamp = (isoString: string) => {
+  const date = new Date(isoString);
+  return date.toISOString().replace("T", " ").substring(0, 19);
+};
+
+const getStatusConfig = (action: string) => {
+  const normalizedAction = action?.toUpperCase();
+  switch (normalizedAction) {
+    case "CREATE":
+    case "LOGIN":
+      return { label: "Success", color: "bg-emerald-50 text-emerald-600" };
+    case "UPDATE":
+      return { label: "Info", color: "bg-blue-50 text-blue-600" };
+    case "DELETE":
+    case "FAILED_LOGIN":
+      return { label: "Critical", color: "bg-red-50 text-red-600" };
+    default:
+      return { label: "Normal", color: "bg-gray-100 text-gray-600" };
+  }
+};
 
 export default function Dashboard() {
   const breadcrumbs = [{ label: "", active: true }];
-
-  const auditLogs = [
-    {
-      user: "Dr. Adaeze Nwosu",
-      action: "User Login",
-      module: "Authentication",
-      timestamp: "2026-03-08 08:42:15",
-      ip: "192.168.1.14",
-      status: "Success",
-      statusColor: "bg-emerald-50 text-emerald-600",
-    },
-    {
-      user: "System Admin",
-      action: "Password Reset: Chioma Eze",
-      module: "Security",
-      timestamp: "2026-03-08 08:31:02",
-      ip: "192.168.1.1",
-      status: "warning",
-      statusColor: "bg-orange-50 text-orange-600",
-    },
-    {
-      user: "Fatima Bello",
-      action: "Role Changed: Nurse → Doctor",
-      module: "User Management",
-      timestamp: "2026-03-08 08:15:44",
-      ip: "192.168.1.1",
-      status: "Info",
-      statusColor: "bg-blue-50 text-blue-600",
-    },
-    {
-      user: "Unknown (IP: 10.0.0.45)",
-      action: "Failed Login Attempt",
-      module: "Authentication",
-      timestamp: "2026-03-08 07:58:33",
-      ip: "192.168.1.18",
-      status: "Critical",
-      statusColor: "bg-red-50 text-red-600",
-    },
-  ];
+  const { data: auditData, isLoading: isAuditLoading } = useAuditLogs(1, 4);
 
   return (
     <div className="flex-1 flex flex-col bg-[#F9FAFB] min-w-0 overflow-hidden">
       <Header title="Dashboard" breadcrumbs={breadcrumbs} />
 
-      {/* Main Content Area */}
       <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 pt-4 pb-10 space-y-6 sm:space-y-8">
-        {/* Welcome Section */}
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 sm:gap-6">
           <div>
             <h2 className="text-xl sm:text-2xl lg:text-3xl font-medium font-inter text-gray-900 tracking-tight">
@@ -89,7 +70,13 @@ export default function Dashboard() {
               <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-0.5">
                 Today&apos;s Date
               </p>
-              <p className="text-sm font-bold text-gray-800">1st March, 2026</p>
+              <p className="text-sm font-bold text-gray-800">
+                {new Date().toLocaleDateString("en-GB", {
+                  day: "numeric",
+                  month: "long",
+                  year: "numeric",
+                })}
+              </p>
             </div>
           </div>
         </div>
@@ -214,7 +201,6 @@ export default function Dashboard() {
             </button>
           </div>
 
-          {/* Responsive Table Wrapper */}
           <div className="overflow-x-auto w-full">
             <table className="w-full min-w-[800px] text-left">
               <thead>
@@ -252,40 +238,64 @@ export default function Dashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {auditLogs.map((log, index) => (
-                  <tr
-                    key={index}
-                    className="hover:bg-gray-50/50 transition-colors"
-                  >
-                    <td className="px-5 sm:px-8 py-5 text-sm font-semibold text-gray-700 whitespace-nowrap">
-                      {log.user}
-                    </td>
+                {isAuditLoading ? (
+                  <tr>
                     <td
-                      className="px-5 py-5 text-sm text-gray-500 whitespace-nowrap truncate max-w-[200px]"
-                      title={log.action}
+                      colSpan={6}
+                      className="px-8 py-8 text-center text-sm text-gray-500"
                     >
-                      {log.action}
-                    </td>
-                    <td className="px-5 py-5 text-sm text-gray-500 whitespace-nowrap">
-                      {log.module}
-                    </td>
-                    <td className="px-5 py-5 text-sm text-gray-500 font-mono whitespace-nowrap">
-                      {log.timestamp}
-                    </td>
-                    <td className="px-5 py-5 text-sm text-gray-500 font-mono whitespace-nowrap">
-                      {log.ip}
-                    </td>
-                    <td className="px-5 sm:px-8 py-5 whitespace-nowrap">
-                      <div className="flex justify-center">
-                        <span
-                          className={`${log.statusColor} px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider`}
-                        >
-                          {log.status}
-                        </span>
-                      </div>
+                      Loading audit logs...
                     </td>
                   </tr>
-                ))}
+                ) : auditData?.results && auditData.results.length > 0 ? (
+                  auditData.results.map((log: AuditLog) => {
+                    const statusConfig = getStatusConfig(log.action);
+
+                    return (
+                      <tr
+                        key={log.id}
+                        className="hover:bg-gray-50/50 transition-colors"
+                      >
+                        <td className="px-5 sm:px-8 py-5 text-sm font-semibold text-gray-700 whitespace-nowrap">
+                          {log.actor_name}
+                        </td>
+                        <td
+                          className="px-5 py-5 text-sm text-gray-500 whitespace-nowrap truncate max-w-[200px]"
+                          title={log.action}
+                        >
+                          {log.action}
+                        </td>
+                        <td className="px-5 py-5 text-sm text-gray-500 whitespace-nowrap">
+                          {log.module}
+                        </td>
+                        <td className="px-5 py-5 text-sm text-gray-500 font-mono whitespace-nowrap">
+                          {formatTimestamp(log.timestamp)}
+                        </td>
+                        <td className="px-5 py-5 text-sm text-gray-500 font-mono whitespace-nowrap">
+                          {log.ip_address}
+                        </td>
+                        <td className="px-5 sm:px-8 py-5 whitespace-nowrap">
+                          <div className="flex justify-center">
+                            <span
+                              className={`${statusConfig.color} px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider`}
+                            >
+                              {statusConfig.label}
+                            </span>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td
+                      colSpan={6}
+                      className="px-8 py-8 text-center text-sm text-gray-500"
+                    >
+                      No recent audit logs found.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
