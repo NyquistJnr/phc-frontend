@@ -38,7 +38,7 @@ export default function DataTable<T extends Record<string, unknown>>({
     <div className="overflow-x-auto">
       <table className="w-full text-left border-collapse min-w-[640px]">
         <thead>
-          <tr className="text-gray-500 text-[13px] font-bold border-b border-gray-50">
+          <tr className="text-gray-500 text-xs font-bold uppercase tracking-wider border-b border-gray-50">
             {columns.map((col) => (
               <th
                 key={col.key}

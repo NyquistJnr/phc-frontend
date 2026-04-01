@@ -12,7 +12,7 @@ export interface MetricCardProps {
 export default function MetricCard({ icon: Icon, title, value, colorClass, subValue }: MetricCardProps) {
   const isLight = colorClass.includes('bg-white');
   return (
-    <div className={`${colorClass} p-6 rounded-[32px] shadow-sm flex flex-col justify-between min-h-[160px]`}>
+    <div className={`${colorClass} p-4 sm:p-6 rounded-2xl sm:rounded-[32px] shadow-sm flex flex-col justify-between min-h-[140px] sm:min-h-[160px]`}>
       <div className="flex justify-between items-start">
         <div className={`p-2 rounded-lg ${isLight ? 'bg-gray-100 text-gray-600' : 'bg-white/20 text-white'}`}>
           <Icon size={24} />
@@ -24,7 +24,7 @@ export default function MetricCard({ icon: Icon, title, value, colorClass, subVa
       <div className="space-y-1">
         <p className={`text-sm font-medium ${isLight ? 'text-gray-500' : 'text-white/90'}`}>{title}</p>
         <div className="flex items-baseline gap-1">
-          <p className={`text-4xl font-bold ${isLight ? 'text-gray-900' : 'text-white'}`}>{value}</p>
+          <p className={`text-3xl sm:text-4xl font-bold ${isLight ? 'text-gray-900' : 'text-white'}`}>{value}</p>
           {subValue && <span className={`text-lg font-medium ${isLight ? 'text-gray-500' : 'text-white/70'}`}>{subValue}</span>}
         </div>
       </div>
