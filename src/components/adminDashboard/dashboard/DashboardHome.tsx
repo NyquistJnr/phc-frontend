@@ -21,6 +21,8 @@ import MetricCard from "@/src/components/adminDashboard/generics/MetricCard";
 import StatusRow from "@/src/components/adminDashboard/generics/StatusRow";
 import AlertRow from "@/src/components/adminDashboard/generics/AlertRow";
 import { useAuditLogs, AuditLog } from "@/src/hooks/useAuditLogs";
+import Link from "next/link";
+import { useSession } from "next-auth/react";
 
 const formatTimestamp = (isoString: string) => {
   const date = new Date(isoString);
@@ -45,7 +47,15 @@ const getStatusConfig = (action: string) => {
 
 export default function Dashboard() {
   const breadcrumbs = [{ label: "", active: true }];
-  const { data: auditData, isLoading: isAuditLoading } = useAuditLogs(1, 4);
+
+  // Destructure session data
+  const { data: session } = useSession();
+  const firstName = session?.user?.first_name || "User";
+
+  const { data: auditData, isLoading: isAuditLoading } = useAuditLogs({
+    page: 1,
+    pageSize: 4,
+  });
 
   return (
     <div className="flex-1 flex flex-col bg-[#F9FAFB] min-w-0 overflow-hidden">
@@ -55,7 +65,8 @@ export default function Dashboard() {
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 sm:gap-6">
           <div>
             <h2 className="text-xl sm:text-2xl lg:text-3xl font-medium font-inter text-gray-900 tracking-tight">
-              Welcome Nobert
+              {/* Inject dynamic name here */}
+              Welcome {firstName}
             </h2>
             <p className="text-sm sm:text-base text-gray-500 font-medium mt-1">
               Here is your facility overview for today
@@ -196,9 +207,12 @@ export default function Dashboard() {
             <h3 className="text-lg font-bold text-gray-900">
               Recent Audit Logs
             </h3>
-            <button className="flex items-center gap-2 text-[#046C3F] text-sm font-bold hover:underline">
+            <Link
+              href="/dashboard/system-logs/audit"
+              className="flex items-center gap-2 text-[#046C3F] text-sm font-bold hover:underline"
+            >
               View all <ArrowRight size={16} />
-            </button>
+            </Link>
           </div>
 
           <div className="overflow-x-auto w-full">

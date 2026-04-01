@@ -25,15 +25,38 @@ export interface AuditLogsResponse {
   results: AuditLog[];
 }
 
-export function useAuditLogs(page = 1, pageSize = 10) {
+export interface UseAuditLogsParams {
+  page?: number;
+  pageSize?: number;
+  module?: string;
+  action?: string;
+  search?: string;
+}
+
+export function useAuditLogs({
+  page = 1,
+  pageSize = 10,
+  module,
+  action,
+  search,
+}: UseAuditLogsParams = {}) {
   const api = useApi();
 
   return useQuery({
-    queryKey: ["auditLogs", page, pageSize],
+    queryKey: ["auditLogs", page, pageSize, module, action, search],
 
     queryFn: async () => {
+      const params = new URLSearchParams({
+        page: page.toString(),
+        page_size: pageSize.toString(),
+      });
+
+      if (module && module !== "All") params.append("module", module);
+      if (action && action !== "All") params.append("action", action);
+      if (search) params.append("search", search);
+
       return await api.get<AuditLogsResponse>(
-        `/api/v1/auth/audit-logs/?page=${page}&page_size=${pageSize}`,
+        `/api/v1/auth/audit-logs/?${params.toString()}`,
       );
     },
     enabled: api.isAuthenticated && !api.isLoading,
