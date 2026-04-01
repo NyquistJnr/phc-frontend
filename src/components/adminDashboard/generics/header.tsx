@@ -1,10 +1,31 @@
 "use client";
 
-import React from "react";
-import { Search, Bell, Home, Menu } from "lucide-react";
+import React, { useState, useRef, useEffect } from "react";
+import { Search, Bell, Home, Menu, CheckCircle2 } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
+import { createPortal } from "react-dom";
 import { useSidebar } from "./sidebar";
 import { useSession } from "next-auth/react";
+import {
+  useNotifications,
+  useMarkNotificationRead,
+} from "@/src/hooks/useNotifications";
+
+const timeAgo = (dateStr: string) => {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const seconds = Math.round((now.getTime() - date.getTime()) / 1000);
+  const minutes = Math.round(seconds / 60);
+  const hours = Math.round(minutes / 60);
+  const days = Math.round(hours / 24);
+
+  if (seconds < 60) return "Just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  if (hours < 24) return `${hours}h ago`;
+  if (days === 1) return "Yesterday";
+  return `${days}d ago`;
+};
 
 interface Breadcrumb {
   label: string;
@@ -21,12 +42,63 @@ export default function Header({ title, breadcrumbs }: HeaderProps) {
   const { setMobileOpen } = useSidebar();
   const { data: session } = useSession();
 
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const [coords, setCoords] = useState({ top: 0, left: 0 });
+  const bellRef = useRef<HTMLButtonElement>(null);
+  const notifMenuRef = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(false);
+
+  const { data: notifData } = useNotifications(1, 4);
+  const markReadMutation = useMarkNotificationRead();
+
+  const unreadCount = notifData?.stats?.unread || 0;
+  const recentNotifications = notifData?.results || [];
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const toggleNotifMenu = () => {
+    if (!isNotifOpen && bellRef.current) {
+      const rect = bellRef.current.getBoundingClientRect();
+      const menuWidth = 320;
+
+      let top = rect.bottom + window.scrollY + 8;
+      let left = rect.right - menuWidth + window.scrollX;
+
+      if (left < window.scrollX + 10) {
+        left = window.scrollX + 16;
+      }
+
+      setCoords({ top, left });
+    }
+    setIsNotifOpen(!isNotifOpen);
+  };
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (
+        notifMenuRef.current &&
+        !notifMenuRef.current.contains(e.target as Node) &&
+        bellRef.current &&
+        !bellRef.current.contains(e.target as Node)
+      ) {
+        setIsNotifOpen(false);
+      }
+    }
+
+    if (isNotifOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [isNotifOpen]);
+
   const user = session?.user;
   const firstName = user?.first_name || "User";
   const role = user?.role
     ? user.role.charAt(0).toUpperCase() + user.role.slice(1).toLowerCase()
     : "Admin";
-
   const profilePic = user?.profile_picture || "/images/profile.jpg";
 
   return (
@@ -58,10 +130,92 @@ export default function Header({ title, breadcrumbs }: HeaderProps) {
           </div>
 
           <div className="flex items-center gap-3 sm:gap-4">
-            <button className="relative p-2 bg-gray-50 rounded-full text-gray-600">
+            <button
+              ref={bellRef}
+              onClick={toggleNotifMenu}
+              className="relative p-2 bg-gray-50 rounded-full text-gray-600 hover:bg-gray-100 transition-colors"
+            >
               <Bell size={20} />
-              <span className="absolute top-2 right-2.5 w-2 h-2 bg-[#1AC073] rounded-full border-2 border-white"></span>
+              {unreadCount > 0 && (
+                <span className="absolute top-1.5 right-1.5 min-w-[16px] h-4 px-1 bg-[#1AC073] text-white text-[9px] font-bold rounded-full border-2 border-white flex items-center justify-center">
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </span>
+              )}
             </button>
+            {mounted &&
+              isNotifOpen &&
+              createPortal(
+                <div
+                  ref={notifMenuRef}
+                  style={{ top: `${coords.top}px`, left: `${coords.left}px` }}
+                  className="absolute w-80 sm:w-80 bg-white border border-gray-100 rounded-2xl shadow-[0_12px_40px_rgb(0,0,0,0.12)] z-[9999] overflow-hidden animate-in fade-in zoom-in-95 duration-100"
+                >
+                  <div className="flex items-center justify-between px-5 py-4 border-b border-gray-50 bg-gray-50/50">
+                    <h3 className="font-bold text-gray-900">Notifications</h3>
+                    {unreadCount > 0 && (
+                      <span className="px-2 py-0.5 bg-[#E8F7F0] text-[#046C3F] text-[10px] font-bold rounded-full">
+                        {unreadCount} New
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="max-h-[320px] overflow-y-auto">
+                    {recentNotifications.length > 0 ? (
+                      recentNotifications.map((notif) => (
+                        <div
+                          key={notif.id}
+                          className={`flex gap-3 p-4 border-b border-gray-50 transition-colors hover:bg-gray-50 ${!notif.is_read ? "bg-[#F4FBFC]" : "bg-white"}`}
+                        >
+                          <div
+                            className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${!notif.is_read ? "bg-[#046C3F]/10 text-[#046C3F]" : "bg-gray-100 text-gray-400"}`}
+                          >
+                            <Bell size={14} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p
+                              className={`text-sm leading-snug ${!notif.is_read ? "font-semibold text-gray-900" : "font-medium text-gray-700"}`}
+                            >
+                              {notif.actor_name} performed{" "}
+                              <span className="uppercase">{notif.action}</span>{" "}
+                              in {notif.module}.
+                            </p>
+                            <div className="flex items-center justify-between mt-1.5">
+                              <p className="text-[11px] text-gray-400 font-medium">
+                                {timeAgo(notif.timestamp)}
+                              </p>
+                              {!notif.is_read && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    markReadMutation.mutate(notif.id);
+                                  }}
+                                  className="text-[10px] font-bold text-[#046C3F] hover:underline flex items-center gap-1"
+                                >
+                                  <CheckCircle2 size={12} /> Mark read
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="p-8 text-center text-gray-400">
+                        <Bell size={24} className="mx-auto mb-2 opacity-50" />
+                        <p className="text-sm">No recent notifications</p>
+                      </div>
+                    )}
+                  </div>
+
+                  <Link
+                    href="/dashboard/notifications"
+                    onClick={() => setIsNotifOpen(false)}
+                    className="block w-full text-center py-3 text-sm font-bold text-[#046C3F] hover:bg-gray-50 transition-colors border-t border-gray-50"
+                  >
+                    View all notifications
+                  </Link>
+                </div>,
+                document.body,
+              )}
 
             <div className="flex items-center gap-3 border-l pl-3 sm:pl-4 border-gray-100">
               <div className="text-right hidden sm:block">
@@ -73,7 +227,7 @@ export default function Header({ title, breadcrumbs }: HeaderProps) {
               <div className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden border border-gray-200 bg-gray-100">
                 <Image
                   src={profilePic}
-                  alt={`${firstName}'s Profile`}
+                  alt="Profile"
                   fill
                   className="object-cover"
                 />
