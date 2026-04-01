@@ -35,7 +35,7 @@ export default function DataTable<T>({
   };
 
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto min-h-[250px]">
       <table className="w-full text-left border-collapse min-w-[640px]">
         <thead>
           <tr className="text-gray-500 text-xs font-bold uppercase tracking-wider border-b border-gray-50">
