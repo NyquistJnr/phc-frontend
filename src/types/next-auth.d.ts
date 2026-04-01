@@ -10,6 +10,7 @@ declare module "next-auth" {
     role: string;
     access: string;
     refresh: string;
+    profile_picture?: string | null;
   }
 
   interface Session {
@@ -28,5 +29,6 @@ declare module "next-auth/jwt" {
     role: string;
     access: string;
     refresh: string;
+    profile_picture?: string | null;
   }
 }

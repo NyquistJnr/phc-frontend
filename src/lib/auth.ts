@@ -14,7 +14,8 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Missing email or password");
         }
 
-        const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+        const baseUrl =
+          process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
         try {
           const res = await fetch(`${baseUrl}/api/v1/auth/login/`, {
@@ -37,13 +38,16 @@ export const authOptions: NextAuthOptions = {
               first_name: data.data.user.first_name,
               last_name: data.data.user.last_name,
               role: data.data.user.role,
+              profile_picture: data.data.user.profile_picture,
               access: data.data.access,
               refresh: data.data.refresh,
             };
           }
           throw new Error(data?.message || "Authentication failed");
         } catch (error: any) {
-          throw new Error(error.message || "Failed to contact the authentication server.");
+          throw new Error(
+            error.message || "Failed to contact the authentication server.",
+          );
         }
       },
     }),
@@ -56,6 +60,7 @@ export const authOptions: NextAuthOptions = {
         token.first_name = user.first_name;
         token.last_name = user.last_name;
         token.role = user.role;
+        token.profile_picture = user.profile_picture;
         token.access = user.access;
         token.refresh = user.refresh;
       }
@@ -63,18 +68,19 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       session.user = {
-        id: token.id,
-        email: token.email,
-        first_name: token.first_name,
-        last_name: token.last_name,
-        role: token.role,
-        access: token.access,
-        refresh: token.refresh,
+        id: token.id as string,
+        email: token.email as string,
+        first_name: token.first_name as string,
+        last_name: token.last_name as string,
+        role: token.role as string,
+        profile_picture: token.profile_picture as string | null,
+        access: token.access as string,
+        refresh: token.refresh as string,
       } as any;
-      
-      session.access = token.access;
-      session.refresh = token.refresh;
-      
+
+      session.access = token.access as string;
+      session.refresh = token.refresh as string;
+
       return session;
     },
   },
@@ -85,5 +91,7 @@ export const authOptions: NextAuthOptions = {
   pages: {
     signIn: "/login",
   },
-  secret: process.env.NEXTAUTH_SECRET || "RItS50/LCcZFrpHpdt77aTZqyAweqJyuKtK6+3QwO1kBJdSbHVkNGq2JeN4=",
+  secret:
+    process.env.NEXTAUTH_SECRET ||
+    "RItS50/LCcZFrpHpdt77aTZqyAweqJyuKtK6+3QwO1kBJdSbHVkNGq2JeN4=",
 };
