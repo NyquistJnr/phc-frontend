@@ -43,6 +43,17 @@ export interface UseUsersParams {
   isActive?: boolean;
 }
 
+export interface StateAdminInvitePayload {
+  first_name: string;
+  last_name: string;
+  middle_name: string;
+  email: string;
+  phone_number: string;
+  role: string;
+  is_active: boolean;
+  facility_id: string;
+}
+
 export function useUsers({
   page = 1,
   pageSize = 10,
@@ -137,6 +148,21 @@ export function useInviteUser() {
       is_active: boolean;
     }) => {
       return await api.post(`/api/v1/auth/invite/`, payload);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      queryClient.invalidateQueries({ queryKey: ["userStats"] });
+    },
+  });
+}
+
+export function useStateAdminInviteUser() {
+  const api = useApi();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload: StateAdminInvitePayload) => {
+      return await api.post(`/api/v1/auth/state-admin/invite/`, payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });

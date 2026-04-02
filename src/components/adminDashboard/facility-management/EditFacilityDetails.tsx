@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import {
   Building2,
   ArrowLeft,
@@ -10,6 +11,7 @@ import {
   ChevronDown,
   Loader2,
   MonitorCheck,
+  Plus,
 } from "lucide-react";
 import Header from "@/src/components/adminDashboard/generics/header";
 import { toast } from "react-toastify";
@@ -26,6 +28,7 @@ const LabeledInput = ({
 }: any) => {
   const inputStyles =
     "block w-full bg-white border border-gray-200 rounded-xl px-5 py-3.5 text-base text-gray-900 placeholder:text-gray-400 focus:border-[#1AC073] focus:ring-[#1AC073] disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed transition-colors";
+
   const labelStyles =
     "absolute -top-2.5 left-4 bg-white px-1.5 text-xs text-gray-600 font-bold uppercase tracking-wider z-[2]";
 
@@ -199,9 +202,19 @@ function FacilityEditForm() {
         Back
       </button>
 
-      <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">
-        {facility.code} – Facility Profile
-      </h2>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">
+          {facility.code} - Facility Profile
+        </h2>
+        <Link
+          href={`/dashboard/facility-management/create-user?facility_id=${facilityId}`}
+          className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#046C3F] text-white rounded-xl font-semibold shadow-md hover:bg-[#035a34] transition-colors text-sm"
+        >
+          <Plus size={18} />
+          Create User
+        </Link>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
         <div className="bg-[#046C3F] text-white p-5 sm:p-8 rounded-2xl sm:rounded-3xl shadow-sm">
           <p className="text-sm font-medium opacity-80 mb-2">Total Patients</p>
@@ -218,6 +231,7 @@ function FacilityEditForm() {
           </p>
         </div>
       </div>
+
       <div className="bg-white p-4 sm:p-10 rounded-2xl sm:rounded-3xl shadow-sm border border-gray-100">
         <form onSubmit={handleSave} className="space-y-10 sm:space-y-12">
           <section className="space-y-6">
@@ -280,6 +294,7 @@ function FacilityEditForm() {
               />
             </div>
           </section>
+
           <section className="space-y-6 pt-10 border-t border-gray-100">
             <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-50">
               <div className="p-2 bg-[#E8F7F0] rounded-lg">
@@ -319,6 +334,7 @@ function FacilityEditForm() {
               />
             </div>
           </section>
+
           <section className="space-y-6 pt-10 border-t border-gray-100">
             <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-50">
               <div className="p-2 bg-[#E8F7F0] rounded-lg">
@@ -358,6 +374,7 @@ function FacilityEditForm() {
               />
             </div>
           </section>
+
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 pt-8 border-t border-gray-100">
             <button
               type="submit"
