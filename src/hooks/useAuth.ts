@@ -15,3 +15,11 @@ export function useResetPassword() {
     },
   });
 }
+
+export function useForgotPassword() {
+  return useMutation({
+    mutationFn: async (email: string) => {
+      return await apiClient.post(`/api/v1/auth/forgot-password/`, { email });
+    },
+  });
+}
