@@ -1,12 +1,12 @@
 "use client";
 
-import Link from 'next/link';
-import { Mail, Lock, EyeOff, Loader2 } from 'lucide-react';
-import AuthShell from '@/src/components/auth-shell';
-import { signIn } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
-import { toast } from 'react-toastify';
+import Link from "next/link";
+import { Mail, Lock, EyeOff, Loader2 } from "lucide-react";
+import AuthShell from "@/src/components/auth-shell";
+import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { toast } from "react-toastify";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -57,7 +57,6 @@ export default function LoginPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Email */}
           <div className="space-y-2">
             <label className="text-xs md:text-sm font-poppins font-medium text-[#1B1818] tracking-wider">
               Email Address
@@ -76,8 +75,6 @@ export default function LoginPage() {
               />
             </div>
           </div>
-
-          {/* Password */}
           <div className="space-y-2">
             <label className="text-xs md:text-sm font-poppins font-medium text-[#1B1818] tracking-wider">
               Password
@@ -94,7 +91,7 @@ export default function LoginPage() {
                 disabled={loading}
                 className="block w-full pl-12 pr-12 py-4 border border-gray-200 rounded-xl focus:ring focus:ring-[#006732] outline-none transition-all bg-white text-base disabled:opacity-75"
               />
-              <div 
+              <div
                 className="absolute inset-y-0 right-0 pr-4 flex items-center cursor-pointer text-[#9CA3AF] hover:text-[#006732] transition-colors"
                 onClick={() => setShowPassword(!showPassword)}
               >
@@ -108,14 +105,18 @@ export default function LoginPage() {
             disabled={loading}
             className="w-full flex items-center justify-center bg-[#006732] hover:bg-[#006732]/90 text-white font-bold py-4 rounded-xl transition-all duration-300 shadow-md active:scale-[0.98] mt-2 disabled:opacity-70 disabled:cursor-not-allowed"
           >
-            {loading ? <Loader2 className="animate-spin h-5 w-5 mr-3" /> : "Login"}
+            {loading ? (
+              <Loader2 className="animate-spin h-5 w-5 mr-3" />
+            ) : (
+              "Login"
+            )}
           </button>
 
           <div className="text-center pt-2">
             <p className="text-sm text-[#645D5D]">
               Forgot Password?{" "}
               <Link
-                href="/reset-password"
+                href="/forgot-password"
                 className="text-[#006732] font-bold hover:underline underline-offset-4 ml-1"
               >
                 Recover
