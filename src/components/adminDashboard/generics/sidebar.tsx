@@ -37,7 +37,16 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
 
 const navItems = [
   { name: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
-  { name: "User Management", icon: Users, path: "/dashboard/user-management" },
+  {
+    name: "User Management",
+    icon: Users,
+    children: [
+      { name: "Create User", path: "/dashboard/user-management/create-user" },
+      { name: "Modify User", path: "/dashboard/user-management/modify-user" },
+      { name: "Reset Password", path: "/dashboard/user-management/reset-password" },
+      { name: "Suspend Account", path: "/dashboard/user-management/suspend-account" },
+    ],
+  },
   {
     name: "Facility Management",
     icon: Building2,
@@ -195,15 +204,12 @@ export const Sidebar = () => {
                             <Link
                               key={subItem.name}
                               href={subItem.path}
-                              className={`relative flex items-center w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                              className={`flex items-center w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
                                 isSubActive
                                   ? "text-[#046C3F] bg-[#E8F7F0]"
                                   : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
                               }`}
                             >
-                              <span
-                                className={`absolute left-[-1.05rem] w-2 h-2 rounded-full border-2 border-white ${isSubActive ? "bg-[#046C3F]" : "bg-gray-300"}`}
-                              />
                               {subItem.name}
                             </Link>
                           );
@@ -219,10 +225,17 @@ export const Sidebar = () => {
 
         <div className="p-4 space-y-2 border-t border-gray-100 bg-gray-50/50 mt-auto">
           <Link
-            href="/dashboard/settings"
-            className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-600 hover:bg-white hover:shadow-sm hover:text-gray-900 transition-all duration-200"
+            href="/dashboard/system-settings"
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+              pathname === "/dashboard/system-settings"
+                ? "bg-[#046C3F] text-white shadow-md"
+                : "bg-gray-100 text-gray-600 hover:bg-gray-100"
+            }`}
           >
-            <Settings size={20} className="text-gray-400" />
+            <Settings
+              size={20}
+              className={pathname === "/dashboard/system-settings" ? "text-white" : "text-gray-400"}
+            />
             <span className="text-sm font-medium">System Settings</span>
           </Link>
           <button
