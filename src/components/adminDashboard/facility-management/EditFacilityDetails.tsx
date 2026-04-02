@@ -27,7 +27,7 @@ const LabeledInput = ({
   const inputStyles =
     "block w-full bg-white border border-gray-200 rounded-xl px-5 py-3.5 text-base text-gray-900 placeholder:text-gray-400 focus:border-[#1AC073] focus:ring-[#1AC073] disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed transition-colors";
   const labelStyles =
-    "absolute -top-2.5 left-4 bg-white px-1.5 text-xs text-gray-600 font-bold uppercase tracking-wider z-10";
+    "absolute -top-2.5 left-4 bg-white px-1.5 text-xs text-gray-600 font-bold uppercase tracking-wider z-[2]";
 
   return (
     <div className="relative">
@@ -137,8 +137,12 @@ function FacilityEditForm() {
   ) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
-  const hasChanges =
-    JSON.stringify(formData) !== JSON.stringify(initialFormData);
+
+  const hasChanges = Object.keys(formData).some(
+    (key) =>
+      formData[key as keyof typeof formData] !==
+      initialFormData[key as keyof typeof initialFormData],
+  );
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();

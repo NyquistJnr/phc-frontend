@@ -98,14 +98,8 @@ export default function FacilityDetails() {
         <ActionMenu
           items={[
             {
-              label: "View Details",
+              label: "View / Edit Details",
               icon: Eye,
-              onClick: () =>
-                router.push(`/dashboard/facility-management/edit?id=${row.id}`),
-            },
-            {
-              label: "Edit Facility",
-              icon: Edit2,
               onClick: () =>
                 router.push(`/dashboard/facility-management/edit?id=${row.id}`),
             },
