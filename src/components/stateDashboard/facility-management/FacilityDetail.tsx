@@ -103,7 +103,6 @@ export default function FacilityDetail({ facilityId }: { facilityId: string }) {
                 <ReadonlyDropdownField label="Facility Level" value={facility?.level} />
                 <ReadonlyDropdownField label="State" value={facility?.state} />
                 <ReadonlyDropdownField label="LGA" value={facility?.lga} />
-                <ReadonlyDropdownField label="Ward" value={undefined} placeholder="—" />
               </div>
             </section>
 
