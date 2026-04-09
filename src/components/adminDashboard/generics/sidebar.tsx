@@ -37,16 +37,8 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
 
 const navItems = [
   { name: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
-  {
-    name: "User Management",
-    icon: Users,
-    children: [
-      { name: "Create User", path: "/dashboard/user-management/create-user" },
-      { name: "Modify User", path: "/dashboard/user-management/modify-user" },
-      { name: "Reset Password", path: "/dashboard/user-management/reset-password" },
-      { name: "Suspend Account", path: "/dashboard/user-management/suspend-account" },
-    ],
-  },
+  { name: "User Management", icon: Users, path: "/dashboard/user-management" },
+  
   {
     name: "Facility Management",
     icon: Building2,
