@@ -14,6 +14,8 @@ export interface User {
   suspended_at: string | null;
   last_login: string | null;
   created_at: string;
+  facility_name?: string | null;
+  facility_id?: string | null;
 }
 
 export interface UsersResponse {
