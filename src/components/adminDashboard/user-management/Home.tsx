@@ -358,7 +358,7 @@ export default function UserManagement() {
                 </button>
 
                 {dateFilterOpen && (
-                  <div className="absolute right-0 top-full mt-2 z-[100] px-2 sm:px-0">
+                  <div className="absolute right-0 top-full mt-2 z-100 px-2 sm:px-0">
                     <CustomDateFilter
                       onApply={(start, end) => {
                         setStartDate(start);
