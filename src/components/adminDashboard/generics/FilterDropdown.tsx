@@ -63,7 +63,8 @@ export default function FilterDropdown({
       }
     }
 
-    function handleScroll() {
+    function handleScroll(e: Event) {
+      if (menuRef.current?.contains(e.target as Node)) return;
       setOpen(false);
     }
 
