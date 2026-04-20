@@ -38,7 +38,6 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
 const navItems = [
   { name: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
   { name: "User Management", icon: Users, path: "/dashboard/user-management" },
-  
   {
     name: "Facility Management",
     icon: Building2,
