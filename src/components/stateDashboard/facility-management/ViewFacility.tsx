@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Search, Building2, Download, Eye, Edit2, ListFilter } from "lucide-react";
-import Header from "@/src/components/adminDashboard/generics/header";
+import Header from "@/src/components/stateDashboard/generics/Header";
 import ActionMenu from "@/src/components/adminDashboard/generics/ActionMenu";
 import Pagination from "@/src/components/adminDashboard/generics/Pagination";
 import FilterDropdown from "@/src/components/adminDashboard/generics/FilterDropdown";
