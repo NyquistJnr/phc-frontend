@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Building2, Calendar } from "lucide-react";
-import Header from "@/src/components/adminDashboard/generics/header";
+import Header from "@/src/components/stateDashboard/generics/Header";
 import { useFacility } from "@/src/hooks/useFacilities";
 
 const inputStyles =
