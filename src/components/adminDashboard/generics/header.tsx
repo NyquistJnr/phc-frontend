@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import { useSidebar } from "./sidebar";
 import { useSession, signOut } from "next-auth/react";
