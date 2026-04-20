@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
@@ -47,30 +48,23 @@ const navItems = [
     icon: Users,
     children: [
       {
-        name: "Create User",
+        name: "Create Account",
         path: "/state-dashboard/user-management/create-user",
       },
       {
-        name: "Modify User",
-        path: "/state-dashboard/user-management/modify-user",
-      },
-      {
-        name: "Reset Password",
-        path: "/state-dashboard/user-management/reset-password",
-      },
-      {
-        name: "Suspend Account",
-        path: "/state-dashboard/user-management/suspend-account",
+        name: "Manage Users",
+        path: "/state-dashboard/user-management",
       },
     ],
   },
   {
     name: "System Monitoring",
     icon: Activity,
+    path: "/state-dashboard/system-monitoring",
     children: [
       {
-        name: "Audit Logs",
-        path: "/state-dashboard/system-monitoring/audit-logs",
+        name: "Audit Log",
+        path: "/state-dashboard/system-monitoring/audit-log",
       },
       {
         name: "System Logs",
@@ -83,12 +77,16 @@ const navItems = [
     icon: SlidersHorizontal,
     children: [
       {
-        name: "General Settings",
-        path: "/state-dashboard/configuration/general",
+        name: "Alert Thresholds",
+        path: "/state-dashboard/configuration/alert-thresholds",
       },
       {
-        name: "Notifications",
-        path: "/state-dashboard/configuration/notifications",
+        name: "Guidelines",
+        path: "/state-dashboard/configuration/guidelines",
+      },
+      {
+        name: "AI Configuration",
+        path: "/state-dashboard/configuration/ai-configuration",
       },
     ],
   },
@@ -97,11 +95,18 @@ const navItems = [
 export const StateSidebar = () => {
   const pathname = usePathname();
   const [expandedMenu, setExpandedMenu] = useState<string | null>(null);
+  const [logoutModalOpen, setLogoutModalOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const { mobileOpen, setMobileOpen } = useSidebar();
+
+  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     navItems.forEach((item) => {
-      if (item.children?.some((child) => pathname.startsWith(child.path))) {
+      if (
+        item.children?.some((child) => pathname.startsWith(child.path)) ||
+        (item.path && item.children && pathname === item.path)
+      ) {
         setExpandedMenu(item.name);
       }
     });
@@ -161,9 +166,40 @@ export const StateSidebar = () => {
             );
             const isExactActive = item.path === pathname;
 
+            const isParentActive = hasActiveChild || isExactActive;
+
             return (
               <div key={item.name} className="space-y-1">
-                {item.children ? (
+                {item.children && item.path ? (
+                  /* Hybrid: navigable parent with expandable children */
+                  <div
+                    className={`w-full flex items-center rounded-xl transition-all duration-200 ${
+                      isParentActive
+                        ? "bg-[#E8F7F0] text-[#046C3F]"
+                        : "text-[#53545C] hover:bg-gray-50 hover:text-gray-900"
+                    }`}
+                  >
+                    <Link
+                      href={item.path}
+                      className="flex items-center gap-3 px-4 py-3 flex-1 min-w-0"
+                    >
+                      <Icon
+                        size={20}
+                        className={`${isParentActive ? "text-[#046C3F]" : "text-gray-400"} shrink-0 transition-colors`}
+                      />
+                      <span className="text-sm font-medium truncate">{item.name}</span>
+                    </Link>
+                    <button
+                      onClick={() => toggleMenu(item.name)}
+                      className="pr-4 py-3 shrink-0"
+                    >
+                      <ChevronDown
+                        size={16}
+                        className={`transition-transform duration-300 ${isExpanded ? "rotate-180 text-[#046C3F]" : "text-gray-400"}`}
+                      />
+                    </button>
+                  </div>
+                ) : item.children ? (
                   <button
                     onClick={() => toggleMenu(item.name)}
                     className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group ${
@@ -240,7 +276,7 @@ export const StateSidebar = () => {
 
         <div className="p-4 border-t border-gray-100 bg-gray-50/50 mt-auto">
           <button
-            onClick={handleLogout}
+            onClick={() => setLogoutModalOpen(true)}
             className="w-full flex items-center gap-3 px-4 py-3 text-[#F33131] hover:bg-red-50 hover:text-red-700 rounded-xl transition-all duration-200 group"
           >
             <LogOut
@@ -251,6 +287,89 @@ export const StateSidebar = () => {
           </button>
         </div>
       </aside>
+
+      {/* Logout Confirmation Modal */}
+      {mounted && logoutModalOpen && createPortal(
+        <div
+          onClick={() => setLogoutModalOpen(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 99999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: "rgba(0,0,0,0.45)",
+            backdropFilter: "blur(2px)",
+            padding: "1rem",
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: "#fff",
+              borderRadius: "1rem",
+              boxShadow: "0 25px 50px rgba(0,0,0,0.25)",
+              width: "100%",
+              maxWidth: "380px",
+              overflow: "hidden",
+            }}
+          >
+            {/* Header */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "1.25rem 1.25rem 0.75rem" }}>
+              <span style={{ fontSize: "1rem", fontWeight: 700, color: "#111827" }}>Log out</span>
+              <button
+                onClick={() => setLogoutModalOpen(false)}
+                style={{ color: "#9CA3AF", background: "none", border: "none", cursor: "pointer", display: "flex" }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div style={{ padding: "0 1.25rem 1.25rem" }}>
+              <p style={{ fontSize: "0.875rem", color: "#6B7280", marginBottom: "1.25rem" }}>
+                Are you sure you want to sign out of your account?
+              </p>
+              <div style={{ display: "flex", gap: "0.75rem" }}>
+                <button
+                  onClick={() => setLogoutModalOpen(false)}
+                  style={{
+                    flex: 1,
+                    padding: "0.625rem",
+                    borderRadius: "0.75rem",
+                    fontSize: "0.875rem",
+                    fontWeight: 600,
+                    color: "#374151",
+                    background: "#F3F4F6",
+                    border: "none",
+                    cursor: "pointer",
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleLogout}
+                  style={{
+                    flex: 1,
+                    padding: "0.625rem",
+                    borderRadius: "0.75rem",
+                    fontSize: "0.875rem",
+                    fontWeight: 600,
+                    color: "#fff",
+                    background: "#DC2626",
+                    border: "none",
+                    cursor: "pointer",
+                  }}
+                >
+                  Log out
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body,
+      )}
     </>
   );
 };
