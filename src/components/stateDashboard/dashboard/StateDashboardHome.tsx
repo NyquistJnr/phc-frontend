@@ -1,7 +1,7 @@
 "use client";
 
 import { Building2, Building, Users, Calendar } from "lucide-react";
-import Header from "@/src/components/adminDashboard/generics/header";
+import Header from "@/src/components/stateDashboard/generics/Header";
 import MetricCard from "@/src/components/adminDashboard/generics/MetricCard";
 import {
   BarChartSkeleton,
