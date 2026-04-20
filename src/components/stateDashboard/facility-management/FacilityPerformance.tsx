@@ -1,6 +1,6 @@
 "use client";
 
-import Header from "@/src/components/adminDashboard/generics/header";
+import Header from "@/src/components/stateDashboard/generics/Header";
 import {
   BarChartSkeleton,
   DonutSkeleton,
