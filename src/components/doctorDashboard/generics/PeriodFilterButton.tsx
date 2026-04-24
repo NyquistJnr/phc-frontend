@@ -14,10 +14,11 @@ const DAY_HEADERS = ["M","T","W","T","F","S","S"];
 
 interface CalendarProps {
   selected: string;
+  secondarySelected?: string;
   onSelect: (date: string) => void;
 }
 
-export function CalendarPicker({ selected, onSelect }: CalendarProps) {
+export function CalendarPicker({ selected, secondarySelected, onSelect }: CalendarProps) {
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
@@ -29,7 +30,11 @@ export function CalendarPicker({ selected, onSelect }: CalendarProps) {
     ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
   ];
 
-  const selectedParts = selected ? selected.split("-").map(Number) : null;
+  const isMatch = (dateStr: string, d: number) => {
+    if (!dateStr) return false;
+    const parts = dateStr.split("-").map(Number);
+    return parts[0] === year && parts[1] - 1 === month && parts[2] === d;
+  };
 
   const prevMonth = () => {
     if (month === 0) { setMonth(11); setYear(y => y - 1); }
@@ -78,11 +83,9 @@ export function CalendarPicker({ selected, onSelect }: CalendarProps) {
       <div className="grid grid-cols-7 gap-y-0.5">
         {cells.map((day, i) => {
           if (!day) return <div key={i} />;
-          const isSelected =
-            selectedParts &&
-            selectedParts[0] === year &&
-            selectedParts[1] - 1 === month &&
-            selectedParts[2] === day;
+          const isPrimary = isMatch(selected, day);
+          const isSecondary = isMatch(secondarySelected ?? "", day);
+          const isAnySelected = isPrimary || isSecondary;
           const isToday =
             today.getFullYear() === year &&
             today.getMonth() === month &&
@@ -94,7 +97,7 @@ export function CalendarPicker({ selected, onSelect }: CalendarProps) {
               key={i}
               onClick={() => onSelect(dateStr)}
               className={`mx-auto w-7 h-7 flex items-center justify-center rounded-full text-xs font-medium transition-colors ${
-                isSelected
+                isAnySelected
                   ? "bg-[#046C3F] text-white"
                   : isToday
                   ? "bg-[#E8F7F0] text-[#046C3F] font-bold"
@@ -138,6 +141,15 @@ export function PeriodFilterButton({ label = "This Week" }: PeriodFilterButtonPr
 
   useEffect(() => { setMounted(true); }, []);
 
+  useEffect(() => {
+    if (open) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => { document.body.style.overflow = ""; };
+  }, [open]);
+
   const openDropdown = () => {
     if (!open && btnRef.current) {
       const rect = btnRef.current.getBoundingClientRect();
@@ -163,7 +175,11 @@ export function PeriodFilterButton({ label = "This Week" }: PeriodFilterButtonPr
     }
   }, [open]);
 
-  const displayLabel = useRange ? "Date Range" : selected;
+  const displayLabel = useRange && fromDate && toDate
+    ? `${fromDate} → ${toDate}`
+    : useRange
+    ? "Date Range"
+    : selected;
 
   return (
     <>
@@ -231,6 +247,7 @@ export function PeriodFilterButton({ label = "This Week" }: PeriodFilterButtonPr
               </div>
               <CalendarPicker
                 selected={rangeMode === "from" ? fromDate : toDate}
+                secondarySelected={rangeMode === "from" ? toDate : fromDate}
                 onSelect={d => rangeMode === "from" ? setFromDate(d) : setToDate(d)}
               />
             </div>
@@ -267,6 +284,15 @@ export function DateRangeButton({ label = "Date Range" }: DateRangeButtonProps) 
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { setMounted(true); }, []);
+
+  useEffect(() => {
+    if (open) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => { document.body.style.overflow = ""; };
+  }, [open]);
 
   const openDropdown = () => {
     if (!open && btnRef.current) {
@@ -332,6 +358,7 @@ export function DateRangeButton({ label = "Date Range" }: DateRangeButtonProps) 
           </div>
           <CalendarPicker
             selected={rangeMode === "from" ? fromDate : toDate}
+            secondarySelected={rangeMode === "from" ? toDate : fromDate}
             onSelect={d => rangeMode === "from" ? setFromDate(d) : setToDate(d)}
           />
           <button
