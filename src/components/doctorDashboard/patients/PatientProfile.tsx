@@ -46,12 +46,13 @@ function Toggle({ enabled, onChange }: { enabled: boolean; onChange: () => void 
   return (
     <button
       onClick={onChange}
-      className={`w-12 h-6 rounded-full transition-colors relative flex items-center px-1 ${enabled ? "bg-[#046C3F]" : "bg-gray-200"}`}
+      style={{ background: enabled ? "#046C3F" : "#D1D5DB" }}
+      className="w-12 h-6 rounded-full relative flex items-center px-0.5 transition-colors"
     >
       <div
-        className={`w-4 h-4 bg-white rounded-full shadow-sm transform transition-transform flex items-center justify-center ${enabled ? "translate-x-6" : "translate-x-0"}`}
-      >
-      </div>
+        className="w-5 h-5 bg-white rounded-full shadow-sm transition-transform"
+        style={{ transform: enabled ? "translateX(24px)" : "translateX(0)" }}
+      />
     </button>
   );
 }
@@ -88,8 +89,8 @@ function Demographics() {
           <Field label="Patient ID" value="PAT-PLT-000234" />
         </div>
 
-        {/* Row 2: Age + Gender + DOB */}
-        <div className="grid grid-cols-3 gap-4">
+        {/* Row 2: Age + Gender + DOB side by side */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem" }}>
           <Field label="Age" value="34 years" />
           <Field label="Gender" value="Female" />
           <Field label="Date of Birth" value="12/12/2026" />
