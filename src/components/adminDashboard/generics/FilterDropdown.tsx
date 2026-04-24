@@ -35,15 +35,15 @@ export default function FilterDropdown({
       const rawHeight = options.length * 42 + 16;
       const estimatedHeight = Math.min(rawHeight, 240);
 
-      let top = rect.bottom + window.scrollY + 4;
-      let left = rect.right - menuWidth + window.scrollX;
+      let top = rect.bottom + 4;
+      let left = rect.right - menuWidth;
 
       if (rect.bottom + estimatedHeight > window.innerHeight) {
-        top = rect.top + window.scrollY - estimatedHeight - 4;
+        top = rect.top - estimatedHeight - 4;
       }
 
-      if (left < window.scrollX + 10) {
-        left = rect.left + window.scrollX;
+      if (left < 10) {
+        left = rect.left;
       }
 
       setCoords({ top, left });
@@ -103,8 +103,8 @@ export default function FilterDropdown({
         createPortal(
           <div
             ref={menuRef}
-            style={{ top: `${coords.top}px`, left: `${coords.left}px` }}
-            className="absolute w-44 bg-white border border-gray-100 rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] z-[9999] py-2 max-h-60 overflow-y-auto animate-in fade-in zoom-in-95 duration-100"
+            style={{ position: "fixed", top: coords.top, left: coords.left }}
+            className="w-44 bg-white border border-gray-100 rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] z-9999 py-2 max-h-60 overflow-y-auto animate-in fade-in zoom-in-95 duration-100"
           >
             {options.map((option) => (
               <button
