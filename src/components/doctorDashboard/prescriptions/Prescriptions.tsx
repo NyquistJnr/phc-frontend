@@ -313,7 +313,7 @@ function PrescriptionHistory() {
                 <td className="px-5 py-4 text-sm text-gray-500">{row.duration}</td>
                 <td className="px-5 py-4 text-sm text-gray-500">{row.date}</td>
                 <td className="px-5 py-4">
-                  <span className="px-2.5 py-1 rounded-lg text-xs font-semibold" style={STATUS_BADGE[row.status]}>
+                  <span className="px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap" style={STATUS_BADGE[row.status]}>
                     {row.status}
                   </span>
                 </td>
