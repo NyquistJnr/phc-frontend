@@ -134,7 +134,7 @@ export function PeriodFilterButton({ label = "This Week" }: PeriodFilterButtonPr
   const [rangeMode, setRangeMode] = useState<"from" | "to">("from");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
-  const [coords, setCoords] = useState({ top: 0, left: 0 });
+  const [coords, setCoords] = useState({ top: 0, left: 0, maxHeight: 480 });
   const [mounted, setMounted] = useState(false);
   const btnRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -157,9 +157,13 @@ export function PeriodFilterButton({ label = "This Week" }: PeriodFilterButtonPr
       if (left + MENU_WIDTH > window.innerWidth) {
         left = Math.max(8, rect.right - MENU_WIDTH);
       }
-      setCoords({ top: rect.bottom + 4, left });
+      const spaceBelow = window.innerHeight - rect.bottom - 8;
+      const spaceAbove = rect.top - 8;
+      const top = spaceBelow >= 200 ? rect.bottom + 4 : rect.top - Math.min(spaceAbove, 480) - 4;
+      const maxHeight = spaceBelow >= 200 ? Math.max(spaceBelow, 200) : Math.min(spaceAbove, 480);
+      setCoords({ top, left, maxHeight });
     }
-    setOpen(true);
+    setOpen(o => !o);
   };
 
   useEffect(() => {
@@ -195,71 +199,75 @@ export function PeriodFilterButton({ label = "This Week" }: PeriodFilterButtonPr
       {mounted && open && createPortal(
         <div
           ref={menuRef}
-          style={{ position: "fixed", top: coords.top, left: coords.left, width: MENU_WIDTH, zIndex: 9999 }}
-          className="bg-white border border-gray-100 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.14)] p-4"
+          style={{ position: "fixed", top: coords.top, left: coords.left, width: MENU_WIDTH, zIndex: 9999, maxHeight: coords.maxHeight, display: "flex", flexDirection: "column" }}
+          className="bg-white border border-gray-100 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.14)]"
         >
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">By Date</p>
-          <div className="space-y-2 mb-4">
-            {PERIOD_OPTIONS.map(([left, right]) => (
-              <div key={left} className="grid grid-cols-2 gap-2">
-                {[left, right].map(opt => (
-                  <label key={opt} className="flex items-center gap-2 cursor-pointer" onClick={() => { setSelected(opt); setUseRange(false); }}>
-                    <div
-                      className="w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors"
-                      style={selected === opt && !useRange ? { background: "#046C3F", borderColor: "#046C3F" } : { borderColor: "#D1D5DB" }}
-                    >
-                      {selected === opt && !useRange && <Check size={10} color="#fff" strokeWidth={3} />}
-                    </div>
-                    <span className="text-sm text-gray-600 select-none">{opt}</span>
-                  </label>
-                ))}
+          <div style={{ overflowY: "auto", flex: 1, padding: "1rem 1rem 0" }}>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">By Date</p>
+            <div className="space-y-2 mb-4">
+              {PERIOD_OPTIONS.map(([left, right]) => (
+                <div key={left} className="grid grid-cols-2 gap-2">
+                  {[left, right].map(opt => (
+                    <label key={opt} className="flex items-center gap-2 cursor-pointer" onClick={() => { setSelected(opt); setUseRange(false); }}>
+                      <div
+                        className="w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors"
+                        style={selected === opt && !useRange ? { background: "#046C3F", borderColor: "#046C3F" } : { borderColor: "#D1D5DB" }}
+                      >
+                        {selected === opt && !useRange && <Check size={10} color="#fff" strokeWidth={3} />}
+                      </div>
+                      <span className="text-sm text-gray-600 select-none">{opt}</span>
+                    </label>
+                  ))}
+                </div>
+              ))}
+            </div>
+
+            <label className="flex items-center gap-2 mb-3 cursor-pointer" onClick={() => setUseRange(!useRange)}>
+              <div
+                className="w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors"
+                style={useRange ? { background: "#046C3F", borderColor: "#046C3F" } : { borderColor: "#D1D5DB" }}
+              >
+                {useRange && <Check size={10} color="#fff" strokeWidth={3} />}
               </div>
-            ))}
+              <span className="text-sm font-semibold text-gray-700 select-none">Date Range</span>
+            </label>
+
+            {useRange && (
+              <div className="mb-4">
+                <div className="flex rounded-xl overflow-hidden border border-gray-200 mb-3">
+                  <button
+                    onClick={() => setRangeMode("from")}
+                    className="flex-1 py-2 text-sm font-semibold transition-colors"
+                    style={rangeMode === "from" ? { background: "#046C3F", color: "#fff" } : { background: "#F9FAFB", color: "#6B7280" }}
+                  >
+                    From
+                  </button>
+                  <button
+                    onClick={() => setRangeMode("to")}
+                    className="flex-1 py-2 text-sm font-semibold transition-colors"
+                    style={rangeMode === "to" ? { background: "#046C3F", color: "#fff" } : { background: "#F9FAFB", color: "#6B7280" }}
+                  >
+                    To
+                  </button>
+                </div>
+                <CalendarPicker
+                  selected={rangeMode === "from" ? fromDate : toDate}
+                  secondarySelected={rangeMode === "from" ? toDate : fromDate}
+                  onSelect={d => rangeMode === "from" ? setFromDate(d) : setToDate(d)}
+                />
+              </div>
+            )}
           </div>
 
-          <label className="flex items-center gap-2 mb-3 cursor-pointer" onClick={() => setUseRange(!useRange)}>
-            <div
-              className="w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors"
-              style={useRange ? { background: "#046C3F", borderColor: "#046C3F" } : { borderColor: "#D1D5DB" }}
+          <div className="p-4 pt-3">
+            <button
+              onClick={() => setOpen(false)}
+              className="w-full py-2.5 text-white text-sm font-semibold rounded-xl"
+              style={{ background: "#046C3F" }}
             >
-              {useRange && <Check size={10} color="#fff" strokeWidth={3} />}
-            </div>
-            <span className="text-sm font-semibold text-gray-700 select-none">Date Range</span>
-          </label>
-
-          {useRange && (
-            <div className="mb-4">
-              <div className="flex rounded-xl overflow-hidden border border-gray-200 mb-3">
-                <button
-                  onClick={() => setRangeMode("from")}
-                  className="flex-1 py-2 text-sm font-semibold transition-colors"
-                  style={rangeMode === "from" ? { background: "#046C3F", color: "#fff" } : { background: "#F9FAFB", color: "#6B7280" }}
-                >
-                  From
-                </button>
-                <button
-                  onClick={() => setRangeMode("to")}
-                  className="flex-1 py-2 text-sm font-semibold transition-colors"
-                  style={rangeMode === "to" ? { background: "#046C3F", color: "#fff" } : { background: "#F9FAFB", color: "#6B7280" }}
-                >
-                  To
-                </button>
-              </div>
-              <CalendarPicker
-                selected={rangeMode === "from" ? fromDate : toDate}
-                secondarySelected={rangeMode === "from" ? toDate : fromDate}
-                onSelect={d => rangeMode === "from" ? setFromDate(d) : setToDate(d)}
-              />
-            </div>
-          )}
-
-          <button
-            onClick={() => setOpen(false)}
-            className="w-full py-2.5 text-white text-sm font-semibold rounded-xl"
-            style={{ background: "#046C3F" }}
-          >
-            Filter
-          </button>
+              Filter
+            </button>
+          </div>
         </div>,
         document.body,
       )}
@@ -278,7 +286,7 @@ export function DateRangeButton({ label = "Date Range" }: DateRangeButtonProps) 
   const [rangeMode, setRangeMode] = useState<"from" | "to">("from");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
-  const [coords, setCoords] = useState({ top: 0, left: 0 });
+  const [coords, setCoords] = useState({ top: 0, left: 0, maxHeight: 420 });
   const [mounted, setMounted] = useState(false);
   const btnRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -301,9 +309,13 @@ export function DateRangeButton({ label = "Date Range" }: DateRangeButtonProps) 
       if (left + MENU_WIDTH > window.innerWidth) {
         left = Math.max(8, rect.right - MENU_WIDTH);
       }
-      setCoords({ top: rect.bottom + 4, left });
+      const spaceBelow = window.innerHeight - rect.bottom - 8;
+      const spaceAbove = rect.top - 8;
+      const top = spaceBelow >= 200 ? rect.bottom + 4 : rect.top - Math.min(spaceAbove, 420) - 4;
+      const maxHeight = spaceBelow >= 200 ? Math.max(spaceBelow, 200) : Math.min(spaceAbove, 420);
+      setCoords({ top, left, maxHeight });
     }
-    setOpen(true);
+    setOpen(o => !o);
   };
 
   useEffect(() => {
@@ -337,37 +349,41 @@ export function DateRangeButton({ label = "Date Range" }: DateRangeButtonProps) 
       {mounted && open && createPortal(
         <div
           ref={menuRef}
-          style={{ position: "fixed", top: coords.top, left: coords.left, width: MENU_WIDTH, zIndex: 9999 }}
-          className="bg-white border border-gray-100 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.14)] p-4"
+          style={{ position: "fixed", top: coords.top, left: coords.left, width: MENU_WIDTH, zIndex: 9999, maxHeight: coords.maxHeight, display: "flex", flexDirection: "column" }}
+          className="bg-white border border-gray-100 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.14)]"
         >
-          <div className="flex rounded-xl overflow-hidden border border-gray-200 mb-3">
+          <div style={{ overflowY: "auto", flex: 1, padding: "1rem 1rem 0" }}>
+            <div className="flex rounded-xl overflow-hidden border border-gray-200 mb-3">
+              <button
+                onClick={() => setRangeMode("from")}
+                className="flex-1 py-2 text-sm font-semibold transition-colors"
+                style={rangeMode === "from" ? { background: "#046C3F", color: "#fff" } : { background: "#F9FAFB", color: "#6B7280" }}
+              >
+                From
+              </button>
+              <button
+                onClick={() => setRangeMode("to")}
+                className="flex-1 py-2 text-sm font-semibold transition-colors"
+                style={rangeMode === "to" ? { background: "#046C3F", color: "#fff" } : { background: "#F9FAFB", color: "#6B7280" }}
+              >
+                To
+              </button>
+            </div>
+            <CalendarPicker
+              selected={rangeMode === "from" ? fromDate : toDate}
+              secondarySelected={rangeMode === "from" ? toDate : fromDate}
+              onSelect={d => rangeMode === "from" ? setFromDate(d) : setToDate(d)}
+            />
+          </div>
+          <div className="p-4 pt-3">
             <button
-              onClick={() => setRangeMode("from")}
-              className="flex-1 py-2 text-sm font-semibold transition-colors"
-              style={rangeMode === "from" ? { background: "#046C3F", color: "#fff" } : { background: "#F9FAFB", color: "#6B7280" }}
+              onClick={() => setOpen(false)}
+              className="w-full py-2.5 text-white text-sm font-semibold rounded-xl"
+              style={{ background: "#046C3F" }}
             >
-              From
-            </button>
-            <button
-              onClick={() => setRangeMode("to")}
-              className="flex-1 py-2 text-sm font-semibold transition-colors"
-              style={rangeMode === "to" ? { background: "#046C3F", color: "#fff" } : { background: "#F9FAFB", color: "#6B7280" }}
-            >
-              To
+              Filter
             </button>
           </div>
-          <CalendarPicker
-            selected={rangeMode === "from" ? fromDate : toDate}
-            secondarySelected={rangeMode === "from" ? toDate : fromDate}
-            onSelect={d => rangeMode === "from" ? setFromDate(d) : setToDate(d)}
-          />
-          <button
-            onClick={() => setOpen(false)}
-            className="w-full mt-3 py-2.5 text-white text-sm font-semibold rounded-xl"
-            style={{ background: "#046C3F" }}
-          >
-            Filter
-          </button>
         </div>,
         document.body,
       )}
