@@ -125,9 +125,10 @@ const MENU_WIDTH = 288;
 
 interface PeriodFilterButtonProps {
   label?: string;
+  textColor?: string;
 }
 
-export function PeriodFilterButton({ label = "This Week" }: PeriodFilterButtonProps) {
+export function PeriodFilterButton({ label = "This Week", textColor }: PeriodFilterButtonProps) {
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState(label);
   const [useRange, setUseRange] = useState(false);
@@ -190,9 +191,10 @@ export function PeriodFilterButton({ label = "This Week" }: PeriodFilterButtonPr
       <button
         ref={btnRef}
         onClick={openDropdown}
-        className="flex items-center gap-1 text-[11px] font-medium text-gray-500 hover:text-gray-700 transition-colors whitespace-nowrap"
+        className="flex items-center gap-1 text-[11px] font-medium transition-colors whitespace-nowrap"
+        style={{ color: textColor ?? undefined }}
       >
-        {displayLabel}
+        <span className={textColor ? "" : "text-gray-500"}>{displayLabel}</span>
         <ChevronDown size={12} className={`transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
 
