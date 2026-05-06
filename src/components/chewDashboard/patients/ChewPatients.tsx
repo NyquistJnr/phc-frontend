@@ -169,7 +169,7 @@ function GenderDropdown() {
                   style={selected === opt ? { background: "#046C3F", borderColor: "#046C3F" } : { borderColor: "#D1D5DB" }}>
                   {selected === opt && <Check size={10} color="#fff" strokeWidth={3} />}
                 </div>
-                <span className={noWrap ? "whitespace-nowrap" : ""}>{opt}</span>
+                <span>{opt}</span>
               </button>
             ))}
           </div>
