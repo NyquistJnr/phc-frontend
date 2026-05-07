@@ -18,7 +18,7 @@ export const authOptions: NextAuthOptions = {
           process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
         try {
-          const res = await fetch(`${baseUrl}/api/v1/auth/login/`, {
+          const res = await fetch(`${baseUrl}/auth/login/`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
