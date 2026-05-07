@@ -36,7 +36,7 @@ export function useProfile() {
   return useQuery({
     queryKey: ["profile"],
     queryFn: async () => {
-      return await api.get<UserProfile>(`/api/v1/auth/profile/`);
+      return await api.get<UserProfile>(`/auth/profile/`);
     },
     enabled: api.isAuthenticated && !api.isLoading,
     staleTime: 5 * 60 * 1000,
@@ -49,7 +49,7 @@ export function useUpdateProfile() {
 
   return useMutation({
     mutationFn: async (payload: ProfileUpdatePayload) => {
-      return await api.patch(`/api/v1/auth/profile/`, payload);
+      return await api.patch(`/auth/profile/`, payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["profile"] });

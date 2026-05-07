@@ -11,7 +11,7 @@ export interface ResetPasswordPayload {
 export function useResetPassword() {
   return useMutation({
     mutationFn: async (payload: ResetPasswordPayload) => {
-      return await apiClient.post(`/api/v1/auth/reset-password/`, payload);
+      return await apiClient.post(`/auth/reset-password/`, payload);
     },
   });
 }
@@ -19,7 +19,7 @@ export function useResetPassword() {
 export function useForgotPassword() {
   return useMutation({
     mutationFn: async (email: string) => {
-      return await apiClient.post(`/api/v1/auth/forgot-password/`, { email });
+      return await apiClient.post(`/auth/forgot-password/`, { email });
     },
   });
 }

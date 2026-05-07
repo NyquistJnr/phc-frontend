@@ -56,7 +56,7 @@ export function useAuditLogs({
       if (search) params.append("search", search);
 
       return await api.get<AuditLogsResponse>(
-        `/api/v1/auth/audit-logs/?${params.toString()}`,
+        `/system/audit-logs/?${params.toString()}`,
       );
     },
     enabled: api.isAuthenticated && !api.isLoading,

@@ -41,7 +41,7 @@ export function useNotifications(page = 1, pageSize = 10) {
     queryKey: ["notifications", page, pageSize],
     queryFn: async () => {
       return await api.get<NotificationResponse>(
-        `/api/v1/auth/notifications/?page=${page}&page_size=${pageSize}`,
+        `/system/notifications/?page=${page}&page_size=${pageSize}`,
       );
     },
     enabled: api.isAuthenticated && !api.isLoading,
@@ -55,7 +55,7 @@ export function useMarkNotificationRead() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      return await api.patch(`/api/v1/auth/notifications/${id}/mark-read/`);
+      return await api.patch(`/system/notifications/${id}/mark-read/`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["notifications"] });

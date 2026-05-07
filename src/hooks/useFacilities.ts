@@ -97,7 +97,7 @@ export function useFacilities({
       if (isActive !== undefined) params.append("is_active", String(isActive));
 
       return await api.get<FacilitiesResponse>(
-        `/api/v1/facilities/?${params.toString()}`,
+        `/facilities/?${params.toString()}`,
       );
     },
     enabled: api.isAuthenticated && !api.isLoading,
@@ -111,9 +111,7 @@ export function useFacilityStats() {
   return useQuery({
     queryKey: ["facilityStats"],
     queryFn: async () => {
-      return await api.get<FacilityStats>(
-        `/api/v1/facilities/facilities/stats/`,
-      );
+      return await api.get<FacilityStats>(`/facilities/facilities/stats/`);
     },
     enabled: api.isAuthenticated && !api.isLoading,
     staleTime: 5 * 60 * 1000,
@@ -133,7 +131,7 @@ export function useToggleFacilityStatus() {
       isActive: boolean;
     }) => {
       return await api.patch(
-        `/api/v1/facilities/facilities/${facilityId}/toggle-status/`,
+        `/facilities/facilities/${facilityId}/toggle-status/`,
         {
           is_active: isActive,
         },
@@ -152,7 +150,7 @@ export function useFacility(id: string | null) {
   return useQuery({
     queryKey: ["facility", id],
     queryFn: async () => {
-      return await api.get<Facility>(`/api/v1/facilities/${id}/`);
+      return await api.get<Facility>(`/facilities/${id}/`);
     },
     enabled: api.isAuthenticated && !api.isLoading && !!id,
     staleTime: 5 * 60 * 1000,
@@ -165,7 +163,7 @@ export function useUpdateFacility(id: string | null) {
 
   return useMutation({
     mutationFn: async (payload: UpdateFacilityPayload) => {
-      return await api.patch(`/api/v1/facilities/${id}/`, payload);
+      return await api.patch(`/facilities/${id}/`, payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["facility", id] });

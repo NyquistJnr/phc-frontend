@@ -91,7 +91,7 @@ export function useUsers({
       if (isActive !== undefined) params.append("is_active", String(isActive));
 
       return await api.get<UsersResponse>(
-        `/api/v1/auth/facility-users/?${params.toString()}`,
+        `/users/facility-users/?${params.toString()}`,
       );
     },
     enabled: api.isAuthenticated && !api.isLoading,
@@ -105,7 +105,7 @@ export function useUserStats() {
   return useQuery({
     queryKey: ["userStats"],
     queryFn: async () => {
-      return await api.get<UserStats>(`/api/v1/auth/facility-users/stats/`);
+      return await api.get<UserStats>(`/users/facility-users/stats/`);
     },
     enabled: api.isAuthenticated && !api.isLoading,
     staleTime: 5 * 60 * 1000,
@@ -124,7 +124,7 @@ export function useToggleUserStatus() {
       userId: string;
       isActive: boolean;
     }) => {
-      return await api.patch(`/api/v1/auth/users/${userId}/toggle-status/`, {
+      return await api.patch(`/users/${userId}/toggle-status/`, {
         is_active: isActive,
       });
     },
@@ -149,7 +149,7 @@ export function useInviteUser() {
       role: string;
       is_active: boolean;
     }) => {
-      return await api.post(`/api/v1/auth/invite/`, payload);
+      return await api.post(`/users/invite/`, payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
@@ -164,7 +164,7 @@ export function useStateAdminInviteUser() {
 
   return useMutation({
     mutationFn: async (payload: StateAdminInvitePayload) => {
-      return await api.post(`/api/v1/auth/state-admin/invite/`, payload);
+      return await api.post(`/users/state-admin/invite/`, payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
