@@ -365,7 +365,10 @@ export default function CreateNewPatient() {
     <div className="min-h-screen bg-[#F6F7FC]">
       <NurseDashboardHeader
         title="Patients"
-        breadcrumbs={[{ label: "Patients" }, { label: "Register New Patient" }]}
+        breadcrumbs={[
+          { label: "Patients", href: "/nurse-dashboard/patients" },
+          { label: "Register New Patient" },
+        ]}
       />
 
       <div className="px-4 py-6 sm:px-6 lg:py-8">

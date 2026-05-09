@@ -230,7 +230,10 @@ export default function CreateReferral() {
     <div className="min-h-screen bg-[#F6F7FC]">
       <NurseDashboardHeader
         title="Referrals"
-        breadcrumbs={[{ label: "Referrals" }, { label: "Create Referral" }]}
+        breadcrumbs={[
+          { label: "Referrals", href: "/nurse-dashboard/referrals" },
+          { label: "Create Referral" },
+        ]}
       />
 
       <div className="px-4 py-6 sm:px-6 lg:py-8">

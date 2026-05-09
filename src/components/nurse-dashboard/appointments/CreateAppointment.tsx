@@ -345,7 +345,12 @@ export default function NewAppointments() {
     <div className="min-h-screen bg-[#F6F7FC]">
       <NurseDashboardHeader
         title="Appointments"
-        breadcrumbs={[{ label: "Appointments" }, { label: "New Appointment" }]}
+        breadcrumbs={[
+          { label: "Appointments", href: "/nurse-dashboard/appointments" },
+          {
+            label: "New Appointment",
+          },
+        ]}
       />
 
       <div className="px-4 py-6 sm:px-6 lg:py-8">

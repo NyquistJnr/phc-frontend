@@ -521,7 +521,10 @@ export default function PatientProfile({ onBack }: { onBack: () => void }) {
     <>
       <NurseDashboardHeader
         title="Patients"
-        breadcrumbs={[{ label: "Patients" }, { label: "View Profile" }]}
+        breadcrumbs={[
+          { label: "Patients", href: "/nurse-dashboard/patients" },
+          { label: "View Profile" },
+        ]}
       />
       <div className="px-4 py-6 sm:px-6 lg:py-8">
         <NurseBackButton onClick={onBack} />

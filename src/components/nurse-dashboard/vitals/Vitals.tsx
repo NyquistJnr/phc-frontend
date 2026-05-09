@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { Plus } from "lucide-react";
 import { CustomDropdown } from "@/src/components/generic/ui/CustomDropdown";
 import { ColumnDef, DataTable } from "@/src/components/generic/ui/DataTable";
@@ -10,153 +10,166 @@ import {
   StatusBadge,
 } from "@/src/components/generic/ui/TableHelpers";
 import NurseDashboardHeader from "@/src/components/nurse-dashboard/generics/NurseDashboardHeader";
-
-type VitalsStatus = "Vitals Pending" | "Waiting" | "Completed";
-type Priority = "Urgent" | "High" | "Normal" | "Low";
-
-type VitalsRow = {
-  patientId: string;
-  patientName: string;
-  ageGender: string;
-  visitType: string;
-  priority: Priority;
-  status: VitalsStatus;
-};
+import { useVitalsList } from "@/src/hooks/nurses/use-vitals";
 
 const VISIT_TYPES = [
   "ANC",
-  "General",
-  "Immunization",
-  "Postnatal",
-  "Consultation",
-  "Follow-up",
-  "Lab Test",
+  "GENERAL",
+  "IMMUNIZATION",
+  "POSTNATAL",
+  "CONSULTATION",
+  "FOLLOW_UP",
+  "LAB_TEST",
 ];
-const PRIORITY_OPTIONS = ["All Priority", "Urgent", "High", "Normal", "Low"];
-const STATUS_OPTIONS = ["All Status", "Vitals Pending", "Waiting", "Completed"];
+const PRIORITY_OPTIONS = ["All Priority", "CRITICAL", "HIGH", "NORMAL", "LOW"];
+const STATUS_OPTIONS = [
+  "All Status",
+  "WAITING",
+  "PENDING",
+  "VITALS_DONE",
+  "COMPLETED",
+];
+const PAGE_SIZES = ["10", "100", "200"];
 
-const INITIAL_ROWS: VitalsRow[] = [
-  ["Ngozi Eze", "45 / M", "ANC", "Urgent", "Vitals Pending"],
-  ["Emeka Dike", "45 / F", "General", "High", "Vitals Pending"],
-  ["Amina Bello", "45 / M", "Immunization", "Normal", "Waiting"],
-  ["Chukwu Obi", "45 / F", "Postnatal", "Low", "Completed"],
-  ["Kemi Adeyemi", "45 / M", "Consultation", "Normal", "Waiting"],
-  ["Kemi Adeyemi", "45 / F", "Follow - Up", "Urgent", "Vitals Pending"],
-  ["Kemi Adeyemi", "45 / M", "Lab Test", "Urgent", "Vitals Pending"],
-  ["Kemi Adeyemi", "45 / M", "Consultation", "Low", "Completed"],
-  ["Kemi Adeyemi", "45 / M", "Consultation", "Low", "Completed"],
-  ["Kemi Adeyemi", "45 / M", "Consultation", "Low", "Completed"],
-  ["Kemi Adeyemi", "45 / F", "General", "High", "Waiting"],
-  ["Amina Bello", "45 / M", "ANC", "Normal", "Completed"],
-].map(([patientName, ageGender, visitType, priority, status]) => ({
-  patientId: "PAT-PLT-000234",
-  patientName,
-  ageGender,
-  visitType,
-  priority: priority as Priority,
-  status: status as VitalsStatus,
-}));
-
-const priorityColors: Record<Priority, { bg: string; text: string }> = {
-  Urgent: { bg: "#FDE8E8", text: "#F33131" },
-  High: { bg: "#FDE8E8", text: "#F33131" },
-  Normal: { bg: "#FFF4E5", text: "#1F2937" },
-  Low: { bg: "#DFF3EA", text: "#039855" },
-};
-
-const statusColors: Record<VitalsStatus, { bg: string; text: string }> = {
-  "Vitals Pending": { bg: "#FDE8E8", text: "#F33131" },
-  Waiting: { bg: "#FFF4E5", text: "#1F2937" },
-  Completed: { bg: "#DFF3EA", text: "#039855" },
+const badgeColors = {
+  green: { bg: "#DFF3EA", text: "#039855" },
+  red: { bg: "#FDE8E8", text: "#F33131" },
+  amber: { bg: "#FFF4E5", text: "#1F2937" },
 };
 
 export default function VitalsList() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const pathname = usePathname();
 
-  const [rows, setRows] = useState<VitalsRow[]>(INITIAL_ROWS);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [visitFilter, setVisitFilter] = useState("All Visit Types");
-  const [priorityFilter, setPriorityFilter] = useState("All Priority");
-  const [statusFilter, setStatusFilter] = useState("All Status");
+  const page = Number(searchParams.get("page")) || 1;
+  const pageSize = Number(searchParams.get("page_size")) || 10;
+  const visitFilter = searchParams.get("visit_type") || "All Visit Types";
+  const priorityFilter = searchParams.get("priority") || "All Priority";
+  const statusFilter = searchParams.get("status") || "All Status";
 
-  const currentPage = Number(searchParams.get("page")) || 1;
-  const itemsPerPage = 10;
+  const initialSearch = searchParams.get("search") || "";
+  const [localSearch, setLocalSearch] = useState(initialSearch);
 
-  const filteredRows = useMemo(() => {
-    const normalizedSearch = searchTerm.trim().toLowerCase();
+  useEffect(() => {
+    const currentSearch = searchParams.get("search") || "";
+    if (localSearch === currentSearch) return;
 
-    return rows.filter((row) => {
-      const matchesSearch =
-        !normalizedSearch ||
-        [row.patientId, row.patientName, row.ageGender, row.visitType].some(
-          (value) => value.toLowerCase().includes(normalizedSearch),
-        );
-      const matchesVisit =
-        visitFilter === "All Visit Types" || row.visitType === visitFilter;
-      const matchesPriority =
-        priorityFilter === "All Priority" || row.priority === priorityFilter;
-      const matchesStatus =
-        statusFilter === "All Status" || row.status === statusFilter;
+    const handler = setTimeout(() => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (localSearch) {
+        params.set("search", localSearch);
+      } else {
+        params.delete("search");
+      }
+      params.set("page", "1");
+      router.push(`${pathname}?${params.toString()}`, { scroll: false });
+    }, 500);
 
-      return matchesSearch && matchesVisit && matchesPriority && matchesStatus;
-    });
-  }, [priorityFilter, rows, searchTerm, statusFilter, visitFilter]);
+    return () => clearTimeout(handler);
+  }, [localSearch, pathname, router, searchParams]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredRows.length / itemsPerPage));
-  const safeCurrentPage = Math.min(currentPage, totalPages);
-  const paginatedRows = filteredRows.slice(
-    (safeCurrentPage - 1) * itemsPerPage,
-    safeCurrentPage * itemsPerPage,
+  const { data, isLoading } = useVitalsList({
+    page,
+    page_size: pageSize,
+    search: searchParams.get("search") || undefined,
+    visit_type: visitFilter,
+    priority: priorityFilter,
+    status: statusFilter,
+  });
+
+  const updateUrlParams = useCallback(
+    (key: string, value: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (value && !value.startsWith("All ")) {
+        params.set(key, value);
+      } else {
+        params.delete(key);
+      }
+      if (key !== "page") params.set("page", "1");
+      router.push(`${pathname}?${params.toString()}`, { scroll: false });
+    },
+    [pathname, router, searchParams],
   );
 
-  const columns: ColumnDef<VitalsRow>[] = [
-    { header: "Patient ID", accessorKey: "patientId", sortable: true },
-    { header: "Patient Name", accessorKey: "patientName", sortable: true },
-    { header: "Age/Gender", accessorKey: "ageGender", sortable: true },
-    { header: "Visit Type", accessorKey: "visitType", sortable: true },
+  const columns: ColumnDef<any>[] = [
+    { header: "Patient ID", accessorKey: "patient_display_id", sortable: true },
+    {
+      header: "Patient Name",
+      sortable: true,
+      render: (row) => row.patient_name || "-",
+    },
+    {
+      header: "Age",
+      sortable: true,
+      render: (row) => `${row.age} yrs`,
+    },
+    {
+      header: "Visit Type",
+      sortable: true,
+      render: (row) => row.visit_type?.replace("_", " ") || "-",
+    },
     {
       header: "Priority",
       sortable: true,
-      render: (row) => (
-        <StatusBadge
-          label={row.priority}
-          bgColorHex={priorityColors[row.priority].bg}
-          textColorHex={priorityColors[row.priority].text}
-        />
-      ),
+      render: (row) => {
+        const priority = row.appointment_priority;
+        const color =
+          priority === "LOW"
+            ? badgeColors.green
+            : priority === "NORMAL"
+              ? badgeColors.amber
+              : badgeColors.red;
+
+        return (
+          <StatusBadge
+            label={priority}
+            bgColorHex={color.bg}
+            textColorHex={color.text}
+          />
+        );
+      },
     },
     {
       header: "Status",
       sortable: true,
-      render: (row) => (
-        <StatusBadge
-          label={row.status}
-          bgColorHex={statusColors[row.status].bg}
-          textColorHex={statusColors[row.status].text}
-        />
-      ),
+      render: (row) => {
+        const status = row.appointment_status;
+        const color =
+          status === "COMPLETED" || status === "VITALS_DONE"
+            ? badgeColors.green
+            : status === "WAITING" || status === "PENDING"
+              ? badgeColors.amber
+              : badgeColors.red;
+
+        return (
+          <StatusBadge
+            label={status?.replace("_", " ")}
+            bgColorHex={color.bg}
+            textColorHex={color.text}
+          />
+        );
+      },
     },
     {
       header: "Action",
-      sortable: true,
-      render: (row) => (
-        <ActionButton
-          label={row.status === "Completed" ? "View" : "Record Vitals"}
-          variant={row.status === "Completed" ? "soft" : "solid"}
-          onClick={() => {
-            // Routing to the creation page. You can pass query parameters if needed.
-            router.push("/nurse-dashboard/vitals/new");
-          }}
-        />
-      ),
+      sortable: false,
+      render: (row) => {
+        const isCompleted =
+          row.appointment_status === "COMPLETED" ||
+          row.appointment_status === "VITALS_DONE";
+        return (
+          <ActionButton
+            label={isCompleted ? "View" : "Record Vitals"}
+            variant={isCompleted ? "soft" : "solid"}
+            onClick={() =>
+              router.push(`/nurse-dashboard/appointments/${row.appointment}`)
+            }
+          />
+        );
+      },
     },
   ];
-
-  const emptyMessage =
-    rows.length === 0
-      ? "No patients waiting for vitals."
-      : "No patients match your criteria.";
 
   return (
     <div className="min-h-screen bg-[#F6F7FC]">
@@ -175,44 +188,43 @@ export default function VitalsList() {
               Take and save patient vital signs
             </p>
           </div>
-
-          <button
-            type="button"
-            onClick={() => router.push("/nurse-dashboard/vitals/new")}
-            className="inline-flex h-11 items-center justify-center gap-3 rounded-xl bg-[#046C3F] px-7 text-base font-medium text-white transition-colors hover:bg-[#035a34]"
-          >
-            <Plus size={20} />
-            Record New Vital
-          </button>
         </div>
 
         <DataTable
-          title="Today's Patient waiting for vital"
-          data={paginatedRows}
+          title="Patient Vitals Queue"
+          data={data?.results || []}
           columns={columns}
           showSearch
           searchPlaceholder="Search by patient name or ID"
-          onSearch={setSearchTerm}
-          totalPages={
-            filteredRows.length > itemsPerPage ? totalPages : undefined
+          onSearch={setLocalSearch}
+          totalPages={data?.total_pages}
+          emptyMessage={
+            isLoading
+              ? "Loading vitals queue..."
+              : "No patients match your criteria."
           }
-          emptyMessage={emptyMessage}
           toolbarActions={
             <>
               <CustomDropdown
                 options={["All Visit Types", ...VISIT_TYPES]}
                 selected={visitFilter}
-                onSelect={setVisitFilter}
+                onSelect={(val) => updateUrlParams("visit_type", val)}
               />
               <CustomDropdown
                 options={PRIORITY_OPTIONS}
                 selected={priorityFilter}
-                onSelect={setPriorityFilter}
+                onSelect={(val) => updateUrlParams("priority", val)}
               />
               <CustomDropdown
                 options={STATUS_OPTIONS}
                 selected={statusFilter}
-                onSelect={setStatusFilter}
+                onSelect={(val) => updateUrlParams("status", val)}
+              />
+              <CustomDropdown
+                options={PAGE_SIZES}
+                selected={pageSize.toString()}
+                onSelect={(val) => updateUrlParams("page_size", val)}
+                placeholder="Rows per page"
               />
             </>
           }

@@ -1,75 +1,17 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import type { ElementType, ReactNode } from "react";
-import {
-  Activity,
-  ArrowRight,
-  Baby,
-  ChevronDown,
-  Syringe,
-  Users,
-} from "lucide-react";
+import { Activity, ArrowRight, Baby, Syringe, Users } from "lucide-react";
 import { ColumnDef, DataTable } from "@/src/components/generic/ui/DataTable";
 import { StatusBadge } from "@/src/components/generic/ui/TableHelpers";
 import NurseDashboardHeader from "@/src/components/nurse-dashboard/generics/NurseDashboardHeader";
-
-type DashboardPatient = {
-  patientId: string;
-  patientName: string;
-  ageGender: string;
-  visitType: string;
-  priority: "High" | "Medium" | "Low";
-  status: "Vitals Pending" | "Waiting" | "Completed";
-};
-
-const PATIENT_ROWS: DashboardPatient[] = [
-  ["Ngozi Eze", "45 / M", "ANC", "High", "Vitals Pending"],
-  ["Emeka Dike", "45 / F", "General", "High", "Vitals Pending"],
-  ["Amina Bello", "45 / M", "Immunization", "Medium", "Waiting"],
-  ["Chukwu Obi", "45 / F", "Postnatal", "Low", "Completed"],
-  ["Kemi Adeyemi", "45 / M", "Consultation", "Medium", "Waiting"],
-  ["Kemi Adeyemi", "45 / F", "Consultation", "High", "Vitals Pending"],
-  ["Kemi Adeyemi", "45 / M", "Consultation", "High", "Vitals Pending"],
-  ["Kemi Adeyemi", "45 / M", "Consultation", "Low", "Completed"],
-  ["Kemi Adeyemi", "45 / M", "Consultation", "Low", "Completed"],
-  ["Kemi Adeyemi", "45 / M", "Consultation", "Low", "Completed"],
-].map(([patientName, ageGender, visitType, priority, status]) => ({
-  patientId: "PAT-PLT-000234",
-  patientName,
-  ageGender,
-  visitType,
-  priority: priority as DashboardPatient["priority"],
-  status: status as DashboardPatient["status"],
-}));
-
-const stats = [
-  {
-    title: "Waiting Queue",
-    value: 37,
-    icon: Users,
-    href: "/nurse-dashboard/patients",
-    active: true,
-  },
-  {
-    title: "Vitals Pending",
-    value: 18,
-    icon: Activity,
-    href: "/nurse-dashboard/vitals",
-  },
-  {
-    title: "Maternal Alerts",
-    value: 6,
-    icon: Baby,
-    href: "/nurse-dashboard/maternal-care",
-  },
-  {
-    title: "Vaccines Due",
-    value: 23,
-    icon: Syringe,
-    href: "/nurse-dashboard/immunization",
-  },
-];
+import NurseDateRangeFilter from "@/src/components/nurse-dashboard/generics/NurseDateRangeFilter";
+import {
+  useNurseStats,
+  useDashboardVitalsQueue,
+} from "@/src/hooks/nurses/use-dashboard";
 
 const maternalAlerts = [
   {
@@ -134,12 +76,14 @@ function StatCard({
   icon: Icon,
   href,
   active,
+  isLoading,
 }: {
   title: string;
   value: number;
   icon: ElementType;
   href: string;
   active?: boolean;
+  isLoading?: boolean;
 }) {
   return (
     <Link
@@ -147,7 +91,7 @@ function StatCard({
       className={`min-h-36 rounded-xl p-4 transition-colors ${
         active
           ? "bg-[#046C3F] text-white"
-          : "bg-white text-gray-500 hover:bg-[#F9FFFC]"
+          : "bg-white text-gray-500 hover:bg-[#F9FFFC] border border-gray-100 shadow-sm"
       }`}
     >
       <div className="mb-8 flex items-start justify-between">
@@ -158,16 +102,21 @@ function StatCard({
         >
           <Icon size={21} />
         </span>
-        <span className={`flex items-center gap-1 text-xs ${active ? "text-white" : "text-gray-300"}`}>
-          This Week <ChevronDown size={14} />
-        </span>
       </div>
-      <p className={`mb-3 text-sm ${active ? "text-white" : "text-gray-400"}`}>
+      <p className={`mb-2 text-sm ${active ? "text-white" : "text-gray-400"}`}>
         {title}
       </p>
-      <p className={`text-3xl font-semibold ${active ? "text-white" : "text-gray-800"}`}>
-        {value}
-      </p>
+      {isLoading ? (
+        <div
+          className={`h-8 w-16 animate-pulse rounded ${active ? "bg-[#0B7F4D]" : "bg-gray-200"}`}
+        ></div>
+      ) : (
+        <p
+          className={`text-3xl font-semibold ${active ? "text-white" : "text-gray-800"}`}
+        >
+          {value}
+        </p>
+      )}
     </Link>
   );
 }
@@ -184,8 +133,8 @@ function SummaryPanel({
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-xl bg-white p-6">
-      <div className="mb-6 flex items-center justify-between border-b border-gray-200 pb-5">
+    <section className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
+      <div className="mb-6 flex items-center justify-between border-b border-gray-100 pb-5">
         <div className="flex items-center gap-3">
           <span className="text-gray-700">{icon}</span>
           <h2 className="text-xl font-semibold text-gray-900">{title}</h2>
@@ -216,10 +165,10 @@ function ListRow({
   const colorSet = badgeColors[color];
 
   return (
-    <div className="flex items-center justify-between border-b border-gray-200 py-4 last:border-b-0">
+    <div className="flex items-center justify-between border-b border-gray-100 py-4 last:border-b-0">
       <div className="min-w-0 pr-4">
         <p className="text-sm font-medium text-gray-800">{name}</p>
-        <p className="mt-2 text-sm text-gray-400">{description}</p>
+        <p className="mt-1 text-sm text-gray-500">{description}</p>
       </div>
       <StatusBadge
         label={status}
@@ -231,25 +180,76 @@ function ListRow({
 }
 
 export default function NurseHome() {
-  const patientColumns: ColumnDef<DashboardPatient>[] = [
-    { header: "Patient ID", accessorKey: "patientId", sortable: true },
-    { header: "Patient Name", accessorKey: "patientName", sortable: true },
-    { header: "Age/Gender", accessorKey: "ageGender", sortable: true },
-    { header: "Visit Type", accessorKey: "visitType", sortable: true },
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
+  const { data: statsData, isLoading: isLoadingStats } = useNurseStats({
+    start_date: startDate,
+    end_date: endDate,
+  });
+
+  const { data: vitalsData, isLoading: isLoadingVitals } =
+    useDashboardVitalsQueue({
+      page: 1,
+      page_size: 10,
+    });
+
+  const dashboardStats = [
+    {
+      title: "Waiting Queue",
+      value: statsData?.waiting_in_queue || 0,
+      icon: Users,
+      href: "/nurse-dashboard/patients",
+      active: true,
+    },
+    {
+      title: "Vitals Pending",
+      value: statsData?.vitals_pending || 0,
+      icon: Activity,
+      href: "/nurse-dashboard/vitals",
+    },
+    {
+      title: "Maternal Alerts",
+      value: statsData?.maternal_alerts || 0,
+      icon: Baby,
+      href: "/nurse-dashboard/maternal-care",
+    },
+    {
+      title: "Vaccines Due",
+      value: statsData?.vaccines_due || 0,
+      icon: Syringe,
+      href: "/nurse-dashboard/immunization",
+    },
+  ];
+
+  const patientColumns: ColumnDef<any>[] = [
+    { header: "Patient ID", accessorKey: "patient_display_id", sortable: true },
+    {
+      header: "Patient Name",
+      sortable: true,
+      render: (row) => row.patient_name || "-",
+    },
+    {
+      header: "Age",
+      sortable: true,
+      render: (row) => `${row.age} yrs`,
+    },
+    { header: "Visit Type", accessorKey: "visit_type", sortable: true },
     {
       header: "Priority",
       sortable: true,
       render: (row) => {
+        const priority = row.appointment_priority;
         const color =
-          row.priority === "Low"
+          priority === "LOW"
             ? badgeColors.green
-            : row.priority === "Medium"
+            : priority === "NORMAL" || priority === "MEDIUM"
               ? badgeColors.amber
               : badgeColors.red;
 
         return (
           <StatusBadge
-            label={row.priority}
+            label={priority}
             bgColorHex={color.bg}
             textColorHex={color.text}
           />
@@ -260,16 +260,17 @@ export default function NurseHome() {
       header: "Status",
       sortable: true,
       render: (row) => {
+        const status = row.appointment_status;
         const color =
-          row.status === "Completed"
+          status === "COMPLETED" || status === "VITALS_DONE"
             ? badgeColors.green
-            : row.status === "Waiting"
+            : status === "WAITING" || status === "PENDING"
               ? badgeColors.amber
               : badgeColors.red;
 
         return (
           <StatusBadge
-            label={row.status}
+            label={status.replace("_", " ")}
             bgColorHex={color.bg}
             textColorHex={color.text}
           />
@@ -278,17 +279,20 @@ export default function NurseHome() {
     },
     {
       header: "Action",
-      sortable: true,
       render: (row) => (
         <Link
-          href="/nurse-dashboard/vitals"
+          href={`/nurse-dashboard/appointments/${row.appointment}`}
           className={`inline-flex rounded-full px-4 py-1.5 text-xs font-medium ${
-            row.status === "Completed"
+            row.appointment_status === "VITALS_DONE" ||
+            row.appointment_status === "COMPLETED"
               ? "border border-[#8CC5AE] bg-[#EAF7F1] text-[#046C3F]"
               : "bg-[#046C3F] text-white"
           }`}
         >
-          {row.status === "Completed" ? "View" : "Record Vitals"}
+          {row.appointment_status === "VITALS_DONE" ||
+          row.appointment_status === "COMPLETED"
+            ? "View"
+            : "Record Vitals"}
         </Link>
       ),
     },
@@ -299,21 +303,35 @@ export default function NurseHome() {
       <NurseDashboardHeader title="Dashboard" breadcrumbs={[]} />
 
       <div className="px-4 py-6 sm:px-6 lg:py-8">
-        <div className="mb-8">
-          <h1 className="mb-2 text-2xl font-semibold text-black sm:text-3xl">
-            Good morning, Nurse Grace
-          </h1>
-          <p className="text-base text-[#3F3F46]">
-            Here&apos;s your patient workload for today
-          </p>
+        <div className="mb-8 flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
+          <div>
+            <h1 className="mb-1 text-2xl font-semibold text-black sm:text-3xl">
+              Good morning, Nurse Grace
+            </h1>
+            <p className="text-base text-[#3F3F46]">
+              Here&apos;s your patient workload for today
+            </p>
+          </div>
+          <div>
+            <NurseDateRangeFilter
+              startDate={startDate}
+              endDate={endDate}
+              onApply={(start, end) => {
+                setStartDate(start);
+                setEndDate(end);
+              }}
+              onClear={() => {
+                setStartDate("");
+                setEndDate("");
+              }}
+            />
+          </div>
         </div>
-
         <div className="mb-6 grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
-          {stats.map((stat) => (
-            <StatCard key={stat.title} {...stat} />
+          {dashboardStats.map((stat) => (
+            <StatCard key={stat.title} {...stat} isLoading={isLoadingStats} />
           ))}
         </div>
-
         <div className="mb-6 grid grid-cols-1 gap-5 xl:grid-cols-[0.82fr_1.18fr]">
           <SummaryPanel
             title="Maternal Alerts"
@@ -347,13 +365,16 @@ export default function NurseHome() {
             ))}
           </SummaryPanel>
         </div>
-
         <DataTable
-          title="Today's Patient waiting for vital"
-          data={PATIENT_ROWS}
+          title="Patient waiting for vital"
+          data={vitalsData?.results || []}
           columns={patientColumns}
           viewAllLink="/nurse-dashboard/vitals"
-          emptyMessage="No patients waiting for vitals."
+          emptyMessage={
+            isLoadingVitals
+              ? "Loading vitals queue..."
+              : "No patients waiting for vitals."
+          }
         />
       </div>
     </div>
