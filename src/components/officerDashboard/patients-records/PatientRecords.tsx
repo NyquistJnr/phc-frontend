@@ -2,9 +2,10 @@
 
 import React, { useState } from 'react';
 import { 
-  Search, Bell, ChevronDown, 
+  ChevronDown, Search,
   ListFilter, Home, Calendar, Check, Users, Stethoscope, ClipboardList, Folder
 } from 'lucide-react';
+import OfficerDashboardHeader from "@/src/components/officerDashboard/generics/OfficerDashboardHeader";
 
 export default function PatientRecordsSearch() {
   // State to manage the open/close of the Module dropdown
@@ -33,38 +34,10 @@ export default function PatientRecordsSearch() {
 
   return (
     <div className="flex-1 flex flex-col h-full min-h-screen bg-[#F8FAFC] font-sans min-w-0 overflow-hidden">
-      
-      {/* Top Header */}
-      <header className="h-[88px] bg-white border-b border-gray-100 flex items-center justify-between px-6 sm:px-8 shrink-0">
-        <div className="flex items-center gap-10">
-          <h1 className="text-[22px] font-bold text-gray-900 hidden sm:block">Patient Records</h1>
-          
-          {/* Search Bar */}
-          <div className="relative w-full sm:w-[500px]">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-            <input 
-              type="text" 
-              placeholder="Search" 
-              className="w-full pl-11 pr-4 py-2.5 bg-white border border-gray-200 rounded-full text-sm focus:outline-none focus:border-[#2A6543] focus:ring-1 focus:ring-[#2A6543] transition-all"
-            />
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-6">
-          <button className="relative p-2 text-gray-400 hover:text-gray-600 transition-colors hidden sm:block">
-            <Bell size={20} />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 border-2 border-white rounded-full"></span>
-          </button>
-          
-          <div className="flex items-center gap-3 cursor-pointer">
-            <div className="text-right hidden sm:block">
-              <p className="text-sm font-bold text-gray-900 leading-tight">Nobert</p>
-              <p className="text-[11px] font-semibold text-gray-500">OIC</p>
-            </div>
-            <img src="https://i.pravatar.cc/150?img=11" alt="Profile" className="w-10 h-10 rounded-full border border-gray-100 object-cover" />
-          </div>
-        </div>
-      </header>
+      <OfficerDashboardHeader
+        title="Patient Records"
+        breadcrumbs={[{ label: "Patient Records" }, { label: "Search Patient" }]}
+      />
 
       {/* Scrollable Page Content */}
       <div className="flex-1 overflow-auto p-6 sm:p-8">
@@ -91,7 +64,7 @@ export default function PatientRecordsSearch() {
               </button>
             </div>
             <div>
-              <p className="text-[13px] font-medium mb-2.5">Today's Patients</p>
+              <p className="text-[13px] font-medium mb-2.5">Today&apos;s Patients</p>
               <div className="flex justify-between items-end">
                 <div>
                   <p className="text-[11px] text-[#F59E0B] font-medium mb-0.5">Waiting</p>

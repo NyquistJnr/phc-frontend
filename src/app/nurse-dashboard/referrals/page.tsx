@@ -1,5 +1,10 @@
-import Referrals from "@/src/components/nurse-dashboard/referrals/Referrals";
+import { Suspense } from "react";
+import Referrals from "../../../components/nurse-dashboard/referrals/Referrals";
 
 export default function ReferralsPage() {
-  return <Referrals />;
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <Referrals />
+    </Suspense>
+  );
 }
