@@ -128,7 +128,6 @@ export default function RecordVital() {
   const router = useRouter();
   const params = useParams();
 
-  // Extracting appointment id from the URL params
   const appointmentId = params?.id as string;
 
   const [form, setForm] = useState<VitalsForm>(INITIAL_FORM);
@@ -153,7 +152,6 @@ export default function RecordVital() {
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    // Basic validation for critical fields
     if (!form.temperature || !form.bloodPressure || !form.pulseRate) {
       setFormError("Please complete the required vital sign fields.");
       return;
@@ -164,7 +162,6 @@ export default function RecordVital() {
       return;
     }
 
-    // Mapping state exactly to the requested payload
     const payload = {
       appointment: appointmentId,
       temperature: form.temperature,
@@ -183,7 +180,6 @@ export default function RecordVital() {
         setToastVisible(true);
         setForm(INITIAL_FORM);
 
-        // Redirect to the appointment dashboard view
         setTimeout(() => {
           router.push(`/nurse-dashboard/appointments/${appointmentId}`);
         }, 1500);
