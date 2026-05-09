@@ -47,7 +47,6 @@ export function useAppointment(id: string) {
   });
 }
 
-// NEW HOOK FOR VITALS
 export function useAppointmentVitals(appointmentId: string) {
   const api = useApi();
 
@@ -57,7 +56,6 @@ export function useAppointmentVitals(appointmentId: string) {
       const res = await api.get<any>(
         `/appointments/vitals/?page=1&page_size=10&appointment_id=${appointmentId}`,
       );
-      // Depending on your axios interceptor setup, unwrap the payload safely:
       return res?.data?.data || res?.data || res;
     },
     enabled: !!appointmentId && api.isAuthenticated && !api.isLoading,
@@ -155,5 +153,34 @@ export function useFacilityStaff(searchTerm: string = "") {
       return res.results || [];
     },
     enabled: api.isAuthenticated && !api.isLoading,
+  });
+}
+
+export function useCreateVital() {
+  const api = useApi();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload: {
+      appointment: string;
+      temperature: string;
+      blood_pressure: string;
+      pulse_rate: number;
+      respiratory_rate: number;
+      weight_kg: string;
+      height_cm: string;
+      spo2: number;
+      notes: string;
+    }) => {
+      return await api.post("/appointments/vitals/", payload);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ["appointment-vitals", variables.appointment],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["appointment", variables.appointment],
+      });
+    },
   });
 }

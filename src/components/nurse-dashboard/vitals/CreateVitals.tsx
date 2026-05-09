@@ -2,21 +2,11 @@
 
 import React, { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Save, TrendingUp, X } from "lucide-react";
+import { Save, TrendingUp, X, Loader2 } from "lucide-react";
 import NurseDashboardHeader from "@/src/components/nurse-dashboard/generics/NurseDashboardHeader";
 import NurseBackButton from "@/src/components/nurse-dashboard/generics/NurseBackButton";
-import { useApi } from "@/src/hooks/use-api"; // Assuming you have this hook based on your previous files
-
-type VitalsForm = {
-  temperature: string;
-  bloodPressure: string;
-  pulseRate: string;
-  respiratoryRate: string;
-  weight: string;
-  height: string;
-  spo2: string;
-  notes: string;
-};
+import { useCreateVital } from "@/src/hooks/nurses/use-appointments";
+import { VitalsForm } from "./type";
 
 const INITIAL_FORM: VitalsForm = {
   temperature: "",
@@ -26,7 +16,7 @@ const INITIAL_FORM: VitalsForm = {
   weight: "",
   height: "",
   spo2: "",
-  notes: "",
+  note: "",
 };
 
 function FieldShell({
@@ -137,14 +127,16 @@ function SuccessToast({
 export default function RecordVital() {
   const router = useRouter();
   const params = useParams();
-  const appointmentId = params.id as string;
-  const api = useApi(); // Using the api hook from your setup
+
+  // Extracting appointment id from the URL params
+  const appointmentId = params?.id as string;
 
   const [form, setForm] = useState<VitalsForm>(INITIAL_FORM);
   const [formError, setFormError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState("Vital Saved Successfully");
+
+  const { mutate: createVital, isPending } = useCreateVital();
 
   const updateForm = <K extends keyof VitalsForm>(
     field: K,
@@ -155,20 +147,24 @@ export default function RecordVital() {
   };
 
   const handleCancel = () => {
-    router.push(`/nurse-dashboard/appointments/${appointmentId}`);
+    router.back();
   };
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
+    // Basic validation for critical fields
     if (!form.temperature || !form.bloodPressure || !form.pulseRate) {
       setFormError("Please complete the required vital sign fields.");
       return;
     }
 
-    setIsLoading(true);
+    if (!appointmentId) {
+      setFormError("Missing appointment ID in URL.");
+      return;
+    }
 
-    // Format payload to match the API expectations
+    // Mapping state exactly to the requested payload
     const payload = {
       appointment: appointmentId,
       temperature: form.temperature,
@@ -178,41 +174,37 @@ export default function RecordVital() {
       weight_kg: form.weight || "-",
       height_cm: form.height || "-",
       spo2: Number(form.spo2) || 0,
-      notes: form.notes || "string",
+      notes: form.note || "",
     };
 
-    try {
-      await api.post("/appointments/vitals/", payload);
+    createVital(payload, {
+      onSuccess: () => {
+        setToastMessage("Vital Saved Successfully");
+        setToastVisible(true);
+        setForm(INITIAL_FORM);
 
-      setToastMessage("Vital Saved Successfully");
-      setToastVisible(true);
-      setForm(INITIAL_FORM);
-
-      // Redirect after a short delay to let the user see the success message
-      setTimeout(() => {
-        router.push(`/nurse-dashboard/appointments/${appointmentId}`);
-      }, 1500);
-    } catch (error) {
-      console.error(error);
-      setFormError(
-        "An error occurred while saving the vitals. Please try again.",
-      );
-    } finally {
-      setIsLoading(false);
-    }
+        // Redirect to the appointment dashboard view
+        setTimeout(() => {
+          router.push(`/nurse-dashboard/appointments/${appointmentId}`);
+        }, 1500);
+      },
+      onError: (error: any) => {
+        const errorMsg =
+          error?.response?.data?.message ||
+          "An error occurred while saving the vitals.";
+        setFormError(errorMsg);
+      },
+    });
   };
 
   return (
     <div className="min-h-screen bg-[#F6F7FC]">
       <NurseDashboardHeader
         title="Vitals"
-        breadcrumbs={[
-          { label: "Appointments", href: "/nurse-dashboard/appointments" },
-          { label: "Record Vitals" },
-        ]}
+        breadcrumbs={[{ label: "Vitals" }]}
       />
 
-      <div className="px-4 py-6 sm:px-6 lg:py-8 max-w-5xl mx-auto">
+      <div className="px-4 py-6 sm:px-6 lg:py-8">
         <NurseBackButton onClick={handleCancel} />
 
         <div className="mb-7 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
@@ -221,7 +213,7 @@ export default function RecordVital() {
               Record Patient Vitals
             </h2>
             <p className="text-base text-[#3F3F46]">
-              Take and save patient vital signs for this appointment
+              Take and save patient vital signs
             </p>
           </div>
         </div>
@@ -254,13 +246,13 @@ export default function RecordVital() {
                 <NumberField
                   label="Pulse Rate"
                   value={form.pulseRate}
-                  placeholder="0 bpm"
+                  placeholder="0 bmp"
                   onChange={(value) => updateForm("pulseRate", value)}
                 />
                 <NumberField
                   label="Respiratory Rate"
                   value={form.respiratoryRate}
-                  placeholder="0 /min"
+                  placeholder="0/min"
                   onChange={(value) => updateForm("respiratoryRate", value)}
                 />
                 <NumberField
@@ -286,10 +278,10 @@ export default function RecordVital() {
 
               <FieldShell label="Note (Optional)">
                 <textarea
-                  value={form.notes}
-                  onChange={(event) => updateForm("notes", event.target.value)}
+                  value={form.note}
+                  onChange={(event) => updateForm("note", event.target.value)}
                   placeholder="Additional triage observations"
-                  rows={4}
+                  rows={6}
                   className="w-full resize-none bg-transparent text-base text-gray-700 outline-none placeholder:text-gray-400"
                 />
               </FieldShell>
@@ -298,18 +290,22 @@ export default function RecordVital() {
                 <button
                   type="button"
                   onClick={handleCancel}
-                  className="h-14 rounded-xl bg-[#B9BDC9] px-12 text-lg font-medium text-white transition-colors hover:bg-[#A9AEBC]"
-                  disabled={isLoading}
+                  disabled={isPending}
+                  className="h-14 rounded-xl bg-[#B9BDC9] px-12 text-lg font-medium text-white transition-colors hover:bg-[#A9AEBC] disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  disabled={isLoading}
-                  className="flex h-14 items-center justify-center gap-3 rounded-xl bg-[#046C3F] px-8 text-lg font-medium text-white transition-colors hover:bg-[#035a34] disabled:opacity-70"
+                  disabled={isPending}
+                  className="flex h-14 items-center justify-center gap-3 rounded-xl bg-[#046C3F] px-8 text-lg font-medium text-white transition-colors hover:bg-[#035a34] disabled:opacity-50"
                 >
-                  <Save size={20} />
-                  {isLoading ? "Saving..." : "Save Vitals"}
+                  {isPending ? (
+                    <Loader2 className="animate-spin" size={20} />
+                  ) : (
+                    <Save size={20} />
+                  )}
+                  {isPending ? "Saving..." : "Save Vitals"}
                 </button>
               </div>
             </div>

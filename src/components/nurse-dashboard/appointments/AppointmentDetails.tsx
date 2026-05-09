@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -10,6 +11,8 @@ import {
   ClipboardList,
   Activity,
   Plus,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import NurseDashboardHeader from "@/src/components/nurse-dashboard/generics/NurseDashboardHeader";
 import { StatusBadge } from "@/src/components/generic/ui/TableHelpers";
@@ -58,6 +61,8 @@ export default function AppointmentDetailsPage() {
   const router = useRouter();
   const id = params.id as string;
 
+  const [showPastVitals, setShowPastVitals] = useState(false);
+
   const { data: appointment, isLoading, isError } = useAppointment(id);
   const { data: vitalsData, isLoading: isLoadingVitals } =
     useAppointmentVitals(id);
@@ -91,7 +96,9 @@ export default function AppointmentDetailsPage() {
     text: "#374151",
   };
 
-  const vitals = vitalsData?.results?.[0];
+  const allVitals = vitalsData?.results || [];
+  const latestVital = allVitals[0];
+  const pastVitals = allVitals.slice(1);
 
   return (
     <div className="min-h-screen bg-[#F6F7FC]">
@@ -152,6 +159,7 @@ export default function AppointmentDetailsPage() {
               </div>
             </div>
           </div>
+
           <div className="md:col-span-2 bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
             <h3 className="mb-6 text-lg font-semibold text-gray-900 border-b border-gray-100 pb-4 flex items-center gap-2">
               <ClipboardList size={20} className="text-[#046C3F]" />
@@ -224,13 +232,14 @@ export default function AppointmentDetailsPage() {
               )}
             </div>
           </div>
+
           <div className="md:col-span-3 bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
             <div className="mb-6 flex items-center justify-between border-b border-gray-100 pb-4">
               <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                 <Activity size={20} className="text-[#046C3F]" />
                 Patient Vitals
               </h3>
-              {!vitals && !isLoadingVitals && (
+              {!latestVital && !isLoadingVitals && (
                 <button
                   onClick={() =>
                     router.push(`/nurse-dashboard/vitals/new/${id}`)
@@ -246,40 +255,167 @@ export default function AppointmentDetailsPage() {
               <div className="py-8 text-center">
                 <p className="text-sm text-gray-500">Loading vitals...</p>
               </div>
-            ) : vitals ? (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <VitalMetric
-                  label="Blood Pressure"
-                  value={vitals.blood_pressure}
-                  unit="mmHg"
-                />
-                <VitalMetric
-                  label="Heart Rate"
-                  value={vitals.pulse_rate}
-                  unit="bpm"
-                />
-                <VitalMetric
-                  label="Temperature"
-                  value={vitals.temperature}
-                  unit="°C"
-                />
-                <VitalMetric
-                  label="Respiratory Rate"
-                  value={vitals.respiratory_rate}
-                  unit="bpm"
-                />
-                <VitalMetric
-                  label="Weight"
-                  value={vitals.weight_kg}
-                  unit="kg"
-                />
-                <VitalMetric
-                  label="Height"
-                  value={vitals.height_cm}
-                  unit="cm"
-                />
-                <VitalMetric label="BMI" value={vitals.bmi} unit="" />
-                <VitalMetric label="SpO2" value={vitals.spo2} unit="%" />
+            ) : latestVital ? (
+              <div className="space-y-6">
+                <div className="flex flex-wrap gap-3">
+                  <span className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-xs font-semibold border border-blue-100">
+                    Age: {latestVital.age} yrs
+                  </span>
+                  <span className="px-3 py-1.5 bg-purple-50 text-purple-700 rounded-lg text-xs font-semibold border border-purple-100">
+                    Visit Type: {latestVital.visit_type}
+                  </span>
+                  <span className="px-3 py-1.5 bg-gray-50 text-gray-700 rounded-lg text-xs font-semibold border border-gray-200">
+                    Status: {latestVital.appointment_status?.replace("_", " ")}
+                  </span>
+                  <span
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border ${
+                      latestVital.appointment_priority === "CRITICAL"
+                        ? "bg-red-50 text-red-700 border-red-100"
+                        : "bg-orange-50 text-orange-700 border-orange-100"
+                    }`}
+                  >
+                    Priority: {latestVital.appointment_priority}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  <VitalMetric
+                    label="Blood Pressure"
+                    value={latestVital.blood_pressure}
+                    unit="mmHg"
+                  />
+                  <VitalMetric
+                    label="Heart Rate"
+                    value={latestVital.pulse_rate}
+                    unit="bpm"
+                  />
+                  <VitalMetric
+                    label="Temperature"
+                    value={latestVital.temperature}
+                    unit="°C"
+                  />
+                  <VitalMetric
+                    label="Respiratory Rate"
+                    value={latestVital.respiratory_rate}
+                    unit="bpm"
+                  />
+                  <VitalMetric
+                    label="Weight"
+                    value={latestVital.weight_kg}
+                    unit="kg"
+                  />
+                  <VitalMetric
+                    label="Height"
+                    value={latestVital.height_cm}
+                    unit="cm"
+                  />
+                  <VitalMetric label="BMI" value={latestVital.bmi} unit="" />
+                  <VitalMetric label="SpO2" value={latestVital.spo2} unit="%" />
+                </div>
+
+                {latestVital.notes && (
+                  <p className="text-sm text-gray-600 bg-gray-50 p-4 rounded-xl border border-gray-100">
+                    <span className="font-semibold text-gray-800">
+                      Clinical Notes:
+                    </span>{" "}
+                    {latestVital.notes}
+                  </p>
+                )}
+
+                {pastVitals.length > 0 && (
+                  <div className="mt-8 pt-6 border-t border-gray-100">
+                    <button
+                      onClick={() => setShowPastVitals(!showPastVitals)}
+                      className="flex items-center gap-2 text-sm font-semibold text-[#046C3F] hover:text-[#035a34] transition-colors bg-[#E6F4EA] px-4 py-2 rounded-lg"
+                    >
+                      {showPastVitals ? (
+                        <>
+                          <ChevronUp size={16} /> Hide Past Records
+                        </>
+                      ) : (
+                        <>
+                          <ChevronDown size={16} /> View Past Records (
+                          {pastVitals.length})
+                        </>
+                      )}
+                    </button>
+
+                    {showPastVitals && (
+                      <div className="mt-6 space-y-6">
+                        {pastVitals.map((pastVital: any, index: number) => (
+                          <div
+                            key={pastVital.id || index}
+                            className="bg-gray-50 p-5 rounded-xl border border-gray-200"
+                          >
+                            <div className="mb-4 flex items-center justify-between pb-3 border-b border-gray-200">
+                              <h4 className="text-sm font-semibold text-gray-800">
+                                Recorded on:{" "}
+                                {new Date(
+                                  pastVital.created_at,
+                                ).toLocaleString()}
+                              </h4>
+                              <p className="text-xs font-medium text-gray-500">
+                                By: {pastVital.recorded_by_name}
+                              </p>
+                            </div>
+
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                              <VitalMetric
+                                label="BP"
+                                value={pastVital.blood_pressure}
+                                unit="mmHg"
+                              />
+                              <VitalMetric
+                                label="HR"
+                                value={pastVital.pulse_rate}
+                                unit="bpm"
+                              />
+                              <VitalMetric
+                                label="Temp"
+                                value={pastVital.temperature}
+                                unit="°C"
+                              />
+                              <VitalMetric
+                                label="Resp"
+                                value={pastVital.respiratory_rate}
+                                unit="bpm"
+                              />
+                              <VitalMetric
+                                label="Weight"
+                                value={pastVital.weight_kg}
+                                unit="kg"
+                              />
+                              <VitalMetric
+                                label="Height"
+                                value={pastVital.height_cm}
+                                unit="cm"
+                              />
+                              <VitalMetric
+                                label="BMI"
+                                value={pastVital.bmi}
+                                unit=""
+                              />
+                              <VitalMetric
+                                label="SpO2"
+                                value={pastVital.spo2}
+                                unit="%"
+                              />
+                            </div>
+
+                            {pastVital.notes && (
+                              <p className="mt-4 text-xs text-gray-600 bg-white p-3 rounded-lg border border-gray-100 shadow-sm">
+                                <span className="font-semibold text-gray-800">
+                                  Notes:
+                                </span>{" "}
+                                {pastVital.notes}
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             ) : (
               <div className="text-center py-10 px-4">
