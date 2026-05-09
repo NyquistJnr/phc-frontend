@@ -24,6 +24,8 @@ export function useReferrals(filters: ReferralFilters) {
       if (filters.search) params.append("search", filters.search);
       if (filters.start_date) params.append("start_date", filters.start_date);
       if (filters.end_date) params.append("end_date", filters.end_date);
+      if (filters.appointment_id)
+        params.append("appointment_id", filters.appointment_id);
 
       return await api.get<ReferralsResponse>(
         `/referrals/records/?${params.toString()}`,

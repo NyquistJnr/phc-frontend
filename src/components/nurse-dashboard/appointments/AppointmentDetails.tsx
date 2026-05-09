@@ -20,6 +20,8 @@ import {
   Save,
   Send,
   Search,
+  Eye,
+  Hospital,
 } from "lucide-react";
 
 import NurseDashboardHeader from "@/src/components/nurse-dashboard/generics/NurseDashboardHeader";
@@ -31,7 +33,10 @@ import {
   useDeleteVital,
 } from "@/src/hooks/nurses/use-appointments";
 import { useFacilities } from "@/src/hooks/useFacilities";
-import { useCreateReferral } from "@/src/hooks/nurses/use-referrals";
+import {
+  useCreateReferral,
+  useReferrals,
+} from "@/src/hooks/nurses/use-referrals";
 
 const statusColors: Record<string, { bg: string; text: string }> = {
   SCHEDULED: { bg: "#FFF4E5", text: "#1F2937" },
@@ -40,6 +45,9 @@ const statusColors: Record<string, { bg: string; text: string }> = {
   CANCELLED: { bg: "#FDE8E8", text: "#F33131" },
   NO_SHOW: { bg: "#FDE8E8", text: "#F33131" },
   VITALS_DONE: { bg: "#E2E7FF", text: "#046C3F" },
+  ACCEPTED: { bg: "#DFF3EA", text: "#039855" },
+  PENDING: { bg: "#FFF4E5", text: "#1F2937" },
+  REJECTED: { bg: "#FDE8E8", text: "#F33131" },
 };
 
 const REFERRAL_TYPE_OPTIONS = [
@@ -353,6 +361,8 @@ export default function AppointmentDetails() {
     useFacilities({ pageSize: 100, isActive: true });
   const { mutate: createReferral, isPending: isSubmittingReferral } =
     useCreateReferral();
+  const { data: appointmentReferrals, isLoading: isLoadingReferrals } =
+    useReferrals({ appointment_id: id });
 
   const facilityOptions = useMemo(() => {
     if (!facilitiesData?.results) return [];
@@ -361,6 +371,8 @@ export default function AppointmentDetails() {
       value: fac.id,
     }));
   }, [facilitiesData]);
+
+  const existingReferral = appointmentReferrals?.results?.[0];
 
   if (isLoading) {
     return (
@@ -432,7 +444,6 @@ export default function AppointmentDetails() {
             reason_for_referral: "",
             clinical_summary: "",
           });
-          router.push("/nurse-dashboard/referrals");
         },
         onError: (error: any) => {
           setReferralError(
@@ -468,12 +479,27 @@ export default function AppointmentDetails() {
               bgColorHex={colorData.bg}
               textColorHex={colorData.text}
             />
-            <button
-              onClick={() => setShowReferralModal(true)}
-              className="flex items-center gap-2 rounded-lg bg-white border border-[#046C3F] px-4 py-2 text-sm font-medium text-[#046C3F] transition-colors hover:bg-[#E6F4EA]"
-            >
-              <Send size={16} /> Refer Patient
-            </button>
+            {isLoadingReferrals ? (
+              <div className="h-10 w-32 animate-pulse rounded-lg bg-gray-200"></div>
+            ) : existingReferral ? (
+              <button
+                onClick={() =>
+                  router.push(
+                    `/nurse-dashboard/referrals/${existingReferral.id}`,
+                  )
+                }
+                className="flex items-center gap-2 rounded-lg bg-white border border-blue-600 px-4 py-2 text-sm font-medium text-blue-600 transition-colors hover:bg-blue-50"
+              >
+                <Eye size={16} /> View Referral
+              </button>
+            ) : (
+              <button
+                onClick={() => setShowReferralModal(true)}
+                className="flex items-center gap-2 rounded-lg bg-white border border-[#046C3F] px-4 py-2 text-sm font-medium text-[#046C3F] transition-colors hover:bg-[#E6F4EA]"
+              >
+                <Send size={16} /> Refer Patient
+              </button>
+            )}
           </div>
         </div>
 
@@ -841,6 +867,84 @@ export default function AppointmentDetails() {
               </div>
             )}
           </div>
+          {existingReferral && (
+            <div className="md:col-span-3 bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+              <div className="mb-6 flex items-center justify-between border-b border-gray-100 pb-4">
+                <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  <Hospital size={20} className="text-blue-600" />
+                  Referral Information
+                </h3>
+                <button
+                  onClick={() =>
+                    router.push(
+                      `/nurse-dashboard/referrals/${existingReferral.id}`,
+                    )
+                  }
+                  className="flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
+                >
+                  <Eye size={16} /> View Full Details
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wider text-gray-400">
+                    Referral ID
+                  </p>
+                  <p className="mt-1 text-sm font-medium text-gray-800">
+                    {existingReferral.referral_id}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-1">
+                    Status
+                  </p>
+                  <StatusBadge
+                    label={
+                      existingReferral.status.charAt(0) +
+                      existingReferral.status.slice(1).toLowerCase()
+                    }
+                    bgColorHex={
+                      statusColors[existingReferral.status]?.bg || "#F3F4F6"
+                    }
+                    textColorHex={
+                      statusColors[existingReferral.status]?.text || "#374151"
+                    }
+                  />
+                </div>
+
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wider text-gray-400">
+                    Receiving Facility
+                  </p>
+                  <p className="mt-1 text-sm font-medium text-gray-800">
+                    {existingReferral.receiving_facility_name}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wider text-gray-400">
+                    Referral Type
+                  </p>
+                  <p className="mt-1 text-sm font-medium text-gray-800">
+                    {existingReferral.referral_type.charAt(0) +
+                      existingReferral.referral_type.slice(1).toLowerCase()}
+                  </p>
+                </div>
+
+                <div className="sm:col-span-2 md:col-span-4 bg-gray-50 rounded-xl p-4 mt-2">
+                  <p className="text-xs font-medium uppercase tracking-wider text-gray-500 mb-2">
+                    Reason for Referral
+                  </p>
+                  <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">
+                    {existingReferral.reason_for_referral ||
+                      "No reason provided."}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
       {showReferralModal &&

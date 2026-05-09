@@ -39,4 +39,5 @@ export interface ReferralFilters {
   search?: string;
   status?: string;
   direction?: string;
+  appointment_id?: string;
 }
