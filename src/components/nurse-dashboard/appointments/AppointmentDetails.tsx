@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { createPortal } from "react-dom";
 import {
   ArrowLeft,
   Calendar,
@@ -17,7 +18,10 @@ import {
   Trash2,
   X,
   Save,
+  Send,
+  Search,
 } from "lucide-react";
+
 import NurseDashboardHeader from "@/src/components/nurse-dashboard/generics/NurseDashboardHeader";
 import { StatusBadge } from "@/src/components/generic/ui/TableHelpers";
 import {
@@ -26,6 +30,8 @@ import {
   useUpdateVital,
   useDeleteVital,
 } from "@/src/hooks/nurses/use-appointments";
+import { useFacilities } from "@/src/hooks/useFacilities";
+import { useCreateReferral } from "@/src/hooks/nurses/use-referrals";
 
 const statusColors: Record<string, { bg: string; text: string }> = {
   SCHEDULED: { bg: "#FFF4E5", text: "#1F2937" },
@@ -35,6 +41,138 @@ const statusColors: Record<string, { bg: string; text: string }> = {
   NO_SHOW: { bg: "#FDE8E8", text: "#F33131" },
   VITALS_DONE: { bg: "#E2E7FF", text: "#046C3F" },
 };
+
+const REFERRAL_TYPE_OPTIONS = [
+  { label: "Physical", value: "PHYSICAL" },
+  { label: "Telemedicine", value: "TELEMEDICINE" },
+  { label: "Emergency", value: "EMERGENCY" },
+];
+
+function FieldShell({
+  label,
+  children,
+  className = "",
+}: {
+  label: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`relative rounded-lg border border-gray-300 bg-white px-4 py-2.5 focus-within:border-[#046C3F] focus-within:ring-1 focus-within:ring-[#046C3F] ${className}`}
+    >
+      <label className="mb-1 block text-xs text-[#62636C]">{label}</label>
+      {children}
+    </div>
+  );
+}
+
+function SearchableSelect({
+  label,
+  placeholder,
+  options,
+  value,
+  onChange,
+  className = "",
+  isLoading = false,
+}: {
+  label: string;
+  placeholder: string;
+  options: { label: string; value: string }[];
+  value: string;
+  onChange: (value: string) => void;
+  className?: string;
+  isLoading?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const ref = useRef<HTMLDivElement>(null);
+
+  const filteredOptions = options.filter((option) =>
+    option.label.toLowerCase().includes(search.toLowerCase()),
+  );
+  const selectedOption = options.find((opt) => opt.value === value);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (ref.current && !ref.current.contains(event.target as Node))
+        setOpen(false);
+    }
+    if (open) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [open]);
+
+  return (
+    <div className={`relative ${className}`} ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-left focus:border-[#046C3F] focus:outline-none focus:ring-1 focus:ring-[#046C3F]"
+      >
+        <span className="mb-1 block text-xs text-[#62636C]">{label}</span>
+        <span className="flex items-center justify-between gap-3 text-base">
+          <span
+            className={
+              selectedOption ? "text-gray-700 truncate" : "text-gray-400"
+            }
+          >
+            {isLoading ? "Loading..." : selectedOption?.label || placeholder}
+          </span>
+          <ChevronDown
+            size={20}
+            className={`text-gray-800 transition-transform ${open ? "rotate-180" : ""}`}
+          />
+        </span>
+      </button>
+
+      {open && (
+        <div className="absolute left-0 right-0 top-full z-40 mt-3 rounded-lg border border-gray-300 bg-white p-4 shadow-sm">
+          <div className="relative mb-3">
+            <Search
+              size={20}
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-900"
+            />
+            <input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search..."
+              className="h-11 w-full rounded-lg border border-gray-300 pl-12 pr-3 text-sm outline-none focus:border-[#046C3F] focus:ring-1 focus:ring-[#046C3F]"
+            />
+          </div>
+          <div className="max-h-60 overflow-y-auto pr-1">
+            {filteredOptions.length === 0 ? (
+              <p className="px-3 py-4 text-sm text-gray-400">
+                No options found.
+              </p>
+            ) : (
+              filteredOptions.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => {
+                    onChange(option.value);
+                    setSearch("");
+                    setOpen(false);
+                  }}
+                  className={`block w-full rounded-md px-3 py-3 text-left text-sm transition-colors ${
+                    value === option.value
+                      ? "bg-[#E8F7F0] font-semibold text-[#046C3F]"
+                      : "text-gray-800 hover:bg-gray-50"
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 const VitalMetric = ({
   label,
@@ -101,11 +239,7 @@ const EditVitalForm = ({ vital, appointmentId, onCancel, onSuccess }: any) => {
           notes: formData.notes,
         },
       },
-      {
-        onSuccess: () => {
-          onSuccess();
-        },
-      },
+      { onSuccess: () => onSuccess() },
     );
   };
 
@@ -193,7 +327,7 @@ const EditVitalForm = ({ vital, appointmentId, onCancel, onSuccess }: any) => {
   );
 };
 
-export default function AppointmentDetailsPage() {
+export default function AppointmentDetails() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
@@ -201,10 +335,32 @@ export default function AppointmentDetailsPage() {
   const [showPastVitals, setShowPastVitals] = useState(false);
   const [editingVitalId, setEditingVitalId] = useState<string | null>(null);
 
+  const [showReferralModal, setShowReferralModal] = useState(false);
+  const [referralForm, setReferralForm] = useState({
+    receiving_facility: "",
+    referral_type: "",
+    reason_for_referral: "",
+    clinical_summary: "",
+  });
+  const [referralError, setReferralError] = useState("");
+
   const { data: appointment, isLoading, isError } = useAppointment(id);
   const { data: vitalsData, isLoading: isLoadingVitals } =
     useAppointmentVitals(id);
   const { mutate: deleteVital, isPending: isDeleting } = useDeleteVital();
+
+  const { data: facilitiesData, isLoading: isLoadingFacilities } =
+    useFacilities({ pageSize: 100, isActive: true });
+  const { mutate: createReferral, isPending: isSubmittingReferral } =
+    useCreateReferral();
+
+  const facilityOptions = useMemo(() => {
+    if (!facilitiesData?.results) return [];
+    return facilitiesData.results.map((fac) => ({
+      label: fac.name,
+      value: fac.id,
+    }));
+  }, [facilitiesData]);
 
   if (isLoading) {
     return (
@@ -234,7 +390,6 @@ export default function AppointmentDetailsPage() {
     bg: "#F3F4F6",
     text: "#374151",
   };
-
   const allVitals = vitalsData?.results || [];
   const latestVital = allVitals[0];
   const pastVitals = allVitals.slice(1);
@@ -249,6 +404,46 @@ export default function AppointmentDetailsPage() {
     }
   };
 
+  const handleReferralSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (
+      !referralForm.receiving_facility ||
+      !referralForm.referral_type ||
+      !referralForm.reason_for_referral.trim()
+    ) {
+      setReferralError("Please complete all required fields.");
+      return;
+    }
+
+    createReferral(
+      {
+        appointment: id,
+        receiving_facility: referralForm.receiving_facility,
+        referral_type: referralForm.referral_type,
+        reason_for_referral: referralForm.reason_for_referral,
+        clinical_summary: referralForm.clinical_summary,
+      },
+      {
+        onSuccess: () => {
+          setShowReferralModal(false);
+          setReferralForm({
+            receiving_facility: "",
+            referral_type: "",
+            reason_for_referral: "",
+            clinical_summary: "",
+          });
+          router.push("/nurse-dashboard/referrals");
+        },
+        onError: (error: any) => {
+          setReferralError(
+            error?.response?.data?.message ||
+              "Failed to create referral. Please try again.",
+          );
+        },
+      },
+    );
+  };
+
   return (
     <div className="min-h-screen bg-[#F6F7FC]">
       <NurseDashboardHeader
@@ -259,23 +454,31 @@ export default function AppointmentDetailsPage() {
         ]}
       />
       <div className="px-4 py-6 sm:px-6 lg:py-8 max-w-8xl mx-auto">
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <button
             onClick={() => router.push("/nurse-dashboard/appointments")}
-            className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-black transition-colors"
+            className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-black transition-colors w-fit"
           >
             <ArrowLeft size={18} /> Back to List
           </button>
 
-          <StatusBadge
-            label={appointment.status.replace("_", " ")}
-            bgColorHex={colorData.bg}
-            textColorHex={colorData.text}
-          />
+          <div className="flex items-center gap-3">
+            <StatusBadge
+              label={appointment.status.replace("_", " ")}
+              bgColorHex={colorData.bg}
+              textColorHex={colorData.text}
+            />
+            <button
+              onClick={() => setShowReferralModal(true)}
+              className="flex items-center gap-2 rounded-lg bg-white border border-[#046C3F] px-4 py-2 text-sm font-medium text-[#046C3F] transition-colors hover:bg-[#E6F4EA]"
+            >
+              <Send size={16} /> Refer Patient
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="md:col-span-1 bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+          <div className="md:col-span-1 bg-white rounded-2xl border border-gray-100 p-6 shadow-sm h-fit">
             <div className="mb-6 flex items-center gap-3">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#E6F4EA] text-[#046C3F]">
                 <User size={24} />
@@ -418,11 +621,7 @@ export default function AppointmentDetailsPage() {
                     Status: {latestVital.appointment_status?.replace("_", " ")}
                   </span>
                   <span
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border ${
-                      latestVital.appointment_priority === "CRITICAL"
-                        ? "bg-red-50 text-red-700 border-red-100"
-                        : "bg-orange-50 text-orange-700 border-orange-100"
-                    }`}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border ${latestVital.appointment_priority === "CRITICAL" ? "bg-red-50 text-red-700 border-red-100" : "bg-orange-50 text-orange-700 border-orange-100"}`}
                   >
                     Priority: {latestVital.appointment_priority}
                   </span>
@@ -509,7 +708,6 @@ export default function AppointmentDetailsPage() {
                         unit="%"
                       />
                     </div>
-
                     {latestVital.notes && (
                       <p className="text-sm text-gray-600 bg-gray-50 p-4 rounded-xl border border-gray-100">
                         <span className="font-semibold text-gray-800">
@@ -571,7 +769,6 @@ export default function AppointmentDetailsPage() {
                                 </button>
                               </div>
                             </div>
-
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                               <VitalMetric
                                 label="BP"
@@ -614,7 +811,6 @@ export default function AppointmentDetailsPage() {
                                 unit="%"
                               />
                             </div>
-
                             {pastVital.notes && (
                               <p className="mt-4 text-xs text-gray-600 bg-white p-3 rounded-lg border border-gray-100 shadow-sm">
                                 <span className="font-semibold text-gray-800">
@@ -647,6 +843,117 @@ export default function AppointmentDetailsPage() {
           </div>
         </div>
       </div>
+      {showReferralModal &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 sm:p-6">
+            <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white p-6 sm:p-8 shadow-xl">
+              <div className="mb-6 flex items-center justify-between border-b border-gray-100 pb-4">
+                <h3 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+                  <Send size={20} className="text-[#046C3F]" />
+                  Refer Patient
+                </h3>
+                <button
+                  onClick={() => setShowReferralModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              <form onSubmit={handleReferralSubmit} className="space-y-6">
+                {referralError && (
+                  <div className="rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
+                    {referralError}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                  <SearchableSelect
+                    label="Receiving Facility *"
+                    placeholder="Search facility"
+                    options={facilityOptions}
+                    value={referralForm.receiving_facility}
+                    isLoading={isLoadingFacilities}
+                    onChange={(value) =>
+                      setReferralForm({
+                        ...referralForm,
+                        receiving_facility: value,
+                      })
+                    }
+                  />
+                  <SearchableSelect
+                    label="Referral Type *"
+                    placeholder="Select referral type"
+                    options={REFERRAL_TYPE_OPTIONS}
+                    value={referralForm.referral_type}
+                    onChange={(value) =>
+                      setReferralForm({ ...referralForm, referral_type: value })
+                    }
+                  />
+                </div>
+
+                <FieldShell label="Reason for Referral *" className="py-2">
+                  <textarea
+                    value={referralForm.reason_for_referral}
+                    onChange={(e) =>
+                      setReferralForm({
+                        ...referralForm,
+                        reason_for_referral: e.target.value,
+                      })
+                    }
+                    placeholder="Detailed reason for this referral..."
+                    rows={4}
+                    className="w-full resize-none bg-transparent text-base text-gray-700 placeholder:text-gray-400 outline-none"
+                  />
+                </FieldShell>
+
+                <FieldShell
+                  label="Clinical Summary (Optional)"
+                  className="py-2"
+                >
+                  <textarea
+                    value={referralForm.clinical_summary}
+                    onChange={(e) =>
+                      setReferralForm({
+                        ...referralForm,
+                        clinical_summary: e.target.value,
+                      })
+                    }
+                    placeholder="Additional notes, current medications, or observations"
+                    rows={3}
+                    className="w-full resize-none bg-transparent text-base text-gray-700 placeholder:text-gray-400 outline-none"
+                  />
+                </FieldShell>
+
+                <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t border-gray-100">
+                  <button
+                    type="button"
+                    onClick={() => setShowReferralModal(false)}
+                    disabled={isSubmittingReferral}
+                    className="h-12 rounded-xl bg-gray-100 px-8 text-base font-medium text-gray-700 transition-colors hover:bg-gray-200 disabled:opacity-70"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmittingReferral}
+                    className="h-12 rounded-xl bg-[#046C3F] px-8 text-base font-medium text-white transition-colors hover:bg-[#035a34] disabled:opacity-70 flex items-center gap-2 justify-center"
+                  >
+                    {isSubmittingReferral ? (
+                      "Submitting..."
+                    ) : (
+                      <>
+                        <Send size={18} /> Submit Referral
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }
