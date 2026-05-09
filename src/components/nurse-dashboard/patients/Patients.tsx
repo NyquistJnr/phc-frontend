@@ -1,12 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { createPortal } from "react-dom";
+import { MoreHorizontal, Eye, Edit } from "lucide-react";
 import { ColumnDef, DataTable } from "@/src/components/generic/ui/DataTable";
-import {
-  ActionButton,
-  StatusBadge,
-} from "@/src/components/generic/ui/TableHelpers";
+import { StatusBadge } from "@/src/components/generic/ui/TableHelpers";
 import { CustomDropdown } from "@/src/components/generic/ui/CustomDropdown";
 import NurseDashboardHeader from "@/src/components/nurse-dashboard/generics/NurseDashboardHeader";
 import { usePatients } from "@/src/hooks/nurses/use-patients";
@@ -19,6 +18,98 @@ const badgeColors: Record<string, { bg: string; text: string }> = {
   NONE: { bg: "#FDE8E8", text: "#F33131" },
   UNKNOWN: { bg: "#FFF4E5", text: "#1F2937" },
 };
+
+function PatientActionMenu({ row }: { row: Patient }) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [coords, setCoords] = useState({ top: 0, left: 0 });
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  const toggleMenu = () => {
+    if (!open && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      const top =
+        rect.bottom + 100 > window.innerHeight
+          ? rect.top + window.scrollY - 100 - 4
+          : rect.bottom + window.scrollY + 4;
+      const left = Math.max(
+        12 + window.scrollX,
+        rect.right - 192 + window.scrollX,
+      );
+      setCoords({ top, left });
+    }
+    setOpen((c) => !c);
+  };
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(e.target as Node) &&
+        buttonRef.current &&
+        !buttonRef.current.contains(e.target as Node)
+      ) {
+        setOpen(false);
+      }
+    }
+    if (open) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [open]);
+
+  const items = [
+    {
+      label: "View Patient",
+      icon: Eye,
+      onClick: () => router.push(`/nurse-dashboard/patients/${row.id}`),
+    },
+    {
+      label: "Edit Patient",
+      icon: Edit,
+      onClick: () => router.push(`/nurse-dashboard/patient/${row.id}/edit`),
+    },
+  ];
+
+  return (
+    <>
+      <button
+        ref={buttonRef}
+        onClick={toggleMenu}
+        className="inline-flex h-8 w-8 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900"
+      >
+        <MoreHorizontal size={18} />
+      </button>
+      {open &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            ref={menuRef}
+            style={{ top: coords.top, left: coords.left }}
+            className="absolute z-[999] w-48 rounded-xl border border-gray-100 bg-white py-2 shadow-[0_8px_30px_rgb(0,0,0,0.12)]"
+          >
+            {items.map((item) => {
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.label}
+                  onClick={() => {
+                    item.onClick();
+                    setOpen(false);
+                  }}
+                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  <Icon size={16} className="text-gray-500" /> {item.label}
+                </button>
+              );
+            })}
+          </div>,
+          document.body,
+        )}
+    </>
+  );
+}
 
 export default function Patients() {
   const searchParams = useSearchParams();
@@ -114,13 +205,7 @@ export default function Patients() {
     },
     {
       header: "Action",
-      render: (row) => (
-        <ActionButton
-          label="View"
-          variant="soft"
-          onClick={() => router.push(`/nurse-dashboard/patients/${row.id}`)}
-        />
-      ),
+      render: (row) => <PatientActionMenu row={row} />,
     },
   ];
 
