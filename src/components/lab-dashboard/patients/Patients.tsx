@@ -1,23 +1,22 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { CalendarDays, User } from "lucide-react";
-import { CustomDropdown } from "@/src/components/generic/ui/CustomDropdown";
 import { ColumnDef, DataTable } from "@/src/components/generic/ui/DataTable";
 import { ActionButton, StatusBadge } from "@/src/components/generic/ui/TableHelpers";
-import NurseDashboardHeader from "@/src/components/nurse-dashboard/generics/NurseDashboardHeader";
-import NurseDateRangeFilter from "@/src/components/nurse-dashboard/generics/NurseDateRangeFilter";
-import NurseBackButton from "@/src/components/nurse-dashboard/generics/NurseBackButton";
+import { CustomDropdown } from "@/src/components/generic/ui/CustomDropdown";
+import DateRangeFilter from "@/src/components/generic/ui/DateRangeFilter";
+import LabBackButton from "@/src/components/lab-dashboard/generics/LabBackButton";
+import LabDashboardHeader from "@/src/components/lab-dashboard/generics/LabDashboardHeader";
 
 type ProfileTab = "Demographics" | "History" | "Laboratory" | "Medications" | "Referrals";
-type PatientStatus = "Vitals Pending" | "Waiting" | "Completed";
+type PatientStatus = "Awaiting Result" | "Processing" | "Completed";
 
 type PatientRow = {
   patientId: string;
   patientName: string;
   ageGender: string;
-  visitType: string;
-  priority: "High" | "Medium" | "Low";
+  lastTest: string;
   status: PatientStatus;
 };
 
@@ -30,16 +29,15 @@ const PROFILE_TABS: ProfileTab[] = [
 ];
 
 const PATIENTS: PatientRow[] = [
-  ["PAT-PLT-000234", "Aisha Mohammed", "34 / F", "ANC", "High", "Vitals Pending"],
-  ["PAT-PLT-000235", "Emeka Dike", "45 / M", "General", "High", "Waiting"],
-  ["PAT-PLT-000236", "Amina Bello", "8 mo / F", "Immunization", "Medium", "Completed"],
-  ["PAT-PLT-000237", "Chukwu Obi", "45 / F", "Postnatal", "Low", "Completed"],
-].map(([patientId, patientName, ageGender, visitType, priority, status]) => ({
+  ["PAT-PLT-000234", "Aisha Mohammed", "34 / F", "Malaria Test", "Completed"],
+  ["PAT-PLT-000235", "Musa Abdullahi", "34 / M", "Urinalysis", "Awaiting Result"],
+  ["PAT-PLT-000236", "Amina Yusuf", "29 / F", "Hemoglobin", "Processing"],
+  ["PAT-PLT-000237", "Bayo Ogunleye", "41 / M", "Lipid Profile", "Completed"],
+].map(([patientId, patientName, ageGender, lastTest, status]) => ({
   patientId,
   patientName,
   ageGender,
-  visitType,
-  priority: priority as PatientRow["priority"],
+  lastTest,
   status: status as PatientStatus,
 }));
 
@@ -96,7 +94,6 @@ function DemographicsTab() {
         </span>
         <h2 className="text-xl font-semibold text-black">Basic Information</h2>
       </div>
-
       <div className="max-w-4xl space-y-6">
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           <Field label="Patient Name" value="Aisha Mohammed" />
@@ -138,6 +135,16 @@ function DemographicsTab() {
   );
 }
 
+const statusBadge = (status: string) => {
+  const color =
+    status === "Completed" || status === "Dispensed"
+      ? badgeColors.green
+      : status === "Pending"
+        ? badgeColors.amber
+        : badgeColors.red;
+  return <StatusBadge label={status} bgColorHex={color.bg} textColorHex={color.text} />;
+};
+
 function GenericTable<T>({
   title,
   data,
@@ -165,16 +172,6 @@ function GenericTable<T>({
   );
 }
 
-const statusBadge = (status: string) => {
-  const key =
-    status === "Completed" || status === "Dispensed"
-      ? badgeColors.green
-      : status === "Pending"
-        ? badgeColors.amber
-        : badgeColors.red;
-  return <StatusBadge label={status} bgColorHex={key.bg} textColorHex={key.text} />;
-};
-
 function HistoryTab() {
   const rows = Array.from({ length: 10 }, (_, index) => ({
     id: "ENC-PLT-000234",
@@ -183,6 +180,7 @@ function HistoryTab() {
     doctor: ["Dr. Suleiman", "Dr. Adamu", "Dr Ada", "Dr Musa"][index % 4],
     notes: "Fever, chills, weakness, headache",
   }));
+
   return (
     <GenericTable
       title="Encounter History"
@@ -209,6 +207,7 @@ function LaboratoryTab() {
     result: index % 3 === 0 ? "Positive" : index % 3 === 1 ? "Negative" : "-",
     status: index % 3 === 2 ? "Pending" : "Completed",
   }));
+
   return (
     <GenericTable
       title="Patient Laboratory Test"
@@ -216,7 +215,7 @@ function LaboratoryTab() {
       searchPlaceholder="Search patient by lab test..."
       toolbar={
         <>
-          <NurseDateRangeFilter startDate="" endDate="" onApply={() => {}} onClear={() => {}} />
+          <DateRangeFilter startDate="" endDate="" onApply={() => {}} onClear={() => {}} />
           <CustomDropdown options={["All Result", "Positive", "Negative"]} selected="All Result" onSelect={() => {}} />
           <CustomDropdown options={["All Status", "Completed", "Pending"]} selected="All Status" onSelect={() => {}} />
         </>
@@ -242,6 +241,7 @@ function MedicationsTab() {
     frequency: ["Once daily", "Twice daily", "Three times daily", "Every 8 hours", "Every 12 hours"][index % 5],
     status: ["Dispensed", "Dispensed", "Pending", "cancelled", "Out of stock"][index % 5],
   }));
+
   return (
     <GenericTable
       title="Patient Laboratory Test"
@@ -249,7 +249,7 @@ function MedicationsTab() {
       searchPlaceholder="Search patient by Drug name..."
       toolbar={
         <>
-          <NurseDateRangeFilter startDate="" endDate="" onApply={() => {}} onClear={() => {}} />
+          <DateRangeFilter startDate="" endDate="" onApply={() => {}} onClear={() => {}} />
           <CustomDropdown options={["All Status", "Dispensed", "Pending", "cancelled", "Out of stock"]} selected="All Status" onSelect={() => {}} />
         </>
       }
@@ -276,6 +276,7 @@ function ReferralsTab() {
     reason: "Severe malaria",
     status: ["Completed", "Completed", "Pending", "cancelled"][index % 4],
   }));
+
   return (
     <GenericTable
       title="Patient Laboratory Test"
@@ -283,7 +284,7 @@ function ReferralsTab() {
       searchPlaceholder="Search patient by Clinician or Facility..."
       toolbar={
         <>
-          <NurseDateRangeFilter startDate="" endDate="" onApply={() => {}} onClear={() => {}} />
+          <DateRangeFilter startDate="" endDate="" onApply={() => {}} onClear={() => {}} />
           <CustomDropdown options={["All Type", "Physical referral", "Telemedicine referral", "Emergency"]} selected="All Type" onSelect={() => {}} />
           <CustomDropdown options={["All Status", "Completed", "Pending", "cancelled"]} selected="All Status" onSelect={() => {}} />
         </>
@@ -315,14 +316,14 @@ function PatientProfile({ onBack }: { onBack: () => void }) {
             : "Patient Referrals";
 
   return (
-    <>
-      <NurseDashboardHeader
+    <div className="min-h-screen bg-[#F6F7FC]">
+      <LabDashboardHeader
         title="Patients"
         breadcrumbs={[{ label: "Patients" }, { label: "View Profile" }]}
       />
       <div className="px-4 py-6 sm:px-6 lg:py-8">
-        <NurseBackButton onClick={onBack} />
-        <h2 className="mb-9 text-2xl font-semibold text-black sm:text-3xl">{title}</h2>
+        <LabBackButton onClick={onBack} />
+        <h1 className="mb-9 text-2xl font-semibold text-black sm:text-3xl">{title}</h1>
         <ProfileTabs active={tab} onChange={setTab} />
         {tab === "Demographics" && <DemographicsTab />}
         {tab === "History" && <HistoryTab />}
@@ -330,7 +331,7 @@ function PatientProfile({ onBack }: { onBack: () => void }) {
         {tab === "Medications" && <MedicationsTab />}
         {tab === "Referrals" && <ReferralsTab />}
       </div>
-    </>
+    </div>
   );
 }
 
@@ -342,53 +343,48 @@ export default function Patients() {
     const term = search.trim().toLowerCase();
     if (!term) return PATIENTS;
     return PATIENTS.filter((patient) =>
-      [patient.patientId, patient.patientName, patient.visitType].some((value) =>
+      [patient.patientId, patient.patientName, patient.lastTest].some((value) =>
         value.toLowerCase().includes(term),
       ),
     );
   }, [search]);
 
-  if (view === "profile") {
-    return <PatientProfile onBack={() => setView("list")} />;
-  }
+  if (view === "profile") return <PatientProfile onBack={() => setView("list")} />;
 
   const columns: ColumnDef<PatientRow>[] = [
     { header: "Patient ID", accessorKey: "patientId", sortable: true },
     { header: "Patient Name", accessorKey: "patientName", sortable: true },
     { header: "Age/Gender", accessorKey: "ageGender", sortable: true },
-    { header: "Visit Type", accessorKey: "visitType", sortable: true },
-    {
-      header: "Priority",
-      sortable: true,
-      render: (row) => {
-        const color = row.priority === "Low" ? badgeColors.green : row.priority === "Medium" ? badgeColors.amber : badgeColors.red;
-        return <StatusBadge label={row.priority} bgColorHex={color.bg} textColorHex={color.text} />;
-      },
-    },
+    { header: "Last Test", accessorKey: "lastTest", sortable: true },
     {
       header: "Status",
       sortable: true,
       render: (row) => {
-        const color = row.status === "Completed" ? badgeColors.green : row.status === "Waiting" ? badgeColors.amber : badgeColors.red;
+        const color =
+          row.status === "Completed"
+            ? badgeColors.green
+            : row.status === "Processing"
+              ? badgeColors.amber
+              : badgeColors.red;
         return <StatusBadge label={row.status} bgColorHex={color.bg} textColorHex={color.text} />;
       },
     },
     {
       header: "Action",
       sortable: true,
-      render: () => (
-        <ActionButton label="View" variant="soft" onClick={() => setView("profile")} />
-      ),
+      render: () => <ActionButton label="View" variant="soft" onClick={() => setView("profile")} />,
     },
   ];
 
   return (
     <div className="min-h-screen bg-[#F6F7FC]">
-      <NurseDashboardHeader title="Patients" breadcrumbs={[{ label: "Patients" }]} />
+      <LabDashboardHeader title="Patients" breadcrumbs={[{ label: "Patients" }]} />
       <div className="px-4 py-6 sm:px-6 lg:py-8">
         <div className="mb-7">
-          <h2 className="mb-1 text-2xl font-semibold text-black sm:text-3xl">Patients</h2>
-          <p className="text-base text-[#3F3F46]">View and manage patient records</p>
+          <h1 className="text-2xl font-semibold text-black sm:text-3xl">Patients</h1>
+          <p className="mt-2 text-base text-[#3F3F46]">
+            View patient profiles and laboratory records
+          </p>
         </div>
         <DataTable
           title="Patients"

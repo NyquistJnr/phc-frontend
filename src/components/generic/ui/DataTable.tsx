@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { Suspense, useState } from "react";
 import { Search, ArrowRight, ListFilter } from "lucide-react";
 import Link from "next/link";
 import { TablePagination } from "./TablePagination";
@@ -21,6 +21,7 @@ interface DataTableProps<T> {
   onViewAll?: () => void;
   viewAllLink?: string;
   totalPages?: number;
+  emptyMessage?: string;
 }
 
 export function DataTable<T>({
@@ -34,8 +35,18 @@ export function DataTable<T>({
   onViewAll,
   viewAllLink,
   totalPages,
+  emptyMessage = "No data found.",
 }: DataTableProps<T>) {
   const [searchTerm, setSearchTerm] = useState("");
+
+  const getAccessorValue = (row: T, accessorKey: keyof T | string) => {
+    if (row && typeof row === "object") {
+      const value = (row as Record<string, unknown>)[String(accessorKey)];
+      return value == null ? "" : String(value);
+    }
+
+    return "";
+  };
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
@@ -139,54 +150,73 @@ export function DataTable<T>({
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
-            {data.map((row, rowIndex) => (
-              <tr
-                key={rowIndex}
-                className="hover:bg-gray-50/50 transition-colors"
-              >
-                {columns.map((col, colIndex) => (
-                  <td key={colIndex} className="px-6 py-4 whitespace-nowrap">
-                    {col.render
-                      ? col.render(row)
-                      : col.accessorKey
-                        ? String((row as any)[col.accessorKey])
-                        : null}
-                  </td>
-                ))}
+            {data.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={columns.length}
+                  className="px-6 py-14 text-center text-sm text-gray-400"
+                >
+                  {emptyMessage}
+                </td>
               </tr>
-            ))}
+            ) : (
+              data.map((row, rowIndex) => (
+                <tr
+                  key={rowIndex}
+                  className="hover:bg-gray-50/50 transition-colors"
+                >
+                  {columns.map((col, colIndex) => (
+                    <td key={colIndex} className="px-6 py-4 whitespace-nowrap">
+                      {col.render
+                        ? col.render(row)
+                        : col.accessorKey
+                          ? getAccessorValue(row, col.accessorKey)
+                          : null}
+                    </td>
+                  ))}
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
       <div className="md:hidden flex flex-col p-4 gap-4 bg-gray-50/30 flex-1">
-        {data.map((row, rowIndex) => (
-          <div
-            key={rowIndex}
-            className="bg-white border border-gray-100 rounded-xl shadow-sm p-4 flex flex-col gap-3"
-          >
-            {columns.map((col, colIndex) => (
-              <div
-                key={colIndex}
-                className="flex justify-between items-center py-1 border-b border-gray-50 last:border-0 last:pb-0"
-              >
-                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider pr-4">
-                  {col.header}
-                </span>
-                <div className="text-sm font-medium text-gray-800 text-right">
-                  {col.render
-                    ? col.render(row)
-                    : col.accessorKey
-                      ? String((row as any)[col.accessorKey])
-                      : null}
-                </div>
-              </div>
-            ))}
+        {data.length === 0 ? (
+          <div className="bg-white border border-gray-100 rounded-xl p-8 text-center text-sm text-gray-400">
+            {emptyMessage}
           </div>
-        ))}
+        ) : (
+          data.map((row, rowIndex) => (
+            <div
+              key={rowIndex}
+              className="bg-white border border-gray-100 rounded-xl shadow-sm p-4 flex flex-col gap-3"
+            >
+              {columns.map((col, colIndex) => (
+                <div
+                  key={colIndex}
+                  className="flex justify-between items-center py-1 border-b border-gray-50 last:border-0 last:pb-0"
+                >
+                  <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider pr-4">
+                    {col.header}
+                  </span>
+                  <div className="text-sm font-medium text-gray-800 text-right">
+                    {col.render
+                      ? col.render(row)
+                      : col.accessorKey
+                        ? getAccessorValue(row, col.accessorKey)
+                        : null}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ))
+        )}
       </div>
       {totalPages && totalPages > 1 && (
         <div className="p-4 md:py-6 md:px-8 border-t border-gray-100 bg-white flex justify-center w-full">
-          <TablePagination totalPages={totalPages} />
+          <Suspense fallback={null}>
+            <TablePagination totalPages={totalPages} />
+          </Suspense>
         </div>
       )}
     </div>

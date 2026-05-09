@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Search, ChevronDown, ArrowLeft, Calendar as CalendarIcon, User } from "lucide-react";
 import Link from "next/link";
-import DoctorHeader from "@/src/components/doctorDashboard/generics/Header";
+import OfficerDashboardHeader from "@/src/components/officerDashboard/generics/OfficerDashboardHeader";
 import { DateRangeButton } from "@/src/components/doctorDashboard/generics/PeriodFilterButton";
 import FilterDropdown from "@/src/components/adminDashboard/generics/FilterDropdown";
 import Pagination from "@/src/components/adminDashboard/generics/Pagination";
@@ -424,7 +424,7 @@ export default function  PatientProfile() {
 
   return (
     <div className="flex-1 flex flex-col bg-[#F9FAFB] min-w-0">
-      <DoctorHeader title="Patients" breadcrumbs={breadcrumbs} />
+      <OfficerDashboardHeader title="Patients" breadcrumbs={breadcrumbs} />
 
       <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 pt-5 pb-10">
         <div className="mb-5">
