@@ -5,6 +5,7 @@ import {
   AppointmentResult,
   AppointmentsResponse,
 } from "@/src/components/nurse-dashboard/appointments/type";
+import { PaginatedResponse } from "@/src/types/custom-pagination";
 
 export function useAppointments(filters: AppointmentFilters) {
   const api = useApi();
@@ -78,5 +79,65 @@ export function useUpdateAppointmentStatus() {
         queryKey: ["appointment", variables.id],
       });
     },
+  });
+}
+
+export function useCreateAppointment() {
+  const api = useApi();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload: {
+      patient: string;
+      assigned_to: string;
+      appointment_date: string;
+      appointment_time: string;
+      visit_type: string;
+      reason_for_visit: string;
+      notes: string;
+    }) => {
+      return await api.post("/appointments/appointments/", payload);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["appointments"] });
+    },
+  });
+}
+
+export function useSearchPatients(searchTerm: string) {
+  const api = useApi();
+
+  return useQuery({
+    queryKey: ["patients", "search", searchTerm],
+    queryFn: async () => {
+      const searchParam = searchTerm
+        ? `&search=${encodeURIComponent(searchTerm)}`
+        : "";
+
+      const res = await api.get<PaginatedResponse<any>>(
+        `/patients/?page=1&page_size=10${searchParam}`,
+      );
+      return res.results || [];
+    },
+    enabled: api.isAuthenticated && !api.isLoading,
+  });
+}
+
+export function useFacilityStaff(searchTerm: string = "") {
+  const api = useApi();
+
+  return useQuery({
+    queryKey: ["facility-staff", "search", searchTerm],
+    queryFn: async () => {
+      const searchParam = searchTerm
+        ? `&search=${encodeURIComponent(searchTerm)}`
+        : "";
+
+      const res = await api.get<PaginatedResponse<any>>(
+        `/users/facility-users/?is_active=true&page=1&page_size=10${searchParam}`,
+      );
+      return res.results || [];
+    },
+    enabled: api.isAuthenticated && !api.isLoading,
   });
 }
