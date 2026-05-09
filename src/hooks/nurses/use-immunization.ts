@@ -67,3 +67,17 @@ export function useVaccines() {
     enabled: api.isAuthenticated && !api.isLoading,
   });
 }
+
+export function useUpdateImmunizationStatus() {
+  const api = useApi();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      return await api.patch(`/immunization/records/${id}/`, { status });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["immunization-records"] });
+    },
+  });
+}

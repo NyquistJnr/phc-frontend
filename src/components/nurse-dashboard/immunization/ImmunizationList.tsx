@@ -1,12 +1,14 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Eye, MoreHorizontal, Plus, Syringe } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Edit, Eye, MoreHorizontal, Plus } from "lucide-react";
 import { ColumnDef, DataTable } from "@/src/components/generic/ui/DataTable";
 import { StatusBadge } from "@/src/components/generic/ui/TableHelpers";
 import { CustomDropdown } from "@/src/components/generic/ui/CustomDropdown";
 import NurseDateRangeFilter from "@/src/components/nurse-dashboard/generics/NurseDateRangeFilter";
+import { useUpdateImmunizationStatus } from "@/src/hooks/nurses/use-immunization";
 import { ImmunizationRecordApi, ImmunizationStatus } from "./type";
 
 const STATUS_OPTIONS = ["All Status", "COMPLETED", "PENDING"];
@@ -18,16 +20,23 @@ const statusColors: Record<string, { bg: string; text: string }> = {
 };
 
 function ImmunizationActionMenu({ row }: { row: ImmunizationRecordApi }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [coords, setCoords] = useState({ top: 0, left: 0 });
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [selectedStatus, setSelectedStatus] = useState(row.status);
+
+  const { mutate: updateStatus, isPending: isUpdating } =
+    useUpdateImmunizationStatus();
+
   const toggleMenu = () => {
     if (!open && buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
       const menuWidth = 206;
-      const estimatedHeight = 124;
+      const estimatedHeight = 100;
       const top =
         rect.bottom + estimatedHeight > window.innerHeight
           ? rect.top + window.scrollY - estimatedHeight - 4
@@ -66,6 +75,26 @@ function ImmunizationActionMenu({ row }: { row: ImmunizationRecordApi }) {
     }
   }, [open]);
 
+  const handleUpdateStatus = () => {
+    updateStatus(
+      { id: row.id, status: selectedStatus },
+      { onSuccess: () => setShowStatusModal(false) },
+    );
+  };
+
+  const items = [
+    {
+      label: "View Detail",
+      icon: Eye,
+      onClick: () => router.push(`/nurse-dashboard/immunization/${row.id}`),
+    },
+    {
+      label: "Update Status",
+      icon: Edit,
+      onClick: () => setShowStatusModal(true),
+    },
+  ];
+
   return (
     <>
       <button
@@ -83,26 +112,68 @@ function ImmunizationActionMenu({ row }: { row: ImmunizationRecordApi }) {
           <div
             ref={menuRef}
             style={{ top: coords.top, left: coords.left }}
-            className="absolute z-[9999] w-[206px] border border-gray-200 bg-white px-4 py-5 shadow-sm"
+            className="absolute z-[9999] w-[206px] rounded-xl border border-gray-100 bg-white py-2 shadow-[0_8px_30px_rgb(0,0,0,0.12)]"
           >
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              className="mb-3 flex w-full items-center gap-3 border-b border-gray-100 pb-3 text-left text-sm font-medium text-gray-400"
-            >
-              <Eye size={20} className="text-gray-700" /> View Detail
-            </button>
-            <div className="flex items-center gap-3">
-              <Syringe size={20} className="text-gray-900" />
-              <button
-                type="button"
-                onClick={() => {
-                  setOpen(false);
-                }}
-                className="rounded-md bg-[#046C3F] px-3 py-2 text-xs font-medium text-white hover:bg-[#035a34]"
+            {items.map((item) => {
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.label}
+                  type="button"
+                  onClick={() => {
+                    item.onClick();
+                    setOpen(false);
+                  }}
+                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  <Icon size={16} className="text-gray-700" /> {item.label}
+                </button>
+              );
+            })}
+          </div>,
+          document.body,
+        )}
+
+      {showStatusModal &&
+        createPortal(
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+            <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
+              <h3 className="mb-4 text-lg font-semibold text-gray-900">
+                Update Status
+              </h3>
+              <p className="mb-4 text-sm text-gray-500">
+                Change the immunization status for <b>{row.patient_name}</b>.
+              </p>
+              <select
+                value={selectedStatus}
+                onChange={(e) =>
+                  setSelectedStatus(e.target.value as ImmunizationStatus)
+                }
+                className="w-full rounded-lg border border-gray-300 p-2.5 text-sm focus:border-[#046C3F] focus:outline-none focus:ring-1 focus:ring-[#046C3F]"
               >
-                Mark Administered
-              </button>
+                {STATUS_OPTIONS.filter((s) => s !== "All Status").map(
+                  (status) => (
+                    <option key={status} value={status}>
+                      {status}
+                    </option>
+                  ),
+                )}
+              </select>
+              <div className="mt-6 flex justify-end gap-3">
+                <button
+                  onClick={() => setShowStatusModal(false)}
+                  className="rounded-lg px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleUpdateStatus}
+                  disabled={isUpdating}
+                  className="rounded-lg bg-[#046C3F] px-4 py-2 text-sm font-medium text-white hover:bg-[#035a34] disabled:opacity-70"
+                >
+                  {isUpdating ? "Saving..." : "Save Status"}
+                </button>
+              </div>
             </div>
           </div>,
           document.body,

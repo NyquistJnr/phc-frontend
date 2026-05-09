@@ -6,7 +6,7 @@ import NurseDashboardHeader from "@/src/components/nurse-dashboard/generics/Nurs
 import ImmunizationList from "./ImmunizationList";
 import { useImmunizationRecords } from "@/src/hooks/nurses/use-immunization";
 
-export default function ImmunizationPage() {
+export default function Immunization() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
