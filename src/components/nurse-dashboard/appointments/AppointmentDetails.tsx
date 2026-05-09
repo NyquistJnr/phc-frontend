@@ -13,12 +13,18 @@ import {
   Plus,
   ChevronDown,
   ChevronUp,
+  Edit2,
+  Trash2,
+  X,
+  Save,
 } from "lucide-react";
 import NurseDashboardHeader from "@/src/components/nurse-dashboard/generics/NurseDashboardHeader";
 import { StatusBadge } from "@/src/components/generic/ui/TableHelpers";
 import {
   useAppointment,
   useAppointmentVitals,
+  useUpdateVital,
+  useDeleteVital,
 } from "@/src/hooks/nurses/use-appointments";
 
 const statusColors: Record<string, { bg: string; text: string }> = {
@@ -44,7 +50,10 @@ const VitalMetric = ({
       {label}
     </p>
     <p className="text-lg font-semibold text-gray-900">
-      {value !== null && value !== undefined ? (
+      {value !== null &&
+      value !== undefined &&
+      value !== "" &&
+      value !== "-" ? (
         <>
           {value}{" "}
           <span className="text-sm font-normal text-gray-500">{unit}</span>
@@ -56,16 +65,146 @@ const VitalMetric = ({
   </div>
 );
 
+const EditVitalForm = ({ vital, appointmentId, onCancel, onSuccess }: any) => {
+  const { mutate: updateVital, isPending } = useUpdateVital();
+  const [formData, setFormData] = useState({
+    temperature: vital.temperature || "",
+    blood_pressure: vital.blood_pressure || "",
+    pulse_rate: vital.pulse_rate || "",
+    respiratory_rate: vital.respiratory_rate || "",
+    weight_kg: vital.weight_kg || "",
+    height_cm: vital.height_cm || "",
+    spo2: vital.spo2 || "",
+    notes: vital.notes || "",
+  });
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+  ) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateVital(
+      {
+        id: vital.id,
+        payload: {
+          appointment: appointmentId,
+          temperature: String(formData.temperature),
+          blood_pressure: String(formData.blood_pressure),
+          pulse_rate: Number(formData.pulse_rate) || 0,
+          respiratory_rate: Number(formData.respiratory_rate) || 0,
+          weight_kg: String(formData.weight_kg),
+          height_cm: String(formData.height_cm),
+          spo2: Number(formData.spo2) || 0,
+          notes: formData.notes,
+        },
+      },
+      {
+        onSuccess: () => {
+          onSuccess();
+        },
+      },
+    );
+  };
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className="bg-white p-5 rounded-xl border border-blue-100 shadow-sm ring-1 ring-blue-50"
+    >
+      <div className="mb-4 flex items-center justify-between border-b border-gray-100 pb-3">
+        <h4 className="text-sm font-semibold text-blue-800 flex items-center gap-2">
+          <Edit2 size={16} /> Editing Vitals
+        </h4>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="text-gray-400 hover:text-gray-600"
+        >
+          <X size={18} />
+        </button>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
+        {[
+          {
+            label: "Blood Pressure",
+            name: "blood_pressure",
+            placeholder: "120/80",
+          },
+          { label: "Heart Rate (bpm)", name: "pulse_rate", type: "number" },
+          { label: "Temp (°C)", name: "temperature" },
+          {
+            label: "Resp Rate (bpm)",
+            name: "respiratory_rate",
+            type: "number",
+          },
+          { label: "Weight (kg)", name: "weight_kg" },
+          { label: "Height (cm)", name: "height_cm" },
+          { label: "SpO2 (%)", name: "spo2", type: "number" },
+        ].map((field) => (
+          <div key={field.name}>
+            <label className="block text-xs font-medium text-gray-500 mb-1">
+              {field.label}
+            </label>
+            <input
+              type={field.type || "text"}
+              name={field.name}
+              value={(formData as any)[field.name]}
+              onChange={handleChange}
+              placeholder={field.placeholder || ""}
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#046C3F] focus:border-transparent"
+            />
+          </div>
+        ))}
+      </div>
+      <div className="mb-4">
+        <label className="block text-xs font-medium text-gray-500 mb-1">
+          Clinical Notes
+        </label>
+        <textarea
+          name="notes"
+          value={formData.notes}
+          onChange={handleChange}
+          rows={2}
+          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#046C3F] focus:border-transparent"
+        />
+      </div>
+      <div className="flex justify-end gap-3">
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={isPending}
+          className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          disabled={isPending}
+          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#046C3F] rounded-lg hover:bg-[#035a34] disabled:opacity-50"
+        >
+          <Save size={16} /> {isPending ? "Saving..." : "Save Changes"}
+        </button>
+      </div>
+    </form>
+  );
+};
+
 export default function AppointmentDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
 
   const [showPastVitals, setShowPastVitals] = useState(false);
+  const [editingVitalId, setEditingVitalId] = useState<string | null>(null);
 
   const { data: appointment, isLoading, isError } = useAppointment(id);
   const { data: vitalsData, isLoading: isLoadingVitals } =
     useAppointmentVitals(id);
+  const { mutate: deleteVital, isPending: isDeleting } = useDeleteVital();
 
   if (isLoading) {
     return (
@@ -100,6 +239,16 @@ export default function AppointmentDetailsPage() {
   const latestVital = allVitals[0];
   const pastVitals = allVitals.slice(1);
 
+  const handleDeleteVital = (vitalId: string) => {
+    if (
+      window.confirm(
+        "Are you sure you want to delete this vital record? This action cannot be undone.",
+      )
+    ) {
+      deleteVital({ id: vitalId, appointmentId: id });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#F6F7FC]">
       <NurseDashboardHeader
@@ -124,6 +273,7 @@ export default function AppointmentDetailsPage() {
             textColorHex={colorData.text}
           />
         </div>
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="md:col-span-1 bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
             <div className="mb-6 flex items-center gap-3">
@@ -239,7 +389,7 @@ export default function AppointmentDetailsPage() {
                 <Activity size={20} className="text-[#046C3F]" />
                 Patient Vitals
               </h3>
-              {!latestVital && !isLoadingVitals && (
+              {!isLoadingVitals && (
                 <button
                   onClick={() =>
                     router.push(`/nurse-dashboard/vitals/new/${id}`)
@@ -278,48 +428,97 @@ export default function AppointmentDetailsPage() {
                   </span>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  <VitalMetric
-                    label="Blood Pressure"
-                    value={latestVital.blood_pressure}
-                    unit="mmHg"
-                  />
-                  <VitalMetric
-                    label="Heart Rate"
-                    value={latestVital.pulse_rate}
-                    unit="bpm"
-                  />
-                  <VitalMetric
-                    label="Temperature"
-                    value={latestVital.temperature}
-                    unit="°C"
-                  />
-                  <VitalMetric
-                    label="Respiratory Rate"
-                    value={latestVital.respiratory_rate}
-                    unit="bpm"
-                  />
-                  <VitalMetric
-                    label="Weight"
-                    value={latestVital.weight_kg}
-                    unit="kg"
-                  />
-                  <VitalMetric
-                    label="Height"
-                    value={latestVital.height_cm}
-                    unit="cm"
-                  />
-                  <VitalMetric label="BMI" value={latestVital.bmi} unit="" />
-                  <VitalMetric label="SpO2" value={latestVital.spo2} unit="%" />
+                <div className="flex justify-between items-end border-b border-gray-50 pb-2">
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-800">
+                      Latest Reading
+                    </h4>
+                    <p className="text-xs text-gray-500">
+                      Recorded on{" "}
+                      {new Date(latestVital.created_at).toLocaleString()} by{" "}
+                      {latestVital.recorded_by_name}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setEditingVitalId(latestVital.id)}
+                      className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                      title="Edit Vitals"
+                    >
+                      <Edit2 size={16} />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteVital(latestVital.id)}
+                      disabled={isDeleting}
+                      className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors disabled:opacity-50"
+                      title="Delete Vitals"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </div>
 
-                {latestVital.notes && (
-                  <p className="text-sm text-gray-600 bg-gray-50 p-4 rounded-xl border border-gray-100">
-                    <span className="font-semibold text-gray-800">
-                      Clinical Notes:
-                    </span>{" "}
-                    {latestVital.notes}
-                  </p>
+                {editingVitalId === latestVital.id ? (
+                  <EditVitalForm
+                    vital={latestVital}
+                    appointmentId={id}
+                    onCancel={() => setEditingVitalId(null)}
+                    onSuccess={() => setEditingVitalId(null)}
+                  />
+                ) : (
+                  <>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                      <VitalMetric
+                        label="Blood Pressure"
+                        value={latestVital.blood_pressure}
+                        unit="mmHg"
+                      />
+                      <VitalMetric
+                        label="Heart Rate"
+                        value={latestVital.pulse_rate}
+                        unit="bpm"
+                      />
+                      <VitalMetric
+                        label="Temperature"
+                        value={latestVital.temperature}
+                        unit="°C"
+                      />
+                      <VitalMetric
+                        label="Respiratory Rate"
+                        value={latestVital.respiratory_rate}
+                        unit="bpm"
+                      />
+                      <VitalMetric
+                        label="Weight"
+                        value={latestVital.weight_kg}
+                        unit="kg"
+                      />
+                      <VitalMetric
+                        label="Height"
+                        value={latestVital.height_cm}
+                        unit="cm"
+                      />
+                      <VitalMetric
+                        label="BMI"
+                        value={latestVital.bmi}
+                        unit=""
+                      />
+                      <VitalMetric
+                        label="SpO2"
+                        value={latestVital.spo2}
+                        unit="%"
+                      />
+                    </div>
+
+                    {latestVital.notes && (
+                      <p className="text-sm text-gray-600 bg-gray-50 p-4 rounded-xl border border-gray-100">
+                        <span className="font-semibold text-gray-800">
+                          Clinical Notes:
+                        </span>{" "}
+                        {latestVital.notes}
+                      </p>
+                    )}
+                  </>
                 )}
 
                 {pastVitals.length > 0 && (
@@ -348,15 +547,29 @@ export default function AppointmentDetailsPage() {
                             className="bg-gray-50 p-5 rounded-xl border border-gray-200"
                           >
                             <div className="mb-4 flex items-center justify-between pb-3 border-b border-gray-200">
-                              <h4 className="text-sm font-semibold text-gray-800">
-                                Recorded on:{" "}
-                                {new Date(
-                                  pastVital.created_at,
-                                ).toLocaleString()}
-                              </h4>
-                              <p className="text-xs font-medium text-gray-500">
-                                By: {pastVital.recorded_by_name}
-                              </p>
+                              <div>
+                                <h4 className="text-sm font-semibold text-gray-800">
+                                  Recorded on:{" "}
+                                  {new Date(
+                                    pastVital.created_at,
+                                  ).toLocaleString()}
+                                </h4>
+                                <p className="text-xs font-medium text-gray-500">
+                                  By: {pastVital.recorded_by_name}
+                                </p>
+                              </div>
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() =>
+                                    handleDeleteVital(pastVital.id)
+                                  }
+                                  disabled={isDeleting}
+                                  className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-100 rounded-md transition-colors disabled:opacity-50"
+                                  title="Delete Past Vitals"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </div>
                             </div>
 
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -429,14 +642,6 @@ export default function AppointmentDetailsPage() {
                   Patient vitals have not been captured for this appointment
                   yet. Please record them to proceed.
                 </p>
-                <button
-                  onClick={() =>
-                    router.push(`/nurse-dashboard/vitals/new/${id}`)
-                  }
-                  className="inline-flex items-center gap-2 rounded-lg bg-[#046C3F] px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#035a34]"
-                >
-                  <Plus size={18} /> Record Patient Vitals
-                </button>
               </div>
             )}
           </div>

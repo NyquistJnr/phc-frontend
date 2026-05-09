@@ -184,3 +184,61 @@ export function useCreateVital() {
     },
   });
 }
+
+export function useUpdateVital() {
+  const api = useApi();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      payload,
+    }: {
+      id: string;
+      payload: Partial<{
+        appointment: string;
+        temperature: string;
+        blood_pressure: string;
+        pulse_rate: number;
+        respiratory_rate: number;
+        weight_kg: string;
+        height_cm: string;
+        spo2: number;
+        notes: string;
+      }>;
+    }) => {
+      return await api.patch(`/appointments/vitals/${id}/`, payload);
+    },
+    onSuccess: (_, variables) => {
+      if (variables.payload.appointment) {
+        queryClient.invalidateQueries({
+          queryKey: ["appointment-vitals", variables.payload.appointment],
+        });
+        queryClient.invalidateQueries({
+          queryKey: ["appointment", variables.payload.appointment],
+        });
+      }
+    },
+  });
+}
+
+export function useDeleteVital() {
+  const api = useApi();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id }: { id: string; appointmentId?: string }) => {
+      return await api.delete(`/appointments/vitals/${id}/`);
+    },
+    onSuccess: (_, variables) => {
+      if (variables.appointmentId) {
+        queryClient.invalidateQueries({
+          queryKey: ["appointment-vitals", variables.appointmentId],
+        });
+        queryClient.invalidateQueries({
+          queryKey: ["appointment", variables.appointmentId],
+        });
+      }
+    },
+  });
+}
