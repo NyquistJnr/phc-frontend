@@ -11,9 +11,6 @@ import {
   Stethoscope,
   FlaskConical,
   Pill,
-  Heart,
-  Syringe,
-  Share2,
   LogOut,
   X,
 } from "lucide-react";
@@ -30,10 +27,7 @@ const navItems = [
 export const OICSidebar = () => {
   const pathname = usePathname();
   const [logoutModalOpen, setLogoutModalOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
   const { mobileOpen, setMobileOpen } = useSidebar();
-
-  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     setMobileOpen(false);
@@ -77,7 +71,11 @@ export const OICSidebar = () => {
         <nav className="grow px-4 space-y-1.5 overflow-y-auto">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = pathname === item.path;
+            const isActive =
+              item.path === "/oic-dashboard"
+                ? pathname === item.path
+                : pathname === item.path ||
+                  pathname.startsWith(`${item.path}/`);
 
             return (
               <Link
@@ -110,7 +108,7 @@ export const OICSidebar = () => {
         </div>
       </aside>
 
-      {mounted && logoutModalOpen && createPortal(
+      {logoutModalOpen && typeof document !== "undefined" && createPortal(
         <div
           onClick={() => setLogoutModalOpen(false)}
           style={{
