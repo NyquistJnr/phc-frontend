@@ -158,3 +158,37 @@ export function useCreatePatient() {
     },
   });
 }
+
+export function usePatientById(id: string) {
+  const api = useApi();
+
+  return useQuery({
+    queryKey: ["patient", id],
+    queryFn: async () => {
+      const res = await api.get<any>(`/patients/${id}/`);
+      return res?.data?.data || res?.data || res;
+    },
+    enabled: !!id,
+  });
+}
+
+export function useUpdatePatient() {
+  const api = useApi();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      payload,
+    }: {
+      id: string;
+      payload: Partial<CreatePatientPayload>;
+    }) => {
+      return await api.patch(`/patients/${id}/`, payload);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["patient", variables.id] });
+      queryClient.invalidateQueries({ queryKey: ["patients"] });
+    },
+  });
+}

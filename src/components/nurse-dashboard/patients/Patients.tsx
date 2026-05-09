@@ -3,13 +3,14 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { createPortal } from "react-dom";
-import { MoreHorizontal, Eye, Edit } from "lucide-react";
+import { MoreHorizontal, Eye, Edit, Plus } from "lucide-react";
 import { ColumnDef, DataTable } from "@/src/components/generic/ui/DataTable";
 import { StatusBadge } from "@/src/components/generic/ui/TableHelpers";
 import { CustomDropdown } from "@/src/components/generic/ui/CustomDropdown";
 import NurseDashboardHeader from "@/src/components/nurse-dashboard/generics/NurseDashboardHeader";
 import { usePatients } from "@/src/hooks/nurses/use-patients";
 import { Patient } from "./type";
+import Link from "next/link";
 
 const PAGE_SIZES = ["10", "100", "200"];
 
@@ -68,7 +69,7 @@ function PatientActionMenu({ row }: { row: Patient }) {
     {
       label: "Edit Patient",
       icon: Edit,
-      onClick: () => router.push(`/nurse-dashboard/patient/${row.id}/edit`),
+      onClick: () => router.push(`/nurse-dashboard/patients/${row.id}/edit`),
     },
   ];
 
@@ -216,7 +217,7 @@ export default function Patients() {
         breadcrumbs={[{ label: "Patients" }]}
       />
       <div className="px-4 py-6 sm:px-6 lg:py-8">
-        <div className="mb-7 flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+        <div className="mb-7 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
             <h2 className="mb-1 text-2xl font-semibold text-black sm:text-3xl">
               Patients
@@ -225,6 +226,13 @@ export default function Patients() {
               View and manage patient records
             </p>
           </div>
+
+          <Link
+            href="/nurse-dashboard/patients/new"
+            className="inline-flex h-11 items-center justify-center gap-3 rounded-xl bg-[#046C3F] px-7 text-base font-medium text-white transition-colors hover:bg-[#035a34]"
+          >
+            <Plus size={20} /> New Patient
+          </Link>
         </div>
 
         <DataTable
