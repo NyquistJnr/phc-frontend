@@ -109,3 +109,29 @@ export interface TabFilters {
   start_date?: string;
   end_date?: string;
 }
+
+export interface CreatePatientPayload {
+  first_name: string;
+  last_name: string;
+  middle_name?: string;
+  email?: string;
+  phone_number: string;
+  address: string;
+  state: string;
+  is_active: boolean;
+  sex: string;
+  date_of_birth: string;
+  lga?: string;
+  ward?: string;
+  next_of_kin_name: string;
+  next_of_kin_phone: string;
+  insurance_status?: string;
+  insurance_provider?: string;
+  insurance_package?: string;
+  coverage_status?: string;
+  allergies?: string;
+  chronic_conditions?: string;
+  notes?: string;
+  blood_group?: string;
+  genotype?: string;
+}

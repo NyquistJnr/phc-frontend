@@ -508,7 +508,7 @@ export default function PatientProfile({ onBack }: { onBack: () => void }) {
     tab === "Demographics"
       ? "Patient Profile"
       : tab === "History"
-        ? "Patient Encounter History"
+        ? "Patient History"
         : tab === "Laboratory"
           ? "Patient Laboratory Test"
           : tab === "Medications"

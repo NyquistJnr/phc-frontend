@@ -1,6 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useApi } from "../use-api";
 import {
+  CreatePatientPayload,
   PaginatedPatientsResponse,
   PatientFilters,
 } from "@/src/components/nurse-dashboard/patients/type";
@@ -141,5 +142,19 @@ export function usePatientReferrals(patientId: string, filters: TabFilters) {
         res) as PaginatedResponse<PatientReferral>;
     },
     enabled: !!patientId && api.isAuthenticated,
+  });
+}
+
+export function useCreatePatient() {
+  const api = useApi();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload: CreatePatientPayload) => {
+      return await api.post("/patients/register/", payload);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["patients"] });
+    },
   });
 }
