@@ -3,6 +3,7 @@ import { useApi } from "../use-api";
 import {
   DrugInventoryResponse,
   ImmunizationFilters,
+  ImmunizationRecordApi,
   ImmunizationRegistrationPayload,
   ImmunizationResponseData,
 } from "@/src/components/nurse-dashboard/immunization/type";
@@ -79,5 +80,18 @@ export function useUpdateImmunizationStatus() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["immunization-records"] });
     },
+  });
+}
+
+export function useImmunizationRecord(id: string) {
+  const api = useApi();
+
+  return useQuery({
+    queryKey: ["immunization-record", id],
+    queryFn: async () => {
+      const res = await api.get<any>(`/immunization/records/${id}/`);
+      return (res?.data?.data || res?.data || res) as ImmunizationRecordApi;
+    },
+    enabled: !!id && api.isAuthenticated && !api.isLoading,
   });
 }
