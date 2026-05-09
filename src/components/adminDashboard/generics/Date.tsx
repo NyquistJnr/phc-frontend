@@ -4,6 +4,8 @@ import { useState } from "react";
 import { Check, ChevronLeft, ChevronRight } from "lucide-react";
 
 interface CustomDateFilterProps {
+  initialStartDate?: string;
+  initialEndDate?: string;
   onApply: (startDate: string, endDate: string) => void;
   onClear: () => void;
 }
@@ -28,6 +30,15 @@ const formatToYYYYMMDD = (date: Date) => {
   const m = String(date.getMonth() + 1).padStart(2, "0");
   const d = String(date.getDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
+};
+
+const parseDateSafe = (dateStr?: string) => {
+  if (!dateStr) return null;
+  const parts = dateStr.split("-");
+  if (parts.length === 3) {
+    return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+  }
+  return null;
 };
 
 const getPredefinedDates = (option: string) => {
@@ -69,6 +80,8 @@ const getPredefinedDates = (option: string) => {
 };
 
 export default function CustomDateFilter({
+  initialStartDate,
+  initialEndDate,
   onApply,
   onClear,
 }: CustomDateFilterProps) {
@@ -76,12 +89,22 @@ export default function CustomDateFilter({
   const [isDateRangeEnabled, setIsDateRangeEnabled] = useState(true);
   const [activeTab, setActiveTab] = useState("From");
 
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentDate, setCurrentDate] = useState(() => {
+    const d = parseDateSafe(initialStartDate);
+    return d ? d : new Date();
+  });
+
   const currentMonth = currentDate.getMonth();
   const currentYear = currentDate.getFullYear();
 
-  const [startDay, setStartDay] = useState<number | null>(null);
-  const [endDay, setEndDay] = useState<number | null>(null);
+  const [startDay, setStartDay] = useState<number | null>(() => {
+    const d = parseDateSafe(initialStartDate);
+    return d ? d.getDate() : null;
+  });
+  const [endDay, setEndDay] = useState<number | null>(() => {
+    const d = parseDateSafe(initialEndDate);
+    return d ? d.getDate() : null;
+  });
   const [hoverDay, setHoverDay] = useState<number | null>(null);
 
   const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
@@ -190,7 +213,7 @@ export default function CustomDateFilter({
   };
 
   return (
-    <div className="w-72 sm:w-[680px] bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100 font-sans overflow-hidden">
+    <div className="w-[290px] md:w-[680px] max-w-[95vw] bg-white rounded-2xl shadow-2xl border border-gray-100 font-sans overflow-hidden">
       <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
         <span className="text-sm font-bold text-gray-800">Filter by Date</span>
         <div className="flex bg-gray-100 rounded-lg p-0.5">
@@ -217,12 +240,12 @@ export default function CustomDateFilter({
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row divide-y divide-gray-100 sm:divide-y-0 sm:divide-x sm:divide-gray-100">
-        <div className="sm:w-44 sm:shrink-0 p-3 sm:p-4">
+      <div className="flex flex-col md:flex-row divide-y divide-gray-100 md:divide-y-0 md:divide-x md:divide-gray-100 max-h-[60vh] md:max-h-none overflow-y-auto">
+        <div className="md:w-44 md:shrink-0 p-3 md:p-4">
           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">
             Quick Select
           </p>
-          <div className="grid grid-cols-2 sm:grid-cols-1 gap-1">
+          <div className="grid grid-cols-2 md:grid-cols-1 gap-1">
             {predefinedOptions.map((option) => (
               <button
                 key={option}
@@ -232,7 +255,7 @@ export default function CustomDateFilter({
                   setStartDay(null);
                   setEndDay(null);
                 }}
-                className={`flex items-center gap-1.5 px-2 sm:px-3 py-2 rounded-lg text-xs font-medium w-full text-left transition-colors ${
+                className={`flex items-center gap-1.5 px-2 md:px-3 py-2 rounded-lg text-xs font-medium w-full text-left transition-colors ${
                   selectedPredefined === option
                     ? "bg-[#E8F5EE] text-[#2A6543]"
                     : "text-gray-600 hover:bg-gray-50"
@@ -245,7 +268,7 @@ export default function CustomDateFilter({
                     strokeWidth={3}
                   />
                 ) : (
-                  <span className="w-2.5 shrink-0 hidden sm:block" />
+                  <span className="w-2.5 shrink-0 hidden md:block" />
                 )}
                 <span className="truncate">{option}</span>
               </button>
@@ -258,7 +281,7 @@ export default function CustomDateFilter({
                 setIsDateRangeEnabled(!isDateRangeEnabled);
                 setSelectedPredefined("");
               }}
-              className={`flex items-center gap-2 px-2 sm:px-3 py-2 rounded-lg text-xs font-semibold w-full text-left transition-colors ${
+              className={`flex items-center gap-2 px-2 md:px-3 py-2 rounded-lg text-xs font-semibold w-full text-left transition-colors ${
                 isDateRangeEnabled
                   ? "bg-[#E8F5EE] text-[#2A6543]"
                   : "text-gray-500 hover:bg-gray-50"
@@ -281,7 +304,11 @@ export default function CustomDateFilter({
         </div>
 
         <div
-          className={`flex-1 p-3 sm:p-4 transition-opacity duration-200 ${isDateRangeEnabled ? "opacity-100" : "opacity-40 pointer-events-none"}`}
+          className={`flex-1 p-3 md:p-4 transition-opacity duration-200 ${
+            isDateRangeEnabled
+              ? "opacity-100"
+              : "opacity-40 pointer-events-none"
+          }`}
         >
           <div className="flex items-center justify-between mb-3">
             <button
@@ -323,7 +350,7 @@ export default function CustomDateFilter({
         </div>
       </div>
 
-      <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100 bg-gray-50/60">
+      <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100 bg-gray-50/60 sticky bottom-0">
         <button
           onClick={handleClearClick}
           className="text-xs font-semibold text-gray-400 hover:text-gray-600 transition-colors px-2 py-1"
