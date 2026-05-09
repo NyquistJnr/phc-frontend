@@ -2,14 +2,27 @@
 
 import React, { useRef, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarDays, ChevronDown, Clock, Search, X } from "lucide-react";
+import {
+  CalendarDays,
+  ChevronDown,
+  Clock,
+  Search,
+  X,
+  Loader2,
+} from "lucide-react";
 
 import NurseDashboardHeader from "@/src/components/nurse-dashboard/generics/NurseDashboardHeader";
 import NurseBackButton from "@/src/components/nurse-dashboard/generics/NurseBackButton";
+import {
+  useCreateAppointment,
+  useSearchPatients,
+  useFacilityStaff,
+} from "@/src/hooks/nurses/use-appointments";
 
 export type AppointmentFormState = {
   patientName: string;
   patientId: string;
+  patientDisplayId: string;
   encounterId: string;
   appointmentId: string;
   date: string;
@@ -21,20 +34,20 @@ export type AppointmentFormState = {
 };
 
 const VISIT_TYPES = [
-  "GENERAL",
-  "FOLLOW_UP",
-  "ANTENATAL",
-  "IMMUNIZATION",
-  "EMERGENCY",
-  "OTHER",
+  { label: "General", value: "GENERAL" },
+  { label: "Follow Up", value: "FOLLOW_UP" },
+  { label: "Antenatal", value: "ANTENATAL" },
+  { label: "Immunization", value: "IMMUNIZATION" },
+  { label: "Emergency", value: "EMERGENCY" },
+  { label: "Other", value: "OTHER" },
 ];
-const ASSIGNEES = ["Qwerty Pop - FAC-IT", "Kalu Prince - Doctor"];
 
 const INITIAL_FORM: AppointmentFormState = {
   patientName: "",
-  patientId: "PAT-PLT-000234",
-  encounterId: "ENC-PLT-000234",
-  appointmentId: "APT-PLT-000234",
+  patientId: "",
+  patientDisplayId: "",
+  encounterId: "",
+  appointmentId: "",
   date: "",
   time: "",
   visitType: "",
@@ -54,7 +67,7 @@ function FieldShell({
 }) {
   return (
     <div
-      className={`rounded-lg border border-gray-300 bg-white px-4 py-2.5 focus-within:border-[#046C3F] focus-within:ring-1 focus-within:ring-[#046C3F] ${className}`}
+      className={`relative flex flex-col justify-center rounded-lg border border-gray-300 bg-white px-4 py-2.5 focus-within:border-[#046C3F] focus-within:ring-1 focus-within:ring-[#046C3F] ${className}`}
     >
       <label className="mb-1 block text-xs text-[#62636C]">{label}</label>
       {children}
@@ -68,27 +81,36 @@ function SelectField({
   options,
   value,
   searchable = false,
+  isLoading = false,
   onChange,
+  onSearchChange,
 }: {
   label: string;
   placeholder: string;
-  options: string[];
+  options: { label: string; value: string }[];
   value: string;
   searchable?: boolean;
+  isLoading?: boolean;
   onChange: (value: string) => void;
+  onSearchChange?: (term: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const ref = useRef<HTMLDivElement>(null);
 
-  const filteredOptions = options.filter((option) =>
-    option.toLowerCase().includes(search.toLowerCase()),
-  );
+  const displayOptions = onSearchChange
+    ? options
+    : options.filter((option) =>
+        option.label.toLowerCase().includes(search.toLowerCase()),
+      );
+
+  const selectedLabel = options.find((opt) => opt.value === value)?.label;
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (ref.current && !ref.current.contains(event.target as Node))
+      if (ref.current && !ref.current.contains(event.target as Node)) {
         setOpen(false);
+      }
     }
     if (open) {
       document.addEventListener("mousedown", handleClickOutside);
@@ -96,6 +118,14 @@ function SelectField({
         document.removeEventListener("mousedown", handleClickOutside);
     }
   }, [open]);
+
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const term = e.target.value;
+    setSearch(term);
+    if (onSearchChange) {
+      onSearchChange(term);
+    }
+  };
 
   return (
     <div className="relative" ref={ref}>
@@ -106,8 +136,8 @@ function SelectField({
       >
         <span className="mb-1 block text-xs text-[#62636C]">{label}</span>
         <span className="flex items-center justify-between gap-3 text-base">
-          <span className={value ? "text-gray-700" : "text-gray-400"}>
-            {value || placeholder}
+          <span className={selectedLabel ? "text-gray-700" : "text-gray-400"}>
+            {selectedLabel || placeholder}
           </span>
           <ChevronDown
             size={20}
@@ -119,44 +149,57 @@ function SelectField({
       {open && (
         <div className="absolute left-0 right-0 top-full z-50 mt-2 rounded-lg border border-gray-300 bg-white p-4 shadow-sm">
           {searchable && (
-            <div className="relative mb-3">
+            <div className="relative mb-3 flex items-center">
               <Search
                 size={20}
                 className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-900"
               />
               <input
                 value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search"
-                className="h-11 w-full rounded-lg border border-gray-300 pl-12 pr-3 text-sm outline-none focus:border-[#046C3F] focus:ring-1 focus:ring-[#046C3F]"
+                onChange={handleSearch}
+                placeholder="Search..."
+                className="h-11 w-full rounded-lg border border-gray-300 pl-12 pr-10 text-sm outline-none focus:border-[#046C3F] focus:ring-1 focus:ring-[#046C3F]"
               />
+              {isLoading && (
+                <Loader2
+                  size={16}
+                  className="absolute right-4 animate-spin text-gray-400"
+                />
+              )}
             </div>
           )}
           <div className="max-h-72 overflow-y-auto pr-1">
-            {filteredOptions.map((option, index) => {
-              const selected = value === option;
-              return (
-                <button
-                  key={`${option}-${index}`}
-                  type="button"
-                  onClick={() => {
-                    onChange(option);
-                    setSearch("");
-                    setOpen(false);
-                  }}
-                  className="flex w-full items-center gap-4 rounded-md px-2 py-2.5 text-left text-sm text-gray-500 hover:bg-gray-50"
-                >
-                  <span
-                    className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border transition-colors ${selected ? "border-[#046C3F] bg-[#046C3F]" : "border-gray-300 bg-white"}`}
+            {displayOptions.length > 0 ? (
+              displayOptions.map((option, index) => {
+                const selected = value === option.value;
+                return (
+                  <button
+                    key={`${option.value}-${index}`}
+                    type="button"
+                    onClick={() => {
+                      onChange(option.value);
+                      setSearch("");
+                      if (onSearchChange) onSearchChange("");
+                      setOpen(false);
+                    }}
+                    className="flex w-full items-center gap-4 rounded-md px-2 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50"
                   >
-                    {selected && (
-                      <span className="h-2.5 w-2.5 rounded-sm bg-white" />
-                    )}
-                  </span>
-                  {option}
-                </button>
-              );
-            })}
+                    <span
+                      className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border transition-colors ${selected ? "border-[#046C3F] bg-[#046C3F]" : "border-gray-300 bg-white"}`}
+                    >
+                      {selected && (
+                        <span className="h-2.5 w-2.5 rounded-sm bg-white" />
+                      )}
+                    </span>
+                    {option.label}
+                  </button>
+                );
+              })
+            ) : (
+              <div className="px-2 py-2 text-sm text-gray-500">
+                {isLoading ? "Searching..." : "No results found"}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -193,6 +236,24 @@ export default function NewAppointments() {
   const [form, setForm] = useState<AppointmentFormState>(INITIAL_FORM);
   const [formError, setFormError] = useState("");
   const [toastVisible, setToastVisible] = useState(false);
+  const [patientSearchTerm, setPatientSearchTerm] = useState("");
+  const [staffSearchInput, setStaffSearchInput] = useState("");
+  const [staffSearchTerm, setStaffSearchTerm] = useState("");
+
+  const [showPatientDropdown, setShowPatientDropdown] = useState(false);
+  const patientRef = useRef<HTMLDivElement>(null);
+
+  const { data: patientsList = [], isFetching: isLoadingPatients } =
+    useSearchPatients(patientSearchTerm);
+  const { data: staffList = [], isFetching: isLoadingStaff } =
+    useFacilityStaff(staffSearchTerm);
+  const { mutate: createAppointment, isPending: isCreating } =
+    useCreateAppointment();
+
+  const assigneeOptions = staffList.map((staff: any) => ({
+    label: `${staff.first_name} ${staff.last_name} - ${staff.role}`,
+    value: staff.id,
+  }));
 
   const handleChange = <K extends keyof AppointmentFormState>(
     field: K,
@@ -202,24 +263,77 @@ export default function NewAppointments() {
     setFormError("");
   };
 
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setPatientSearchTerm(form.patientName);
+    }, 800);
+    return () => clearTimeout(handler);
+  }, [form.patientName]);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setStaffSearchTerm(staffSearchInput);
+    }, 800);
+    return () => clearTimeout(handler);
+  }, [staffSearchInput]);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        patientRef.current &&
+        !patientRef.current.contains(event.target as Node)
+      ) {
+        setShowPatientDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (
-      !form.patientName.trim() ||
+      !form.patientId ||
       !form.visitType ||
       !form.assignedTo ||
+      !form.date ||
+      !form.time ||
       !form.reason.trim()
     ) {
-      setFormError("Please complete all required appointment fields.");
+      setFormError(
+        "Please complete all required appointment fields, ensuring a patient is selected from the list.",
+      );
       return;
     }
 
-    setToastVisible(true);
+    const formattedTime = `${form.time}:00.000Z`;
 
-    setTimeout(() => {
-      router.push("/nurse-dashboard/appointments");
-    }, 2000);
+    createAppointment(
+      {
+        patient: form.patientId,
+        assigned_to: form.assignedTo,
+        appointment_date: form.date,
+        appointment_time: formattedTime,
+        visit_type: form.visitType,
+        reason_for_visit: form.reason,
+        notes: form.notes,
+      },
+      {
+        onSuccess: () => {
+          setToastVisible(true);
+          setTimeout(() => {
+            router.push("/nurse-dashboard/appointments");
+          }, 2000);
+        },
+        onError: (error: any) => {
+          setFormError(
+            error?.response?.data?.message ||
+              "Failed to create appointment. Please try again.",
+          );
+        },
+      },
+    );
   };
 
   const handleCancel = () => {
@@ -264,40 +378,83 @@ export default function NewAppointments() {
             )}
 
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-              <FieldShell label="Patient Name">
-                <div className="flex items-center gap-3">
-                  <Search size={24} className="shrink-0 text-gray-900" />
-                  <input
-                    value={form.patientName}
-                    onChange={(e) =>
-                      handleChange("patientName", e.target.value)
-                    }
-                    placeholder="Search patient by name or ID"
-                    className="w-full bg-transparent text-base text-gray-700 outline-none placeholder:text-gray-400"
-                  />
-                </div>
-              </FieldShell>
+              <div ref={patientRef} className="relative z-10">
+                <FieldShell label="Patient Name">
+                  <div className="flex items-center gap-3">
+                    <Search size={24} className="shrink-0 text-gray-900" />
+                    <input
+                      value={form.patientName}
+                      onChange={(e) => {
+                        handleChange("patientName", e.target.value);
+                        if (form.patientId) {
+                          handleChange("patientId", "");
+                          handleChange("patientDisplayId", "");
+                        }
+                        setShowPatientDropdown(true);
+                      }}
+                      onFocus={() => setShowPatientDropdown(true)}
+                      placeholder="Search patient by name"
+                      className="w-full bg-transparent text-base text-gray-700 outline-none placeholder:text-gray-400"
+                    />
+                    {isLoadingPatients && (
+                      <Loader2
+                        size={20}
+                        className="animate-spin text-gray-400"
+                      />
+                    )}
+                  </div>
+                </FieldShell>
+
+                {showPatientDropdown && (
+                  <div className="absolute left-0 right-0 top-full mt-2 max-h-60 overflow-y-auto rounded-lg border border-gray-300 bg-white p-2 shadow-lg">
+                    {patientsList.length > 0 ? (
+                      patientsList.map((patient: any) => (
+                        <button
+                          key={patient.id}
+                          type="button"
+                          onClick={() => {
+                            handleChange("patientId", patient.id);
+                            handleChange(
+                              "patientDisplayId",
+                              patient.profile?.patient_id || "",
+                            );
+                            handleChange(
+                              "patientName",
+                              `${patient.first_name} ${patient.last_name}`,
+                            );
+                            setShowPatientDropdown(false);
+                          }}
+                          className="w-full rounded-md px-3 py-2 text-left text-sm hover:bg-gray-50"
+                        >
+                          <div className="font-medium text-gray-900">
+                            {patient.first_name} {patient.last_name}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            ID: {patient.profile?.patient_id || "N/A"} •{" "}
+                            {patient.phone_number || "No Phone"}
+                          </div>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="px-3 py-2 text-sm text-gray-500">
+                        {isLoadingPatients
+                          ? "Searching..."
+                          : "No patients found"}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
               <FieldShell label="Patient ID">
                 <input
-                  value={form.patientId}
+                  value={form.patientDisplayId}
                   readOnly
+                  placeholder="Auto-filled on selection"
                   className="w-full bg-transparent text-base text-gray-400 outline-none"
                 />
               </FieldShell>
-              <FieldShell label="Encounter ID">
-                <input
-                  value={form.encounterId}
-                  readOnly
-                  className="w-full bg-transparent text-base text-gray-400 outline-none"
-                />
-              </FieldShell>
-              <FieldShell label="Appointment ID">
-                <input
-                  value={form.appointmentId}
-                  readOnly
-                  className="w-full bg-transparent text-base text-gray-400 outline-none"
-                />
-              </FieldShell>
+
               <FieldShell label="Date">
                 <div className="flex items-center gap-3">
                   <CalendarDays size={22} className="shrink-0 text-gray-500" />
@@ -305,7 +462,7 @@ export default function NewAppointments() {
                     value={form.date}
                     type="date"
                     onChange={(e) => handleChange("date", e.target.value)}
-                    className="w-full bg-transparent text-base text-gray-400 outline-none"
+                    className="w-full bg-transparent text-base text-gray-700 outline-none"
                   />
                 </div>
               </FieldShell>
@@ -316,7 +473,7 @@ export default function NewAppointments() {
                     value={form.time}
                     type="time"
                     onChange={(e) => handleChange("time", e.target.value)}
-                    className="w-full bg-transparent text-base text-gray-400 outline-none"
+                    className="w-full bg-transparent text-base text-gray-700 outline-none"
                   />
                 </div>
               </FieldShell>
@@ -330,11 +487,17 @@ export default function NewAppointments() {
               />
               <SelectField
                 label="Assigned To"
-                placeholder="Select"
-                options={ASSIGNEES}
+                placeholder={
+                  isLoadingStaff && staffList.length === 0
+                    ? "Loading staff..."
+                    : "Select Staff"
+                }
+                options={assigneeOptions}
                 searchable
+                isLoading={isLoadingStaff}
                 value={form.assignedTo}
                 onChange={(value) => handleChange("assignedTo", value)}
+                onSearchChange={(term) => setStaffSearchInput(term)}
               />
             </div>
 
@@ -343,7 +506,7 @@ export default function NewAppointments() {
                 value={form.reason}
                 onChange={(e) => handleChange("reason", e.target.value)}
                 placeholder="Enter reason here"
-                rows={6}
+                rows={4}
                 className="w-full resize-none bg-transparent text-base text-gray-700 outline-none placeholder:text-gray-400"
               />
             </FieldShell>
@@ -353,7 +516,7 @@ export default function NewAppointments() {
                 value={form.notes}
                 onChange={(e) => handleChange("notes", e.target.value)}
                 placeholder="Enter notes here"
-                rows={5}
+                rows={3}
                 className="w-full resize-none bg-transparent text-base text-gray-700 outline-none placeholder:text-gray-400"
               />
             </FieldShell>
@@ -362,16 +525,22 @@ export default function NewAppointments() {
               <button
                 type="button"
                 onClick={handleCancel}
-                className="h-14 rounded-xl bg-[#B9BDC9] px-12 text-lg font-medium text-white transition-colors hover:bg-[#A9AEBC]"
+                disabled={isCreating}
+                className="h-14 rounded-xl bg-[#B9BDC9] px-12 text-lg font-medium text-white transition-colors hover:bg-[#A9AEBC] disabled:opacity-70"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="flex h-14 items-center justify-center gap-3 rounded-xl bg-[#046C3F] px-10 text-lg font-medium text-white transition-colors hover:bg-[#035a34]"
+                disabled={isCreating}
+                className="flex h-14 items-center justify-center gap-3 rounded-xl bg-[#046C3F] px-10 text-lg font-medium text-white transition-colors hover:bg-[#035a34] disabled:opacity-70"
               >
-                <CalendarDays size={20} />
-                Schedule
+                {isCreating ? (
+                  <Loader2 size={20} className="animate-spin" />
+                ) : (
+                  <CalendarDays size={20} />
+                )}
+                {isCreating ? "Scheduling..." : "Schedule"}
               </button>
             </div>
           </div>
