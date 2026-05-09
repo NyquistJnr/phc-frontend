@@ -1,44 +1,10 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useApi } from "../use-api";
-
-export interface AppointmentResult {
-  id: string;
-  appointment_id: string;
-  patient: string;
-  patient_name: string;
-  patient_display_id: string;
-  assigned_to: string;
-  assigned_staff_name: string;
-  appointment_date: string;
-  appointment_time: string;
-  visit_type: string;
-  status: string;
-  priority: string;
-  reason_for_visit: string;
-  notes: string | null;
-  created_by: string;
-  created_by_name: string;
-  created_at: string;
-}
-
-export interface AppointmentsResponse {
-  count: number;
-  total_pages: number;
-  current_page: number;
-  next: string | null;
-  previous: string | null;
-  results: AppointmentResult[];
-}
-
-export interface AppointmentFilters {
-  page?: number;
-  page_size?: number;
-  status?: string;
-  visit_type?: string;
-  search?: string;
-  start_date?: string;
-  end_date?: string;
-}
+import {
+  AppointmentFilters,
+  AppointmentResult,
+  AppointmentsResponse,
+} from "@/src/components/nurse-dashboard/appointments/type";
 
 export function useAppointments(filters: AppointmentFilters) {
   const api = useApi();
@@ -65,5 +31,53 @@ export function useAppointments(filters: AppointmentFilters) {
     },
     enabled: api.isAuthenticated && !api.isLoading,
     placeholderData: (previousData) => previousData,
+  });
+}
+
+export function useAppointment(id: string) {
+  const api = useApi();
+
+  return useQuery({
+    queryKey: ["appointment", id],
+    queryFn: async () => {
+      return await api.get<{ data: AppointmentResult }>(
+        `/appointments/appointments/${id}/`,
+      );
+    },
+    enabled: !!id && api.isAuthenticated && !api.isLoading,
+  });
+}
+
+export function useDeleteAppointment() {
+  const api = useApi();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      return await api.delete(`/appointments/appointments/${id}/`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["appointments"] });
+    },
+  });
+}
+
+export function useUpdateAppointmentStatus() {
+  const api = useApi();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      return await api.patch(
+        `/appointments/appointments/${id}/update-status/`,
+        { status },
+      );
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      queryClient.invalidateQueries({
+        queryKey: ["appointment", variables.id],
+      });
+    },
   });
 }

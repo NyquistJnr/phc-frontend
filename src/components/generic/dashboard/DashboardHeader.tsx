@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Bell, Home, Menu, Search } from "lucide-react";
 import { useSidebar } from "@/src/components/adminDashboard/generics/sidebar";
@@ -9,6 +10,7 @@ import { useProfile } from "@/src/hooks/useProfile";
 
 export type DashboardBreadcrumb = {
   label: string;
+  href?: string;
 };
 
 type DashboardHeaderProps = {
@@ -93,7 +95,12 @@ export default function DashboardHeader({
             <p className="text-[11px] leading-tight text-gray-500">{role}</p>
           </div>
           <div className="relative h-10 w-10 overflow-hidden rounded-full border border-gray-200 bg-gray-100">
-            <Image src={profilePic} alt="Profile" fill className="object-cover" />
+            <Image
+              src={profilePic}
+              alt="Profile"
+              fill
+              className="object-cover"
+            />
           </div>
         </div>
       </header>
@@ -107,7 +114,16 @@ export default function DashboardHeader({
         {breadcrumbs.map((crumb) => (
           <span key={crumb.label} className="contents">
             <span>/</span>
-            <span className="whitespace-nowrap">{crumb.label}</span>
+            {crumb.href ? (
+              <Link
+                href={crumb.href}
+                className="whitespace-nowrap transition-colors hover:text-gray-800"
+              >
+                {crumb.label}
+              </Link>
+            ) : (
+              <span className="whitespace-nowrap">{crumb.label}</span>
+            )}
           </span>
         ))}
       </nav>
