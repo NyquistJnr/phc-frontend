@@ -37,6 +37,7 @@ const VISIT_TYPES = [
   { label: "General", value: "GENERAL" },
   { label: "Follow Up", value: "FOLLOW_UP" },
   { label: "Antenatal", value: "ANTENATAL" },
+  { label: "Postnatal", value: "POSTNATAL" },
   { label: "Immunization", value: "IMMUNIZATION" },
   { label: "Emergency", value: "EMERGENCY" },
   { label: "Other", value: "OTHER" },
