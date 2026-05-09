@@ -40,9 +40,8 @@ export function useAppointment(id: string) {
   return useQuery({
     queryKey: ["appointment", id],
     queryFn: async () => {
-      return await api.get<{ data: AppointmentResult }>(
-        `/appointments/appointments/${id}/`,
-      );
+      const res = await api.get<any>(`/appointments/appointments/${id}/`);
+      return res?.data?.data || res?.data || res;
     },
     enabled: !!id && api.isAuthenticated && !api.isLoading,
   });
