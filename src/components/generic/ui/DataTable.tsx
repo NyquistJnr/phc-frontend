@@ -82,7 +82,7 @@ export function DataTable<T>({
               </div>
             )}
           </div>
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 w-full md:w-auto md:flex-1 relative z-[100]">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 w-full md:w-auto md:flex-1 relative z-10">
             {showSearch && (
               <div className="relative w-full sm:w-auto sm:max-w-md flex-1">
                 <Search
@@ -100,7 +100,7 @@ export function DataTable<T>({
             )}
 
             {toolbarActions && (
-              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto relative z-[100]">
+              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto relative z-10">
                 {toolbarActions}
               </div>
             )}

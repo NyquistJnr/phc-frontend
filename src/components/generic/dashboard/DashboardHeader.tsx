@@ -48,7 +48,7 @@ export default function DashboardHeader({
   const profilePic = profileData?.profile_picture || "/images/profile.jpg";
 
   return (
-    <div className="sticky top-0 z-20 flex w-full flex-col">
+    <div className="sticky top-0 z-50 flex w-full flex-col">
       <header className="flex items-center justify-between gap-4 border-b border-gray-100 bg-white px-4 py-3 sm:px-8">
         <div className="flex min-w-0 items-center gap-3">
           <button

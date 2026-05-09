@@ -22,12 +22,12 @@ const statusColors: Record<string, { bg: string; text: string }> = {
   VITALS_DONE: { bg: "#E2E7FF", text: "#046C3F" },
 };
 
-export default function AppointmentDetails() {
+export default function AppointmentDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
 
-  const { data: response, isLoading, isError } = useAppointment(id);
+  const { data: appointment, isLoading, isError } = useAppointment(id);
 
   if (isLoading) {
     return (
@@ -37,7 +37,7 @@ export default function AppointmentDetails() {
     );
   }
 
-  if (isError || !response?.data) {
+  if (isError || !appointment || !appointment.appointment_id) {
     return (
       <div className="flex h-screen flex-col items-center justify-center bg-[#F6F7FC]">
         <p className="mb-4 text-gray-500">
@@ -53,7 +53,6 @@ export default function AppointmentDetails() {
     );
   }
 
-  const appointment = response.data;
   const colorData = statusColors[appointment.status] || {
     bg: "#F3F4F6",
     text: "#374151",
@@ -68,9 +67,7 @@ export default function AppointmentDetails() {
           { label: appointment.appointment_id },
         ]}
       />
-
       <div className="px-4 py-6 sm:px-6 lg:py-8 max-w-5xl mx-auto">
-        {/* Header Actions */}
         <div className="mb-6 flex items-center justify-between">
           <button
             onClick={() => router.push("/nurse-dashboard/appointments")}
@@ -85,10 +82,7 @@ export default function AppointmentDetails() {
             textColorHex={colorData.text}
           />
         </div>
-
-        {/* Info Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Patient Card */}
           <div className="md:col-span-1 bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
             <div className="mb-6 flex items-center gap-3">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#E6F4EA] text-[#046C3F]">
@@ -123,8 +117,6 @@ export default function AppointmentDetails() {
               </div>
             </div>
           </div>
-
-          {/* Details Card */}
           <div className="md:col-span-2 bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
             <h3 className="mb-6 text-lg font-semibold text-gray-900 border-b border-gray-100 pb-4 flex items-center gap-2">
               <ClipboardList size={20} className="text-[#046C3F]" />
@@ -159,7 +151,7 @@ export default function AppointmentDetails() {
                     Time
                   </p>
                   <p className="mt-1 text-sm font-medium text-gray-800">
-                    {appointment.appointment_time.slice(0, 5)}
+                    {appointment.appointment_time?.slice(0, 5)}
                   </p>
                 </div>
               </div>
