@@ -8,10 +8,15 @@ import {
   User,
   FileText,
   ClipboardList,
+  Activity,
+  Plus,
 } from "lucide-react";
 import NurseDashboardHeader from "@/src/components/nurse-dashboard/generics/NurseDashboardHeader";
 import { StatusBadge } from "@/src/components/generic/ui/TableHelpers";
-import { useAppointment } from "@/src/hooks/nurses/use-appointments";
+import {
+  useAppointment,
+  useAppointmentVitals,
+} from "@/src/hooks/nurses/use-appointments";
 
 const statusColors: Record<string, { bg: string; text: string }> = {
   SCHEDULED: { bg: "#FFF4E5", text: "#1F2937" },
@@ -22,12 +27,40 @@ const statusColors: Record<string, { bg: string; text: string }> = {
   VITALS_DONE: { bg: "#E2E7FF", text: "#046C3F" },
 };
 
+const VitalMetric = ({
+  label,
+  value,
+  unit,
+}: {
+  label: string;
+  value: any;
+  unit: string;
+}) => (
+  <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+    <p className="text-xs font-medium uppercase tracking-wider text-gray-500 mb-1">
+      {label}
+    </p>
+    <p className="text-lg font-semibold text-gray-900">
+      {value !== null && value !== undefined ? (
+        <>
+          {value}{" "}
+          <span className="text-sm font-normal text-gray-500">{unit}</span>
+        </>
+      ) : (
+        <span className="text-gray-400 text-sm">Not recorded</span>
+      )}
+    </p>
+  </div>
+);
+
 export default function AppointmentDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
 
   const { data: appointment, isLoading, isError } = useAppointment(id);
+  const { data: vitalsData, isLoading: isLoadingVitals } =
+    useAppointmentVitals(id);
 
   if (isLoading) {
     return (
@@ -58,6 +91,8 @@ export default function AppointmentDetailsPage() {
     text: "#374151",
   };
 
+  const vitals = vitalsData?.results?.[0];
+
   return (
     <div className="min-h-screen bg-[#F6F7FC]">
       <NurseDashboardHeader
@@ -67,7 +102,7 @@ export default function AppointmentDetailsPage() {
           { label: appointment.appointment_id },
         ]}
       />
-      <div className="px-4 py-6 sm:px-6 lg:py-8 max-w-5xl mx-auto">
+      <div className="px-4 py-6 sm:px-6 lg:py-8 max-w-8xl mx-auto">
         <div className="mb-6 flex items-center justify-between">
           <button
             onClick={() => router.push("/nurse-dashboard/appointments")}
@@ -188,6 +223,86 @@ export default function AppointmentDetailsPage() {
                 </div>
               )}
             </div>
+          </div>
+          <div className="md:col-span-3 bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+            <div className="mb-6 flex items-center justify-between border-b border-gray-100 pb-4">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <Activity size={20} className="text-[#046C3F]" />
+                Patient Vitals
+              </h3>
+              {!vitals && !isLoadingVitals && (
+                <button
+                  onClick={() =>
+                    router.push(`/nurse-dashboard/vitals/new/${id}`)
+                  }
+                  className="flex items-center gap-2 rounded-lg bg-[#046C3F] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#035a34]"
+                >
+                  <Plus size={16} /> Add Vitals
+                </button>
+              )}
+            </div>
+
+            {isLoadingVitals ? (
+              <div className="py-8 text-center">
+                <p className="text-sm text-gray-500">Loading vitals...</p>
+              </div>
+            ) : vitals ? (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <VitalMetric
+                  label="Blood Pressure"
+                  value={vitals.blood_pressure}
+                  unit="mmHg"
+                />
+                <VitalMetric
+                  label="Heart Rate"
+                  value={vitals.pulse_rate}
+                  unit="bpm"
+                />
+                <VitalMetric
+                  label="Temperature"
+                  value={vitals.temperature}
+                  unit="°C"
+                />
+                <VitalMetric
+                  label="Respiratory Rate"
+                  value={vitals.respiratory_rate}
+                  unit="bpm"
+                />
+                <VitalMetric
+                  label="Weight"
+                  value={vitals.weight_kg}
+                  unit="kg"
+                />
+                <VitalMetric
+                  label="Height"
+                  value={vitals.height_cm}
+                  unit="cm"
+                />
+                <VitalMetric label="BMI" value={vitals.bmi} unit="" />
+                <VitalMetric label="SpO2" value={vitals.spo2} unit="%" />
+              </div>
+            ) : (
+              <div className="text-center py-10 px-4">
+                <div className="mx-auto w-12 h-12 rounded-full bg-gray-50 flex items-center justify-center mb-4">
+                  <Activity size={24} className="text-gray-400" />
+                </div>
+                <h4 className="text-base font-medium text-gray-900 mb-1">
+                  No vitals recorded
+                </h4>
+                <p className="text-sm text-gray-500 mb-6 max-w-sm mx-auto">
+                  Patient vitals have not been captured for this appointment
+                  yet. Please record them to proceed.
+                </p>
+                <button
+                  onClick={() =>
+                    router.push(`/nurse-dashboard/vitals/new/${id}`)
+                  }
+                  className="inline-flex items-center gap-2 rounded-lg bg-[#046C3F] px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#035a34]"
+                >
+                  <Plus size={18} /> Record Patient Vitals
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>

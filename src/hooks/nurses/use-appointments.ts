@@ -2,7 +2,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useApi } from "../use-api";
 import {
   AppointmentFilters,
-  AppointmentResult,
   AppointmentsResponse,
 } from "@/src/components/nurse-dashboard/appointments/type";
 import { PaginatedResponse } from "@/src/types/custom-pagination";
@@ -45,6 +44,23 @@ export function useAppointment(id: string) {
       return res?.data?.data || res?.data || res;
     },
     enabled: !!id && api.isAuthenticated && !api.isLoading,
+  });
+}
+
+// NEW HOOK FOR VITALS
+export function useAppointmentVitals(appointmentId: string) {
+  const api = useApi();
+
+  return useQuery({
+    queryKey: ["appointment-vitals", appointmentId],
+    queryFn: async () => {
+      const res = await api.get<any>(
+        `/appointments/vitals/?page=1&page_size=10&appointment_id=${appointmentId}`,
+      );
+      // Depending on your axios interceptor setup, unwrap the payload safely:
+      return res?.data?.data || res?.data || res;
+    },
+    enabled: !!appointmentId && api.isAuthenticated && !api.isLoading,
   });
 }
 
