@@ -41,24 +41,26 @@ const parseDateSafe = (dateStr?: string) => {
   return null;
 };
 
-const getPredefinedDates = (option: string) => {
+const getPredefinedDates = (option: string): { start: Date; end: Date } => {
   const today = new Date();
   let start = new Date(today);
   let end = new Date(today);
 
   switch (option) {
-    case "This Week":
+    case "This Week": {
       const day = today.getDay() || 7;
       start.setDate(today.getDate() - (day - 1));
       end = new Date(start);
       end.setDate(start.getDate() + 6);
       break;
-    case "Last Week":
+    }
+    case "Last Week": {
       const lastWeekDay = today.getDay() || 7;
       start.setDate(today.getDate() - (lastWeekDay - 1) - 7);
       end = new Date(start);
       end.setDate(start.getDate() + 6);
       break;
+    }
     case "This Month":
       start = new Date(today.getFullYear(), today.getMonth(), 1);
       end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
@@ -76,7 +78,7 @@ const getPredefinedDates = (option: string) => {
       end = new Date(today.getFullYear() - 1, 11, 31);
       break;
   }
-  return { start: formatToYYYYMMDD(start), end: formatToYYYYMMDD(end) };
+  return { start, end };
 };
 
 export default function CustomDateFilter({
@@ -86,7 +88,6 @@ export default function CustomDateFilter({
   onClear,
 }: CustomDateFilterProps) {
   const [selectedPredefined, setSelectedPredefined] = useState("");
-  const [isDateRangeEnabled, setIsDateRangeEnabled] = useState(true);
   const [activeTab, setActiveTab] = useState("From");
 
   const [currentDate, setCurrentDate] = useState(() => {
@@ -97,19 +98,58 @@ export default function CustomDateFilter({
   const currentMonth = currentDate.getMonth();
   const currentYear = currentDate.getFullYear();
 
-  const [startDay, setStartDay] = useState<number | null>(() => {
-    const d = parseDateSafe(initialStartDate);
-    return d ? d.getDate() : null;
-  });
-  const [endDay, setEndDay] = useState<number | null>(() => {
-    const d = parseDateSafe(initialEndDate);
-    return d ? d.getDate() : null;
-  });
+  const [startDate, setStartDate] = useState<Date | null>(() =>
+    parseDateSafe(initialStartDate),
+  );
+  const [endDate, setEndDate] = useState<Date | null>(() =>
+    parseDateSafe(initialEndDate),
+  );
   const [hoverDay, setHoverDay] = useState<number | null>(null);
+
+  const startDay =
+    startDate &&
+    startDate.getFullYear() === currentYear &&
+    startDate.getMonth() === currentMonth
+      ? startDate.getDate()
+      : null;
+
+  const endDay =
+    endDate &&
+    endDate.getFullYear() === currentYear &&
+    endDate.getMonth() === currentMonth
+      ? endDate.getDate()
+      : null;
+
+  const isInRange = (day: number) => {
+    const d = new Date(currentYear, currentMonth, day);
+    if (startDate && endDate) return d > startDate && d < endDate;
+    if (startDate && !endDate && hoverDay) {
+      const hoverDate = new Date(currentYear, currentMonth, hoverDay);
+      if (hoverDate > startDate) return d > startDate && d < hoverDate;
+    }
+    return false;
+  };
+
+  const isStart = (day: number) => {
+    if (!startDate) return false;
+    return (
+      startDate.getFullYear() === currentYear &&
+      startDate.getMonth() === currentMonth &&
+      startDate.getDate() === day
+    );
+  };
+
+  const isEnd = (day: number) => {
+    if (!endDate) return false;
+    return (
+      endDate.getFullYear() === currentYear &&
+      endDate.getMonth() === currentMonth &&
+      endDate.getDate() === day
+    );
+  };
 
   const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
   const firstDayOfMonth = new Date(currentYear, currentMonth, 1).getDay();
-
   const adjustedFirstDay = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1;
 
   const calendarDays = [
@@ -118,18 +158,30 @@ export default function CustomDateFilter({
   ];
 
   const handleDayClick = (day: number) => {
-    if (!startDay || (startDay && endDay)) {
-      setStartDay(day);
-      setEndDay(null);
-    } else if (day === startDay) {
-      setStartDay(null);
-      setEndDay(null);
-    } else if (day > startDay) {
-      setEndDay(day);
+    setSelectedPredefined("");
+
+    const clicked = new Date(currentYear, currentMonth, day);
+
+    if (!startDate || (startDate && endDate)) {
+      setStartDate(clicked);
+      setEndDate(null);
+    } else if (clicked.getTime() === startDate.getTime()) {
+      setStartDate(null);
+      setEndDate(null);
+    } else if (clicked > startDate) {
+      setEndDate(clicked);
     } else {
-      setEndDay(startDay);
-      setStartDay(day);
+      setEndDate(startDate);
+      setStartDate(clicked);
     }
+  };
+
+  const handlePredefinedClick = (option: string) => {
+    setSelectedPredefined(option);
+    const { start, end } = getPredefinedDates(option);
+    setStartDate(start);
+    setEndDate(end);
+    setCurrentDate(new Date(start.getFullYear(), start.getMonth(), 1));
   };
 
   const nextMonth = () =>
@@ -138,25 +190,17 @@ export default function CustomDateFilter({
     setCurrentDate(new Date(currentYear, currentMonth - 1, 1));
 
   const handleApplyClick = () => {
-    if (!isDateRangeEnabled && selectedPredefined) {
-      const { start, end } = getPredefinedDates(selectedPredefined);
-      onApply(start, end);
-    } else if (isDateRangeEnabled && startDay) {
-      const startStr = formatToYYYYMMDD(
-        new Date(currentYear, currentMonth, startDay),
-      );
-      const endStr = endDay
-        ? formatToYYYYMMDD(new Date(currentYear, currentMonth, endDay))
-        : startStr;
+    if (startDate) {
+      const startStr = formatToYYYYMMDD(startDate);
+      const endStr = endDate ? formatToYYYYMMDD(endDate) : startStr;
       onApply(startStr, endStr);
     }
   };
 
   const handleClearClick = () => {
     setSelectedPredefined("");
-    setIsDateRangeEnabled(true);
-    setStartDay(null);
-    setEndDay(null);
+    setStartDate(null);
+    setEndDate(null);
     onClear();
   };
 
@@ -170,18 +214,45 @@ export default function CustomDateFilter({
   ];
 
   const daysOfWeek = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
+  const rangeStartsBeforeMonth = startDate
+    ? startDate < new Date(currentYear, currentMonth, 1)
+    : false;
+  const rangeEndsAfterMonth = endDate
+    ? endDate > new Date(currentYear, currentMonth + 1, 0)
+    : false;
 
   const renderDay = (day: number | null, index: number) => {
     if (!day) return <div key={`empty-${index}`} className="h-8" />;
 
-    const isStart = day === startDay;
-    const isEnd = day === endDay;
-    const previewEnd =
-      startDay && !endDay && hoverDay && hoverDay > startDay ? hoverDay : null;
-    const effectiveEnd = endDay ?? previewEnd;
-    const isBetween =
-      startDay && effectiveEnd ? day > startDay && day < effectiveEnd : false;
-    const isPreview = !endDay && day === previewEnd;
+    const dayIsStart = isStart(day);
+    const dayIsEnd = isEnd(day);
+    const dayInRange = isInRange(day);
+
+    const isFirstDay = day === 1;
+    const isLastDay = day === daysInMonth;
+    const effectiveStart =
+      dayIsStart || (rangeStartsBeforeMonth && isFirstDay && endDate !== null);
+    const effectiveEnd =
+      dayIsEnd || (rangeEndsAfterMonth && isLastDay && startDate !== null);
+    const fullyInRange =
+      dayInRange ||
+      (rangeStartsBeforeMonth && rangeEndsAfterMonth) ||
+      (rangeStartsBeforeMonth &&
+        endDate &&
+        new Date(currentYear, currentMonth, day) < endDate!) ||
+      (rangeEndsAfterMonth &&
+        startDate &&
+        new Date(currentYear, currentMonth, day) > startDate!);
+
+    const hoverDate = hoverDay
+      ? new Date(currentYear, currentMonth, hoverDay)
+      : null;
+    const isPreview =
+      !endDate &&
+      hoverDate &&
+      startDate &&
+      hoverDate > startDate &&
+      day === hoverDay;
 
     return (
       <div
@@ -191,20 +262,36 @@ export default function CustomDateFilter({
         onMouseEnter={() => setHoverDay(day)}
         onMouseLeave={() => setHoverDay(null)}
       >
-        {isBetween && <div className="absolute inset-0 bg-[#EDF7F0]" />}
-        {isStart && effectiveEnd && (
+        {(dayInRange || (fullyInRange && !dayIsStart && !dayIsEnd)) && (
+          <div className="absolute inset-0 bg-[#EDF7F0]" />
+        )}
+        {(dayIsStart || effectiveStart) && (endDate || rangeEndsAfterMonth) && (
           <div className="absolute right-0 w-1/2 h-full bg-[#EDF7F0]" />
         )}
-        {(isEnd || isPreview) && (
+        {(dayIsEnd || effectiveEnd) &&
+          (startDate || rangeStartsBeforeMonth) && (
+            <div className="absolute left-0 w-1/2 h-full bg-[#EDF7F0]" />
+          )}
+        {isPreview && (
           <div className="absolute left-0 w-1/2 h-full bg-[#EDF7F0]" />
         )}
         <div
           className={`
-          relative z-10 flex items-center justify-center w-7 h-7 text-xs font-medium transition-all duration-100
-          ${isStart || isEnd ? "bg-[#2A6543] text-white rounded-full" : ""}
-          ${isPreview ? "bg-[#2A6543]/40 text-white rounded-full" : ""}
-          ${!isStart && !isEnd && !isPreview ? "text-gray-600 hover:bg-gray-100 hover:rounded-full" : ""}
-        `}
+            relative z-10 flex items-center justify-center w-7 h-7 text-xs font-medium transition-all duration-100
+            ${dayIsStart || dayIsEnd ? "bg-[#2A6543] text-white rounded-full" : ""}
+            ${effectiveStart && !dayIsStart ? "bg-[#2A6543] text-white rounded-full" : ""}
+            ${effectiveEnd && !dayIsEnd ? "bg-[#2A6543] text-white rounded-full" : ""}
+            ${isPreview ? "bg-[#2A6543]/40 text-white rounded-full" : ""}
+            ${
+              !dayIsStart &&
+              !dayIsEnd &&
+              !effectiveStart &&
+              !effectiveEnd &&
+              !isPreview
+                ? "text-gray-600 hover:bg-gray-100 hover:rounded-full"
+                : ""
+            }
+          `}
         >
           {day}
         </div>
@@ -218,7 +305,13 @@ export default function CustomDateFilter({
         <span className="text-sm font-bold text-gray-800">Filter by Date</span>
         <div className="flex bg-gray-100 rounded-lg p-0.5">
           <button
-            onClick={() => setActiveTab("From")}
+            onClick={() => {
+              setActiveTab("From");
+              if (startDate)
+                setCurrentDate(
+                  new Date(startDate.getFullYear(), startDate.getMonth(), 1),
+                );
+            }}
             className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-all ${
               activeTab === "From"
                 ? "bg-[#2A6543] text-white shadow-sm"
@@ -228,7 +321,13 @@ export default function CustomDateFilter({
             From
           </button>
           <button
-            onClick={() => setActiveTab("To")}
+            onClick={() => {
+              setActiveTab("To");
+              if (endDate)
+                setCurrentDate(
+                  new Date(endDate.getFullYear(), endDate.getMonth(), 1),
+                );
+            }}
             className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-all ${
               activeTab === "To"
                 ? "bg-[#2A6543] text-white shadow-sm"
@@ -249,12 +348,7 @@ export default function CustomDateFilter({
             {predefinedOptions.map((option) => (
               <button
                 key={option}
-                onClick={() => {
-                  setSelectedPredefined(option);
-                  setIsDateRangeEnabled(false);
-                  setStartDay(null);
-                  setEndDay(null);
-                }}
+                onClick={() => handlePredefinedClick(option)}
                 className={`flex items-center gap-1.5 px-2 md:px-3 py-2 rounded-lg text-xs font-medium w-full text-left transition-colors ${
                   selectedPredefined === option
                     ? "bg-[#E8F5EE] text-[#2A6543]"
@@ -274,42 +368,40 @@ export default function CustomDateFilter({
               </button>
             ))}
           </div>
-
-          <div className="mt-2 pt-2 border-t border-gray-100">
-            <button
-              onClick={() => {
-                setIsDateRangeEnabled(!isDateRangeEnabled);
-                setSelectedPredefined("");
-              }}
-              className={`flex items-center gap-2 px-2 md:px-3 py-2 rounded-lg text-xs font-semibold w-full text-left transition-colors ${
-                isDateRangeEnabled
-                  ? "bg-[#E8F5EE] text-[#2A6543]"
-                  : "text-gray-500 hover:bg-gray-50"
-              }`}
-            >
-              <div
-                className={`w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0 transition-colors ${
-                  isDateRangeEnabled
-                    ? "bg-[#2A6543] border-[#2A6543]"
-                    : "border-gray-300"
-                }`}
-              >
-                {isDateRangeEnabled && (
-                  <Check size={9} className="text-white" strokeWidth={3} />
+          {startDate && (
+            <div className="mt-3 pt-3 border-t border-gray-100">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">
+                Selected
+              </p>
+              <p className="text-xs text-[#2A6543] font-medium">
+                {startDate.toLocaleDateString("en-GB", {
+                  day: "numeric",
+                  month: "short",
+                })}
+                {endDate && endDate.getTime() !== startDate.getTime() && (
+                  <>
+                    {" "}
+                    →{" "}
+                    {endDate.toLocaleDateString("en-GB", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    })}
+                  </>
                 )}
-              </div>
-              Custom Range
-            </button>
-          </div>
+                {(!endDate || endDate.getTime() === startDate.getTime()) && (
+                  <>
+                    {" "}
+                    —{" "}
+                    {startDate.toLocaleDateString("en-GB", { year: "numeric" })}
+                  </>
+                )}
+              </p>
+            </div>
+          )}
         </div>
 
-        <div
-          className={`flex-1 p-3 md:p-4 transition-opacity duration-200 ${
-            isDateRangeEnabled
-              ? "opacity-100"
-              : "opacity-40 pointer-events-none"
-          }`}
-        >
+        <div className="flex-1 p-3 md:p-4">
           <div className="flex items-center justify-between mb-3">
             <button
               onClick={prevMonth}
@@ -332,6 +424,19 @@ export default function CustomDateFilter({
               <ChevronRight size={16} />
             </button>
           </div>
+          {selectedPredefined && startDate && endDate && (
+            <div className="flex items-center gap-1.5 mb-2 px-1">
+              <div className="h-1.5 w-1.5 rounded-full bg-[#2A6543]" />
+              <p className="text-[10px] text-gray-400">
+                Range spans{" "}
+                {startDate.getMonth() === endDate.getMonth() &&
+                startDate.getFullYear() === endDate.getFullYear()
+                  ? "this month"
+                  : `${MONTHS[startDate.getMonth()]} ${startDate.getFullYear()} → ${MONTHS[endDate.getMonth()]} ${endDate.getFullYear()}`}
+                . Use ‹ › to browse.
+              </p>
+            </div>
+          )}
 
           <div className="grid grid-cols-7 mb-1">
             {daysOfWeek.map((d, i) => (
@@ -359,7 +464,7 @@ export default function CustomDateFilter({
         </button>
         <button
           onClick={handleApplyClick}
-          disabled={isDateRangeEnabled && !startDay}
+          disabled={!startDate}
           className="px-6 py-2 bg-[#2A6543] disabled:opacity-50 hover:bg-[#235337] text-white text-xs font-bold rounded-lg transition-colors shadow-sm"
         >
           Apply Filter

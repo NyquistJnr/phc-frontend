@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import { CalendarDays } from "lucide-react";
 import CustomDateFilter from "@/src/components/adminDashboard/generics/Date";
 
@@ -21,6 +22,8 @@ export default function NurseDateRangeFilter({
 }: DateRangeFilterProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [dropdownStyle, setDropdownStyle] = useState<CSSProperties>({});
   const hasFilter = Boolean(startDate || endDate);
 
   useEffect(() => {
@@ -29,7 +32,6 @@ export default function NurseDateRangeFilter({
         setOpen(false);
       }
     }
-
     if (open) {
       document.addEventListener("mousedown", handleClickOutside);
       return () =>
@@ -37,11 +39,50 @@ export default function NurseDateRangeFilter({
     }
   }, [open]);
 
+  useEffect(() => {
+    if (!open || !ref.current || !dropdownRef.current) return;
+
+    const MARGIN = 16;
+    const isMobile = window.innerWidth < 1024;
+
+    if (isMobile) {
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const dropW = Math.min(dropdownRef.current.offsetWidth, vw - MARGIN * 2);
+      const dropH = Math.min(dropdownRef.current.offsetHeight, vh - MARGIN * 2);
+
+      setDropdownStyle({
+        position: "fixed",
+        width: dropW,
+        maxHeight: vh - MARGIN * 2,
+        overflowY: "auto",
+        left: (vw - dropW) / 2,
+        top: (vh - dropH) / 2,
+        transform: "none",
+      });
+    } else {
+      const trigger = ref.current.getBoundingClientRect();
+      const dropdownWidth = dropdownRef.current.offsetWidth;
+      const vw = window.innerWidth;
+
+      let left = 0;
+      const rightEdge = trigger.left + dropdownWidth;
+      if (rightEdge > vw - MARGIN) {
+        left = -(rightEdge - vw + MARGIN);
+      }
+      if (trigger.left + left < MARGIN) {
+        left = -trigger.left + MARGIN;
+      }
+
+      setDropdownStyle({ left });
+    }
+  }, [open]);
+
   return (
     <div className="relative" ref={ref}>
       <button
         type="button"
-        onClick={() => setOpen((value) => !value)}
+        onClick={() => setOpen((v) => !v)}
         className={`flex items-center gap-2 rounded-lg border px-3 py-2.5 text-xs font-medium transition-colors ${
           hasFilter
             ? "border-[#046C3F] bg-[#E8F7F0] text-[#046C3F]"
@@ -55,10 +96,14 @@ export default function NurseDateRangeFilter({
       {open && (
         <>
           <div
-            className="fixed inset-0 z-[9998] bg-black/40 backdrop-blur-sm lg:hidden"
+            className="fixed inset-0 z-[9998] bg-black/10 backdrop-blur-sm"
             onClick={() => setOpen(false)}
           />
-          <div className="fixed left-1/2 top-1/2 z-[9999] -translate-x-1/2 -translate-y-1/2 lg:absolute lg:top-full lg:mt-2 lg:left-1/2 lg:-translate-y-0 origin-top">
+          <div
+            ref={dropdownRef}
+            className="fixed z-[9999] lg:absolute lg:top-full lg:mt-2"
+            style={dropdownStyle}
+          >
             <CustomDateFilter
               initialStartDate={startDate}
               initialEndDate={endDate}
