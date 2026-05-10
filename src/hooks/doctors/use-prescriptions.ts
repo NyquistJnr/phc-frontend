@@ -1,9 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useApi } from "../use-api"; // Adjust import path as needed
-
-// ==========================================
-// TYPES & INTERFACES
-// ==========================================
+import { useApi } from "../use-api";
 
 export interface PrescriptionFilters {
   page?: number;
@@ -40,10 +36,6 @@ export interface UpdatePrescriptionPayload {
   status: string;
 }
 
-// ==========================================
-// QUERIES (GET)
-// ==========================================
-
 export function usePrescriptions(filters: PrescriptionFilters) {
   const api = useApi();
 
@@ -53,7 +45,8 @@ export function usePrescriptions(filters: PrescriptionFilters) {
       const params = new URLSearchParams();
 
       if (filters.page) params.append("page", String(filters.page));
-      if (filters.page_size) params.append("page_size", String(filters.page_size));
+      if (filters.page_size)
+        params.append("page_size", String(filters.page_size));
       if (filters.patient_id) params.append("patient_id", filters.patient_id);
       if (filters.search) params.append("search", filters.search);
       if (filters.start_date) params.append("start_date", filters.start_date);
@@ -63,8 +56,8 @@ export function usePrescriptions(filters: PrescriptionFilters) {
       }
 
       const queryString = params.toString() ? `?${params.toString()}` : "";
-      
-      const res = await api.get<any>(`/api/v1/prescriptions/orders/${queryString}`);
+
+      const res = await api.get<any>(`/prescriptions/orders/${queryString}`);
       return res?.data?.data || res?.data || res;
     },
     enabled: api.isAuthenticated && !api.isLoading,
@@ -78,16 +71,12 @@ export function usePrescriptionById(id: string) {
   return useQuery({
     queryKey: ["prescription", id],
     queryFn: async () => {
-      const res = await api.get<any>(`/api/v1/prescriptions/orders/${id}/`);
+      const res = await api.get<any>(`/prescriptions/orders/${id}/`);
       return res?.data?.data || res?.data || res;
     },
     enabled: !!id && api.isAuthenticated && !api.isLoading,
   });
 }
-
-// ==========================================
-// MUTATIONS (POST, PUT, PATCH, DELETE)
-// ==========================================
 
 export function useCreatePrescription() {
   const api = useApi();
@@ -95,7 +84,7 @@ export function useCreatePrescription() {
 
   return useMutation({
     mutationFn: async (payload: CreatePrescriptionPayload) => {
-      return await api.post("/api/v1/prescriptions/orders/", payload);
+      return await api.post("/prescriptions/orders/", payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["prescriptions"] });
@@ -108,12 +97,20 @@ export function useUpdatePrescription() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, payload }: { id: string; payload: UpdatePrescriptionPayload }) => {
-      return await api.put(`/api/v1/prescriptions/orders/${id}/`, payload);
+    mutationFn: async ({
+      id,
+      payload,
+    }: {
+      id: string;
+      payload: UpdatePrescriptionPayload;
+    }) => {
+      return await api.put(`/prescriptions/orders/${id}/`, payload);
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["prescriptions"] });
-      queryClient.invalidateQueries({ queryKey: ["prescription", variables.id] });
+      queryClient.invalidateQueries({
+        queryKey: ["prescription", variables.id],
+      });
     },
   });
 }
@@ -123,12 +120,20 @@ export function usePatchPrescription() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, payload }: { id: string; payload: Partial<UpdatePrescriptionPayload> }) => {
-      return await api.patch(`/api/v1/prescriptions/orders/${id}/`, payload);
+    mutationFn: async ({
+      id,
+      payload,
+    }: {
+      id: string;
+      payload: Partial<UpdatePrescriptionPayload>;
+    }) => {
+      return await api.patch(`/prescriptions/orders/${id}/`, payload);
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["prescriptions"] });
-      queryClient.invalidateQueries({ queryKey: ["prescription", variables.id] });
+      queryClient.invalidateQueries({
+        queryKey: ["prescription", variables.id],
+      });
     },
   });
 }
@@ -139,7 +144,7 @@ export function useDeletePrescription() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      return await api.delete(`/api/v1/prescriptions/orders/${id}/`);
+      return await api.delete(`/prescriptions/orders/${id}/`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["prescriptions"] });

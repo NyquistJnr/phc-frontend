@@ -1,9 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useApi } from "../use-api"; // Adjust this import path as needed
-import type {
-  ApiEnvelope,
-  CreateDoctorLabRequestPayload,
-} from "./type";
+import { useApi } from "../use-api";
+import type { ApiEnvelope, CreateDoctorLabRequestPayload } from "./type";
 
 export {
   useAppointments as useDoctorAppointments,
@@ -31,7 +28,6 @@ function unwrapApiResponse<T = unknown>(response: ApiEnvelope<T> | T): T {
   return (data ?? response) as T;
 }
 
-// 1. Get Doctor Alerts
 export function useDoctorAlerts() {
   const api = useApi();
 
@@ -39,14 +35,12 @@ export function useDoctorAlerts() {
     queryKey: ["doctorAlerts"],
     queryFn: async () => {
       const res = await api.get<ApiEnvelope>(`/doctor/alerts/`);
-      // Matches the wrapper unwrapping from your previous examples
       return unwrapApiResponse(res);
     },
     enabled: api.isAuthenticated && !api.isLoading,
   });
 }
 
-// 2. Get All Laboratory Requests
 export function useDoctorLabRequests(filters: {
   start_date?: string;
   end_date?: string;
@@ -61,25 +55,25 @@ export function useDoctorLabRequests(filters: {
     queryKey: ["doctorLabRequests", filters],
     queryFn: async () => {
       const params = new URLSearchParams();
-      
+
       if (filters.start_date) params.append("start_date", filters.start_date);
       if (filters.end_date) params.append("end_date", filters.end_date);
       if (filters.page) params.append("page", String(filters.page));
-      if (filters.page_size) params.append("page_size", String(filters.page_size));
+      if (filters.page_size)
+        params.append("page_size", String(filters.page_size));
       if (filters.search) params.append("search", filters.search);
       if (filters.status) params.append("status", filters.status);
-
-      // Append `?` only if parameters exist
       const queryString = params.toString() ? `?${params.toString()}` : "";
-      
-      const res = await api.get<ApiEnvelope>(`/doctor/lab-requests/${queryString}`);
+
+      const res = await api.get<ApiEnvelope>(
+        `/doctor/lab-requests/${queryString}`,
+      );
       return unwrapApiResponse(res);
     },
     enabled: api.isAuthenticated && !api.isLoading,
   });
 }
 
-// 3. Get Pending Lab Requests
 export function useDoctorPendingLabs(filters: {
   page?: number;
   page_size?: number;
@@ -90,20 +84,22 @@ export function useDoctorPendingLabs(filters: {
     queryKey: ["doctorPendingLabs", filters],
     queryFn: async () => {
       const params = new URLSearchParams();
-      
+
       if (filters.page) params.append("page", String(filters.page));
-      if (filters.page_size) params.append("page_size", String(filters.page_size));
+      if (filters.page_size)
+        params.append("page_size", String(filters.page_size));
 
       const queryString = params.toString() ? `?${params.toString()}` : "";
 
-      const res = await api.get<ApiEnvelope>(`/doctor/pending-labs/${queryString}`);
+      const res = await api.get<ApiEnvelope>(
+        `/doctor/pending-labs/${queryString}`,
+      );
       return unwrapApiResponse(res);
     },
     enabled: api.isAuthenticated && !api.isLoading,
   });
 }
 
-// 4. Get Doctor Stats
 export function useDoctorStats(filters: {
   start_date?: string;
   end_date?: string;
@@ -114,7 +110,7 @@ export function useDoctorStats(filters: {
     queryKey: ["doctorStats", filters],
     queryFn: async () => {
       const params = new URLSearchParams();
-      
+
       if (filters.start_date) params.append("start_date", filters.start_date);
       if (filters.end_date) params.append("end_date", filters.end_date);
 
