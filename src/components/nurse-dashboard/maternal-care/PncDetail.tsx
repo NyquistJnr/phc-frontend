@@ -1,10 +1,11 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Clock, Activity, FileText, Baby } from "lucide-react";
+import { ArrowLeft, Clock, Activity, FileText, Baby, Plus } from "lucide-react";
 import NurseDashboardHeader from "@/src/components/nurse-dashboard/generics/NurseDashboardHeader";
 import { StatusBadge } from "@/src/components/generic/ui/TableHelpers";
 import { usePncVisitDetails } from "@/src/hooks/nurses/use-maternal-care";
+import Link from "next/link";
 
 export default function PncVisitDetailPage() {
   const router = useRouter();
@@ -179,9 +180,17 @@ export default function PncVisitDetailPage() {
             </section>
           </div>
         </div>
-        <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-          <Baby className="text-[#046C3F]" /> Newborn Assessments
-        </h2>
+        <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+            <Baby className="text-[#046C3F]" /> Newborn Assessments
+          </h2>
+          <Link
+            href={`/nurse-dashboard/maternal-care/${params.id}/pnc/${pncId}/new`}
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#046C3F] px-5 text-sm font-medium text-white transition-colors hover:bg-[#035a34]"
+          >
+            <Plus size={18} /> New Assessment
+          </Link>
+        </div>
 
         {pnc.newborn_assessments && pnc.newborn_assessments.length > 0 ? (
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
