@@ -1,18 +1,32 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Clock, Activity, FileText, Baby, Plus } from "lucide-react";
+import {
+  ArrowLeft,
+  Clock,
+  Activity,
+  FileText,
+  Baby,
+  Plus,
+  User,
+  CalendarDays,
+} from "lucide-react";
 import NurseDashboardHeader from "@/src/components/nurse-dashboard/generics/NurseDashboardHeader";
 import { StatusBadge } from "@/src/components/generic/ui/TableHelpers";
 import { usePncVisitDetails } from "@/src/hooks/nurses/use-maternal-care";
+import { useEpisodeBabies } from "@/src/hooks/nurses/use-anc-pnc";
 import Link from "next/link";
 
-export default function PncVisitDetailPage() {
+export default function PncVisitDetail() {
   const router = useRouter();
-
   const params = useParams();
+  const episodeId = params?.id as string;
   const pncId = params?.pnc as string;
+
   const { data: pnc, isLoading, isError } = usePncVisitDetails(pncId);
+
+  const { data: babies, isLoading: isLoadingBabies } =
+    useEpisodeBabies(episodeId);
 
   const displayYesNo = (val: any) => {
     if (val === true || val === "true") return "Yes";
@@ -64,7 +78,7 @@ export default function PncVisitDetailPage() {
           },
           {
             label: "Episode Details",
-            href: `/nurse-dashboard/maternal-care/${params.id}`,
+            href: `/nurse-dashboard/maternal-care/${episodeId}`,
           },
           { label: "PNC Visit Detail" },
         ]}
@@ -77,7 +91,6 @@ export default function PncVisitDetailPage() {
         >
           <ArrowLeft size={16} /> Back to Episode
         </button>
-
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-8">
           <div className="p-6 border-b border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
@@ -180,18 +193,66 @@ export default function PncVisitDetailPage() {
             </section>
           </div>
         </div>
+        <div className="mb-4">
+          <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2 mb-4">
+            <User className="text-[#046C3F]" /> Registered Babies
+          </h2>
+          {isLoadingBabies ? (
+            <div className="text-sm text-gray-500">Loading babies...</div>
+          ) : babies && babies.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+              {babies.map((baby: any) => (
+                <div
+                  key={baby.id}
+                  className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 flex items-start gap-4"
+                >
+                  <div className="h-10 w-10 shrink-0 rounded-full bg-[#E8F1EC] flex items-center justify-center text-[#046C3F]">
+                    <Baby size={20} />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-gray-900">
+                      {baby.full_name}
+                    </h4>
+                    <p className="text-sm text-gray-500 mb-2">
+                      {baby.patient_display_id}
+                    </p>
+                    <div className="flex items-center gap-3 text-xs font-medium text-gray-600">
+                      <span className="bg-gray-100 px-2 py-1 rounded">
+                        Sex: {baby.sex}
+                      </span>
+                      <span className="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded">
+                        <CalendarDays size={12} /> {baby.date_of_birth}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="bg-white rounded-xl border border-gray-100 p-6 text-sm text-gray-500 mb-8">
+              No babies registered for this episode yet.
+            </div>
+          )}
+        </div>
         <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-            <Baby className="text-[#046C3F]" /> Newborn Assessments
+            <Activity className="text-[#046C3F]" /> Newborn Assessments
           </h2>
-          <Link
-            href={`/nurse-dashboard/maternal-care/${params.id}/pnc/${pncId}/new`}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#046C3F] px-5 text-sm font-medium text-white transition-colors hover:bg-[#035a34]"
-          >
-            <Plus size={18} /> New Assessment
-          </Link>
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              href={`/nurse-dashboard/maternal-care/${episodeId}/pnc/${pncId}/birth`}
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#E8F1EC] px-5 text-sm font-medium text-[#046C3F] transition-colors hover:bg-[#DDF0E8]"
+            >
+              <Baby size={18} /> Record Child
+            </Link>
+            <Link
+              href={`/nurse-dashboard/maternal-care/${episodeId}/pnc/${pncId}/new`}
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#046C3F] px-5 text-sm font-medium text-white transition-colors hover:bg-[#035a34]"
+            >
+              <Plus size={18} /> New Assessment
+            </Link>
+          </div>
         </div>
-
         {pnc.newborn_assessments && pnc.newborn_assessments.length > 0 ? (
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             {pnc.newborn_assessments.map((baby) => {

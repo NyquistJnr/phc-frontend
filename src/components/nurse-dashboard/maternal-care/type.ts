@@ -269,3 +269,11 @@ export interface AncPayloadForm {
   risk_factors: string;
   notes: string;
 }
+
+export interface EpisodeBaby {
+  id: string;
+  patient_display_id: string;
+  full_name: string;
+  sex: string;
+  date_of_birth: string;
+}
