@@ -100,13 +100,14 @@ export type DoctorPrescriptionLine = {
 };
 
 export type DoctorPatientSummary = {
-  id: string;
-  name: string;
+  patientId: string;
+  patientName: string;
+  encounterId: string;
   ageGender: string;
-  condition: string;
+  diagnosis: string;
   allergies: string;
   lastVisit: string;
-  medications: DoctorPrescriptionLine[];
+  prescriptions: DoctorPrescriptionLine[];
 };
 
 export type DoctorReferralRow = {
@@ -118,6 +119,7 @@ export type DoctorReferralRow = {
   reason: string;
   date: string;
   status: DoctorReferralStatus;
+  notes: string;
 };
 
 export type DoctorReferralApiRow = {
@@ -130,6 +132,7 @@ export type DoctorReferralApiRow = {
   referral_type?: string;
   reason?: string;
   clinical_summary?: string;
+  notes?: string;
   date?: string;
   referral_date?: string;
   created_at?: string;
@@ -156,16 +159,13 @@ export type DoctorReferralApiPayload = {
 
 export type DoctorReferralForm = {
   patientId: string;
-  referralId: string;
-  encounterId: string;
-  referralDate: string;
   referringFacility: string;
   receivingFacility: string;
   referralType: string;
   reason: string;
   clinicalSummary: string;
+  doctorNotes: string;
   prescriptions: DoctorPrescriptionLine[];
-  notes: string;
 };
 
 export type DoctorPatientListRow = {

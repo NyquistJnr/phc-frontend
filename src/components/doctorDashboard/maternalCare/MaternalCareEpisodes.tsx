@@ -1,0 +1,410 @@
+"use client";
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+import React, { useState, useEffect, useCallback } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import Link from "next/link";
+import { Plus, Eye, Edit, Ban, MoreHorizontal } from "lucide-react";
+import { createPortal } from "react-dom";
+
+import DoctorHeader from "@/src/components/doctorDashboard/generics/Header";
+import NurseDateRangeFilter from "@/src/components/nurse-dashboard/generics/NurseDateRangeFilter";
+import { CustomDropdown } from "@/src/components/generic/ui/CustomDropdown";
+import { ColumnDef, DataTable } from "@/src/components/generic/ui/DataTable";
+import { StatusBadge } from "@/src/components/generic/ui/TableHelpers";
+
+import {
+  useEpisodes,
+  useDeleteEpisode,
+  useUpdateEpisodeStatus,
+} from "@/src/hooks/nurses/use-maternal-care";
+import { EpisodeResult } from "./types";
+
+const STATUS_OPTIONS = [
+  "All Status",
+  "ACTIVE",
+  "DELIVERED",
+  "CLOSED",
+  "MISCARRIAGE",
+];
+const PAGE_SIZES = ["10", "50", "100"];
+
+const statusColors: Record<string, { bg: string; text: string }> = {
+  ACTIVE: { bg: "#E2E7FF", text: "#046C3F" },
+  DELIVERED: { bg: "#DFF3EA", text: "#039855" },
+  CLOSED: { bg: "#F3F4F6", text: "#374151" },
+  MISCARRIAGE: { bg: "#FDE8E8", text: "#F33131" },
+};
+
+function EpisodeActionMenu({ row }: { row: EpisodeResult }) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [coords, setCoords] = useState({ top: 0, left: 0 });
+  const buttonRef = React.useRef<HTMLButtonElement>(null);
+  const menuRef = React.useRef<HTMLDivElement>(null);
+
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [selectedStatus, setSelectedStatus] = useState(row.status);
+
+  const { mutate: deleteEpisode, isPending: isDeleting } = useDeleteEpisode();
+  const { mutate: updateStatus, isPending: isUpdating } =
+    useUpdateEpisodeStatus();
+
+  const toggleMenu = () => {
+    if (!open && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      const top =
+        rect.bottom + 188 > window.innerHeight
+          ? rect.top + window.scrollY - 188 - 4
+          : rect.bottom + window.scrollY + 4;
+      const left = Math.max(
+        12 + window.scrollX,
+        rect.right - 192 + window.scrollX,
+      );
+      setCoords({ top, left });
+    }
+    setOpen((c) => !c);
+  };
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(e.target as Node) &&
+        buttonRef.current &&
+        !buttonRef.current.contains(e.target as Node)
+      ) {
+        setOpen(false);
+      }
+    }
+    if (open) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [open]);
+
+  const handleDelete = () => {
+    deleteEpisode(row.id, {
+      onSuccess: () => setShowDeleteModal(false),
+    });
+  };
+
+  const handleUpdateStatus = () => {
+    updateStatus(
+      { id: row.id, status: selectedStatus },
+      { onSuccess: () => setShowStatusModal(false) },
+    );
+  };
+
+  const items = [
+    {
+      label: "View Detail",
+      icon: Eye,
+      onClick: () => router.push(`/doctor-dashboard/maternal-care/${row.id}`),
+      className: "text-gray-700",
+    },
+    {
+      label: "Update Status",
+      icon: Edit,
+      onClick: () => setShowStatusModal(true),
+      className: "text-gray-700",
+    },
+    {
+      label: "Delete",
+      icon: Ban,
+      onClick: () => setShowDeleteModal(true),
+      className: "text-red-600",
+    },
+  ];
+
+  return (
+    <>
+      <button
+        ref={buttonRef}
+        onClick={toggleMenu}
+        className="inline-flex h-8 w-8 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900"
+      >
+        <MoreHorizontal size={18} />
+      </button>
+
+      {open &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            ref={menuRef}
+            style={{ top: coords.top, left: coords.left }}
+            className="absolute z-[999] w-48 rounded-xl border border-gray-100 bg-white py-2 shadow-[0_8px_30px_rgb(0,0,0,0.12)]"
+          >
+            {items.map((item) => {
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.label}
+                  onClick={() => {
+                    item.onClick();
+                    setOpen(false);
+                  }}
+                  className={`flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm font-medium hover:bg-gray-50 ${item.className}`}
+                >
+                  <Icon size={16} className={item.className} /> {item.label}
+                </button>
+              );
+            })}
+          </div>,
+          document.body,
+        )}
+
+      {showStatusModal &&
+        createPortal(
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+            <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
+              <h3 className="mb-4 text-lg font-semibold text-gray-900">
+                Update Status
+              </h3>
+              <p className="mb-4 text-sm text-gray-500">
+                Change the status for episode {row.episode_id}.
+              </p>
+              <select
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value as any)}
+                className="w-full rounded-lg border border-gray-300 p-2.5 text-sm focus:border-[#046C3F] focus:outline-none focus:ring-1 focus:ring-[#046C3F]"
+              >
+                {STATUS_OPTIONS.filter((s) => s !== "All Status").map(
+                  (status) => (
+                    <option key={status} value={status}>
+                      {status}
+                    </option>
+                  ),
+                )}
+              </select>
+              <div className="mt-6 flex justify-end gap-3">
+                <button
+                  onClick={() => setShowStatusModal(false)}
+                  className="rounded-lg px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleUpdateStatus}
+                  disabled={isUpdating}
+                  className="rounded-lg bg-[#046C3F] px-4 py-2 text-sm font-medium text-white hover:bg-[#035a34] disabled:opacity-70"
+                >
+                  {isUpdating ? "Saving..." : "Save Status"}
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
+
+      {showDeleteModal &&
+        createPortal(
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+            <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
+              <h3 className="mb-2 text-lg font-semibold text-gray-900">
+                Delete Episode
+              </h3>
+              <p className="mb-6 text-sm text-gray-500">
+                Are you sure you want to delete episode <b>{row.episode_id}</b>{" "}
+                for <b>{row.patient_name}</b>? This action cannot be undone.
+              </p>
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setShowDeleteModal(false)}
+                  className="rounded-lg px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                  className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-70"
+                >
+                  {isDeleting ? "Deleting..." : "Yes, Delete"}
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
+    </>
+  );
+}
+
+export default function MaternalCareEpisodes() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const page = Number(searchParams.get("page")) || 1;
+  const pageSize = Number(searchParams.get("page_size")) || 10;
+  const statusFilter = searchParams.get("status") || "All Status";
+  const start_date = searchParams.get("start_date") || "";
+  const end_date = searchParams.get("end_date") || "";
+
+  const initialSearch = searchParams.get("search") || "";
+  const [localSearch, setLocalSearch] = useState(initialSearch);
+
+  useEffect(() => {
+    const currentSearch = searchParams.get("search") || "";
+    if (localSearch === currentSearch) {
+      return;
+    }
+
+    const handler = setTimeout(() => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (localSearch) {
+        params.set("search", localSearch);
+      } else {
+        params.delete("search");
+      }
+
+      params.set("page", "1");
+      router.push(`${pathname}?${params.toString()}`, { scroll: false });
+    }, 500);
+
+    return () => clearTimeout(handler);
+  }, [localSearch, pathname, router, searchParams]);
+
+  const { data, isLoading } = useEpisodes({
+    page,
+    page_size: pageSize,
+    status: statusFilter,
+    search: searchParams.get("search") || undefined,
+    start_date,
+    end_date,
+  });
+
+  const updateUrlParams = useCallback(
+    (key: string, value: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (value && value !== "All Status") {
+        params.set(key, value);
+      } else {
+        params.delete(key);
+      }
+
+      if (key !== "page") params.set("page", "1");
+      router.push(`${pathname}?${params.toString()}`, { scroll: false });
+    },
+    [pathname, router, searchParams],
+  );
+
+  const columns: ColumnDef<EpisodeResult>[] = [
+    { header: "Patient ID", accessorKey: "patient_display_id", sortable: true },
+    { header: "Patient Name", accessorKey: "patient_name", sortable: true },
+    { header: "LMP", accessorKey: "last_menstrual_period", sortable: true },
+    { header: "EDD", accessorKey: "expected_date_of_delivery", sortable: true },
+    {
+      header: "Gravida / Parity",
+      render: (row) => `G${row.gravida} / P${row.parity}`,
+    },
+    {
+      header: "Status",
+      render: (row) => {
+        const colorData = statusColors[row.status] || {
+          bg: "#F3F4F6",
+          text: "#374151",
+        };
+        return (
+          <StatusBadge
+            label={row.status}
+            bgColorHex={colorData.bg}
+            textColorHex={colorData.text}
+          />
+        );
+      },
+    },
+    { header: "Action", render: (row) => <EpisodeActionMenu row={row} /> },
+  ];
+
+  return (
+    <div className="min-h-screen bg-[#F6F7FC]">
+      <DoctorHeader
+        title="Maternal Care"
+        breadcrumbs={[{ label: "Maternal Episodes" }]}
+      />
+
+      <div className="px-4 py-6 sm:px-6 lg:py-8">
+        <div className="mb-7 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <div>
+            <h2 className="mb-1 text-2xl font-semibold text-black sm:text-3xl">
+              Maternal Care Episodes
+            </h2>
+            <p className="text-base text-[#3F3F46]">
+              Manage patient pregnancies, active episodes, and track delivery
+              timelines
+            </p>
+          </div>
+
+          <Link
+            href="/doctor-dashboard/maternal-care/new"
+            className="inline-flex h-11 items-center justify-center gap-3 rounded-xl bg-[#046C3F] px-7 text-base font-medium text-white transition-colors hover:bg-[#035a34]"
+          >
+            <Plus size={20} /> New Episode
+          </Link>
+        </div>
+
+        <DataTable
+          title="Patient Episodes"
+          data={data?.results || []}
+          columns={columns}
+          showSearch
+          searchPlaceholder="Search by patient name or ID"
+          onSearch={(val) => setLocalSearch(val)}
+          totalPages={data?.total_pages}
+          emptyMessage={
+            isLoading
+              ? "Loading episodes..."
+              : "No maternal care episodes match your criteria."
+          }
+          toolbarActions={
+            <>
+              <NurseDateRangeFilter
+                startDate={start_date}
+                endDate={end_date}
+                onApply={(start, end) => {
+                  const params = new URLSearchParams(searchParams.toString());
+                  if (start) params.set("start_date", start);
+                  else params.delete("start_date");
+
+                  if (end) params.set("end_date", end);
+                  else params.delete("end_date");
+
+                  params.set("page", "1");
+                  router.push(`${pathname}?${params.toString()}`, {
+                    scroll: false,
+                  });
+                }}
+                onClear={() => {
+                  const params = new URLSearchParams(searchParams.toString());
+                  params.delete("start_date");
+                  params.delete("end_date");
+                  params.set("page", "1");
+                  router.push(`${pathname}?${params.toString()}`, {
+                    scroll: false,
+                  });
+                }}
+              />
+
+              <CustomDropdown
+                options={STATUS_OPTIONS}
+                selected={statusFilter}
+                onSelect={(val) => updateUrlParams("status", val)}
+              />
+
+              <CustomDropdown
+                options={PAGE_SIZES}
+                selected={pageSize.toString()}
+                onSelect={(val) => updateUrlParams("page_size", val)}
+                placeholder="Rows per page"
+              />
+            </>
+          }
+        />
+      </div>
+    </div>
+  );
+}

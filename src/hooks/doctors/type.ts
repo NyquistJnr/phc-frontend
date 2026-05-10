@@ -1,26 +1,3 @@
-export type DoctorPrescriptionFilters = {
-  page?: number;
-  page_size?: number;
-  search?: string;
-  status?: string;
-  start_date?: string;
-  end_date?: string;
-};
-
-export type CreateDoctorPrescriptionPayload = {
-  patient: string;
-  appointment?: string;
-  clinical_notes?: string;
-  notes?: string;
-  items: Array<{
-    drug: string;
-    dosage: string;
-    frequency: string;
-    duration: string;
-    instructions?: string;
-  }>;
-};
-
 export type CreateDoctorLabRequestPayload = {
   patient: string;
   appointment?: string;

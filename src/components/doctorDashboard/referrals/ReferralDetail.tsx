@@ -1,0 +1,223 @@
+"use client";
+
+import React from "react";
+import { useParams, useRouter } from "next/navigation";
+import { ArrowLeft, FileText, User, Activity, ArrowRightLeft } from "lucide-react";
+
+import DoctorHeader from "@/src/components/doctorDashboard/generics/Header";
+import { StatusBadge } from "@/src/components/generic/ui/TableHelpers";
+import { useReferralById } from "@/src/hooks/nurses/use-referrals";
+
+const statusColors: Record<string, { bg: string; text: string }> = {
+  ACCEPTED: { bg: "#DFF3EA", text: "#039855" },
+  PENDING: { bg: "#FFF4E5", text: "#1F2937" },
+  REJECTED: { bg: "#FDE8E8", text: "#F33131" },
+};
+
+function DetailItem({
+  label,
+  value,
+  className = "",
+}: {
+  label: string;
+  value: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 ${className}`}
+    >
+      <p className="mb-1 text-xs text-[#62636C]">{label}</p>
+      <div className="text-sm font-medium text-gray-900">{value || "N/A"}</div>
+    </div>
+  );
+}
+
+export default function ReferralDetailPage() {
+  const params = useParams();
+  const router = useRouter();
+  const id = params.id as string;
+
+  const { data: referral, isLoading, isError } = useReferralById(id);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#F6F7FC]">
+        <DoctorHeader
+          title="Referrals"
+          breadcrumbs={[{ label: "Referrals" }, { label: "Detail" }]}
+        />
+        <div className="flex items-center justify-center py-20 text-gray-500">
+          Loading referral details...
+        </div>
+      </div>
+    );
+  }
+
+  if (isError || !referral) {
+    return (
+      <div className="min-h-screen bg-[#F6F7FC]">
+        <DoctorHeader
+          title="Referrals"
+          breadcrumbs={[{ label: "Referrals" }, { label: "Detail" }]}
+        />
+        <div className="px-4 py-6 sm:px-6">
+          <button
+            type="button"
+            onClick={() => router.push("/doctor-dashboard/referrals")}
+            className="mb-8 inline-flex items-center gap-2 rounded border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-[#046C3F] transition-colors hover:bg-[#F8FAF9]"
+          >
+            <ArrowLeft size={15} />
+            Back
+          </button>
+          <div className="mt-8 rounded-xl bg-white p-8 text-center text-red-500 shadow-sm">
+            Failed to load referral data. Please try again.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const colorData = statusColors[referral.status] || {
+    bg: "#F3F4F6",
+    text: "#374151",
+  };
+
+  return (
+    <div className="min-h-screen bg-[#F6F7FC]">
+      <DoctorHeader
+        title="Referrals"
+        breadcrumbs={[{ label: "Referrals" }, { label: "Referral Detail" }]}
+      />
+
+      <div className="px-4 py-6 sm:px-6 lg:py-8">
+        <button
+          type="button"
+          onClick={() => router.push("/doctor-dashboard/referrals")}
+          className="mb-8 inline-flex items-center gap-2 rounded border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-[#046C3F] transition-colors hover:bg-[#F8FAF9]"
+        >
+          <ArrowLeft size={15} />
+          Back
+        </button>
+
+        <div className="mb-7 mt-4 flex flex-col sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2 className="mb-1 text-2xl font-semibold text-black sm:text-3xl">
+              Referral Detail
+            </h2>
+            <p className="text-base text-[#3F3F46]">
+              View detailed information about this referral
+            </p>
+          </div>
+          <div className="mt-4 sm:mt-0">
+            <StatusBadge
+              label={
+                referral.status.charAt(0) +
+                referral.status.slice(1).toLowerCase()
+              }
+              bgColorHex={colorData.bg}
+              textColorHex={colorData.text}
+            />
+          </div>
+        </div>
+
+        <div className="space-y-6">
+          <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
+            <div className="mb-5 flex items-center gap-2 border-b border-gray-100 pb-3 text-lg font-semibold text-gray-800">
+              <User size={20} className="text-[#046C3F]" /> Patient Details
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <DetailItem label="Patient Name" value={referral.patient_name} />
+              <DetailItem
+                label="Patient ID"
+                value={referral.patient_display_id}
+              />
+              <DetailItem label="Referral ID" value={referral.referral_id} />
+              <DetailItem
+                label="Date Created"
+                value={new Date(referral.created_at).toLocaleDateString(
+                  "en-GB",
+                  {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  },
+                )}
+              />
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
+            <div className="mb-5 flex items-center gap-2 border-b border-gray-100 pb-3 text-lg font-semibold text-gray-800">
+              <ArrowRightLeft size={20} className="text-[#046C3F]" /> Facility &
+              Routing
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <DetailItem
+                label="Direction"
+                value={
+                  referral.direction
+                    ? referral.direction.charAt(0).toUpperCase() +
+                      referral.direction.slice(1).toLowerCase()
+                    : "N/A"
+                }
+              />
+              <DetailItem
+                label="Referring Facility"
+                value={referral.referring_facility_name}
+              />
+              <DetailItem
+                label="Receiving Facility"
+                value={referral.receiving_facility_name}
+              />
+              <DetailItem
+                label="Referred By"
+                value={referral.referred_by_name}
+              />
+            </div>
+          </div>
+          <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
+            <div className="mb-5 flex items-center gap-2 border-b border-gray-100 pb-3 text-lg font-semibold text-gray-800">
+              <Activity size={20} className="text-[#046C3F]" /> Clinical
+              Information
+            </div>
+
+            <div className="mb-4 w-fit">
+              <DetailItem
+                label="Referral Type"
+                value={
+                  referral.referral_type.charAt(0) +
+                  referral.referral_type.slice(1).toLowerCase()
+                }
+              />
+            </div>
+
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              <div className="rounded-lg border border-gray-200 bg-gray-50 px-5 py-4">
+                <p className="mb-2 flex items-center gap-2 font-medium text-gray-700">
+                  <FileText size={16} className="text-gray-500" /> Reason for
+                  Referral
+                </p>
+                <p className="whitespace-pre-wrap text-sm text-gray-600">
+                  {referral.reason_for_referral || "No reason provided."}
+                </p>
+              </div>
+
+              <div className="rounded-lg border border-gray-200 bg-gray-50 px-5 py-4">
+                <p className="mb-2 flex items-center gap-2 font-medium text-gray-700">
+                  <FileText size={16} className="text-gray-500" /> Clinical
+                  Summary
+                </p>
+                <p className="whitespace-pre-wrap text-sm text-gray-600">
+                  {referral.clinical_summary || "No summary provided."}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

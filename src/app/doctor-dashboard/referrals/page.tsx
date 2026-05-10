@@ -1,7 +1,12 @@
-import DoctorReferrals from "@/src/components/doctorDashboard/referrals/Referrals";
+"use client";
+
+import { Suspense } from "react";
+import ReferralHistory from "@/src/components/doctorDashboard/referrals/ReferralHistory";
 
 export default function DoctorReferralsPage() {
   return (
-      <DoctorReferrals />
+    <Suspense fallback={<div>Loading...</div>}>
+      <ReferralHistory />
+    </Suspense>
   );
 }

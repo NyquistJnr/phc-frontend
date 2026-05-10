@@ -3,20 +3,7 @@ import { useApi } from "../use-api"; // Adjust this import path as needed
 import type {
   ApiEnvelope,
   CreateDoctorLabRequestPayload,
-  CreateDoctorPrescriptionPayload,
-  DoctorMaternalVisitFilters,
-  DoctorPrescriptionFilters,
 } from "./type";
-
-export {
-  usePatients as useDoctorPatients,
-  usePatientDetails as useDoctorPatientDetails,
-  usePatientHistory as useDoctorPatientHistory,
-  usePatientLabRequests as useDoctorPatientLabRequests,
-  usePatientPrescriptions as useDoctorPatientPrescriptions,
-  usePatientReferrals as useDoctorPatientReferrals,
-  usePatients as useDoctorSearchPatients,
-} from "../nurses/use-patients";
 
 export {
   useAppointments as useDoctorAppointments,
@@ -24,36 +11,6 @@ export {
   useSearchPatients as useDoctorAppointmentPatientSearch,
   useFacilityStaff as useDoctorFacilityStaff,
 } from "../nurses/use-appointments";
-
-export {
-  useReferrals as useDoctorReferrals,
-  useCreateReferral as useCreateDoctorReferral,
-  useReferralById as useDoctorReferralById,
-  useUpdateReferralStatus as useUpdateDoctorReferralStatus,
-} from "../nurses/use-referrals";
-
-export {
-  useImmunizationRecords as useDoctorImmunizationRecords,
-  useCreateImmunization as useCreateDoctorImmunization,
-  useVaccines as useDoctorVaccines,
-  useUpdateImmunizationStatus as useUpdateDoctorImmunizationStatus,
-  useImmunizationRecord as useDoctorImmunizationRecord,
-} from "../nurses/use-immunization";
-
-export {
-  useCreateAncVisit as useDoctorCreateAncVisit,
-  useCreatePncVisit as useDoctorCreatePncVisit,
-  useCreateNewbornAssessment as useDoctorCreateNewbornAssessment,
-  useRecordDelivery as useDoctorRecordDelivery,
-  useEpisodeBabies as useDoctorEpisodeBabies,
-} from "../nurses/use-anc-pnc";
-
-export {
-  useEpisodes as useDoctorMaternalCareEpisodes,
-  useCreateEpisode as useDoctorCreateMaternalEpisode,
-  useAncVisitDetails as useDoctorAncVisitDetails,
-  usePncVisitDetails as useDoctorPncVisitDetails,
-} from "../nurses/use-maternal-care";
 
 export {
   useNotifications as useDoctorNotifications,
@@ -72,46 +29,6 @@ function unwrapApiResponse<T = unknown>(response: ApiEnvelope<T> | T): T {
     return (data as { data?: T }).data as T;
   }
   return (data ?? response) as T;
-}
-
-function buildQueryString(filters: Record<string, unknown>) {
-  const params = new URLSearchParams();
-  Object.entries(filters).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && value !== "" && value !== "All Status") {
-      params.append(key, String(value));
-    }
-  });
-  return params.toString() ? `?${params.toString()}` : "";
-}
-
-export function useDoctorAncVisits(filters: DoctorMaternalVisitFilters) {
-  const api = useApi();
-
-  return useQuery({
-    queryKey: ["doctorAncVisits", filters],
-    queryFn: async () => {
-      const queryString = buildQueryString(filters);
-      const res = await api.get<ApiEnvelope>(`/maternal-care/anc-visits/${queryString}`);
-      return unwrapApiResponse(res);
-    },
-    enabled: api.isAuthenticated && !api.isLoading,
-    placeholderData: (previousData) => previousData,
-  });
-}
-
-export function useDoctorPncVisits(filters: DoctorMaternalVisitFilters) {
-  const api = useApi();
-
-  return useQuery({
-    queryKey: ["doctorPncVisits", filters],
-    queryFn: async () => {
-      const queryString = buildQueryString(filters);
-      const res = await api.get<ApiEnvelope>(`/maternal-care/pnc-visits/${queryString}`);
-      return unwrapApiResponse(res);
-    },
-    enabled: api.isAuthenticated && !api.isLoading,
-    placeholderData: (previousData) => previousData,
-  });
 }
 
 // 1. Get Doctor Alerts
@@ -207,36 +124,6 @@ export function useDoctorStats(filters: {
       return unwrapApiResponse(res);
     },
     enabled: api.isAuthenticated && !api.isLoading,
-  });
-}
-
-export function useDoctorPrescriptions(filters: DoctorPrescriptionFilters) {
-  const api = useApi();
-
-  return useQuery({
-    queryKey: ["doctorPrescriptions", filters],
-    queryFn: async () => {
-      const queryString = buildQueryString(filters);
-      const res = await api.get<ApiEnvelope>(`/prescriptions/records/${queryString}`);
-      return unwrapApiResponse(res);
-    },
-    enabled: api.isAuthenticated && !api.isLoading,
-    placeholderData: (previousData) => previousData,
-  });
-}
-
-export function useCreateDoctorPrescription() {
-  const api = useApi();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (payload: CreateDoctorPrescriptionPayload) => {
-      return await api.post("/prescriptions/records/", payload);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["doctorPrescriptions"] });
-      queryClient.invalidateQueries({ queryKey: ["patientPrescriptions"] });
-    },
   });
 }
 

@@ -1,10 +1,12 @@
+"use client";
+
 import { Suspense } from "react";
-import MaternalCareEpisodes from "@/src/components/doctorDashboard/maternalCare/MaternalCareEpisodes";
+import MaternalCareEpisodeDetails from "@/src/components/doctorDashboard/maternalCare/MaternalCare";
 
 export default function MaternalCarePage() {
   return (
     <Suspense fallback={<div>Loading...</div>}>
-      <MaternalCareEpisodes />
+      <MaternalCareEpisodeDetails />
     </Suspense>
   );
 }

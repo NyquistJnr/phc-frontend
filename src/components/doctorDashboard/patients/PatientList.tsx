@@ -1,160 +1,249 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Search, ChevronDown } from "lucide-react";
-import Link from "next/link";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { createPortal } from "react-dom";
+import { MoreHorizontal, Eye } from "lucide-react";
+import { ColumnDef, DataTable } from "@/src/components/generic/ui/DataTable";
+import { StatusBadge } from "@/src/components/generic/ui/TableHelpers";
+import { CustomDropdown } from "@/src/components/generic/ui/CustomDropdown";
 import DoctorHeader from "@/src/components/doctorDashboard/generics/Header";
-import { PeriodFilterButton } from "@/src/components/doctorDashboard/generics/PeriodFilterButton";
-import FilterDropdown from "@/src/components/adminDashboard/generics/FilterDropdown";
-import Pagination from "@/src/components/adminDashboard/generics/Pagination";
-import { useDoctorPatients } from "@/src/hooks/doctors/use-doctors";
+import { usePatients } from "@/src/hooks/nurses/use-patients";
+import { Patient } from "@/src/components/nurse-dashboard/patients/type";
 
-interface Patient {
-  id: string;
-  name: string;
-  ageGender: string;
-  lastVisit: string;
-  condition: string;
-}
+const PAGE_SIZES = ["10", "100", "200"];
 
-type PatientApiRow = {
-  id?: string;
-  patient_id?: string;
-  full_name?: string;
-  first_name?: string;
-  last_name?: string;
-  name?: string;
-  age?: number | string;
-  gender?: string;
-  sex?: string;
-  last_visit?: string;
-  last_visited?: string;
-  condition?: string;
-  diagnosis?: string;
+const badgeColors: Record<string, { bg: string; text: string }> = {
+  ACTIVE: { bg: "#DFF3EA", text: "#039855" },
+  NONE: { bg: "#FDE8E8", text: "#F33131" },
+  UNKNOWN: { bg: "#FFF4E5", text: "#1F2937" },
 };
 
-const PATIENTS: Patient[] = [
-  { id: "PAT-PLT-000234", name: "Musa Abdullahi",  ageGender: "35 / F", lastVisit: "Today",          condition: "Malaria" },
-  { id: "PAT-PLT-000234", name: "Amina Yusuf",     ageGender: "35 / F", lastVisit: "Yesterday",      condition: "Hypertension" },
-  { id: "PAT-PLT-000234", name: "Fatima Ibrahim",  ageGender: "35 / F", lastVisit: "3 days ago",     condition: "ANC (32wks)" },
-  { id: "PAT-PLT-000234", name: "Bayo Ogunleye",   ageGender: "35 / F", lastVisit: "7 days ago",     condition: "UTI" },
-  { id: "PAT-PLT-000234", name: "Bayo Ogunleye",   ageGender: "35 / F", lastVisit: "O: 1/160 (high)",condition: "Fever" },
-  { id: "PAT-PLT-000234", name: "Bayo Ogunleye",   ageGender: "35 / F", lastVisit: "13 Apr",         condition: "Fever" },
-  { id: "PAT-PLT-000234", name: "Bayo Ogunleye",   ageGender: "35 / F", lastVisit: "13 Apr",         condition: "Fever" },
-  { id: "PAT-PLT-000234", name: "Bayo Ogunleye",   ageGender: "35 / F", lastVisit: "13 Apr",         condition: "Fever" },
-  { id: "PAT-PLT-000234", name: "Bayo Ogunleye",   ageGender: "35 / F", lastVisit: "13 Apr",         condition: "Fever" },
-  { id: "PAT-PLT-000234", name: "Bayo Ogunleye",   ageGender: "35 / F", lastVisit: "13 Apr",         condition: "Fever" },
-];
+function PatientActionMenu({ row }: { row: Patient }) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [coords, setCoords] = useState({ top: 0, left: 0 });
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
-const TABLE_HEADERS = ["Patient ID", "Patient Name", "Age/Gender", "Last Visit", "Condition", "Action"];
+  const toggleMenu = () => {
+    if (!open && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      const top =
+        rect.bottom + 100 > window.innerHeight
+          ? rect.top + window.scrollY - 100 - 4
+          : rect.bottom + window.scrollY + 4;
+      const left = Math.max(
+        12 + window.scrollX,
+        rect.right - 192 + window.scrollX,
+      );
+      setCoords({ top, left });
+    }
+    setOpen((c) => !c);
+  };
 
-export default function PatientList() {
-  const [search, setSearch] = useState("");
-  const [gender, setGender] = useState("All");
-  const [page, setPage] = useState(1);
-  const { data: patientsData, isLoading } = useDoctorPatients({
-    page,
-    page_size: 10,
-    search,
-  });
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(e.target as Node) &&
+        buttonRef.current &&
+        !buttonRef.current.contains(e.target as Node)
+      ) {
+        setOpen(false);
+      }
+    }
+    if (open) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [open]);
 
-  const patients = useMemo<Patient[]>(() => {
-    if (!patientsData?.results?.length) return PATIENTS;
-    return patientsData.results.map((patient: PatientApiRow) => ({
-      id: patient.patient_id || patient.id || "PAT-PLT-000234",
-      name:
-        patient.full_name ||
-        [patient.first_name, patient.last_name].filter(Boolean).join(" ") ||
-        patient.name ||
-        "Unknown Patient",
-      ageGender: `${patient.age ?? "35"} / ${patient.gender?.[0] || patient.sex?.[0] || "F"}`,
-      lastVisit: patient.last_visit || patient.last_visited || "Today",
-      condition: patient.condition || patient.diagnosis || "Not specified",
-    }));
-  }, [patientsData]);
-
-  const breadcrumbs = [{ label: "Patients", active: true }];
+  const items = [
+    {
+      label: "View Patient",
+      icon: Eye,
+      onClick: () => router.push(`/doctor-dashboard/patients/${row.id}`),
+    },
+  ];
 
   return (
-    <div className="flex-1 flex flex-col bg-[#F9FAFB] min-w-0">
-      <DoctorHeader title="Patients" breadcrumbs={breadcrumbs} />
+    <>
+      <button
+        ref={buttonRef}
+        onClick={toggleMenu}
+        className="inline-flex h-8 w-8 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900"
+      >
+        <MoreHorizontal size={18} />
+      </button>
+      {open &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            ref={menuRef}
+            style={{ top: coords.top, left: coords.left }}
+            className="absolute z-[999] w-48 rounded-xl border border-gray-100 bg-white py-2 shadow-[0_8px_30px_rgb(0,0,0,0.12)]"
+          >
+            {items.map((item) => {
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.label}
+                  onClick={() => {
+                    item.onClick();
+                    setOpen(false);
+                  }}
+                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  <Icon size={16} className="text-gray-500" /> {item.label}
+                </button>
+              );
+            })}
+          </div>,
+          document.body,
+        )}
+    </>
+  );
+}
 
-      <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 pt-6 pb-10">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Patient</h1>
-          <p className="text-sm text-gray-500 mt-1">Search and view patient records</p>
+export default function Patients() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const page = Number(searchParams.get("page")) || 1;
+  const pageSize = Number(searchParams.get("page_size")) || 10;
+
+  const initialSearch = searchParams.get("search") || "";
+  const [localSearch, setLocalSearch] = useState(initialSearch);
+
+  useEffect(() => {
+    const currentSearch = searchParams.get("search") || "";
+    if (localSearch === currentSearch) {
+      return;
+    }
+
+    const handler = setTimeout(() => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (localSearch) {
+        params.set("search", localSearch);
+      } else {
+        params.delete("search");
+      }
+
+      params.set("page", "1");
+      router.push(`${pathname}?${params.toString()}`, { scroll: false });
+    }, 500);
+
+    return () => clearTimeout(handler);
+  }, [localSearch, pathname, router, searchParams]);
+
+  const { data, isLoading } = usePatients({
+    page,
+    page_size: pageSize,
+    search: searchParams.get("search") || undefined,
+  });
+
+  const updateUrlParams = useCallback(
+    (key: string, value: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (value) {
+        params.set(key, value);
+      } else {
+        params.delete(key);
+      }
+
+      if (key !== "page") params.set("page", "1");
+      router.push(`${pathname}?${params.toString()}`, { scroll: false });
+    },
+    [pathname, router, searchParams],
+  );
+
+  const patients = data?.results || [];
+  const totalPages = data?.total_pages || 1;
+
+  const columns: ColumnDef<Patient>[] = [
+    {
+      header: "Patient ID",
+      render: (row) => row.profile?.patient_id || "N/A",
+    },
+    {
+      header: "Patient Name",
+      render: (row) => `${row.first_name} ${row.last_name}`.trim(),
+    },
+    {
+      header: "Age / Group",
+      render: (row) => `${row.profile?.age} yrs (${row.profile?.age_group})`,
+    },
+    {
+      header: "Gender",
+      render: (row) => row.profile?.sex || "N/A",
+    },
+    {
+      header: "Blood Group",
+      render: (row) => row.profile?.blood_group || "N/A",
+    },
+    {
+      header: "Insurance",
+      render: (row) => {
+        const status = row.profile?.insurance_status || "UNKNOWN";
+        const color = badgeColors[status] || badgeColors.UNKNOWN;
+
+        return (
+          <StatusBadge
+            label={status}
+            bgColorHex={color.bg}
+            textColorHex={color.text}
+          />
+        );
+      },
+    },
+    {
+      header: "Action",
+      render: (row) => <PatientActionMenu row={row} />,
+    },
+  ];
+
+  return (
+    <div className="min-h-screen bg-[#F6F7FC]">
+      <DoctorHeader
+        title="Patients"
+        breadcrumbs={[{ label: "Patients" }]}
+      />
+      <div className="px-4 py-6 sm:px-6 lg:py-8">
+        <div className="mb-7">
+          <div>
+            <h2 className="mb-1 text-2xl font-semibold text-black sm:text-3xl">
+              Patients
+            </h2>
+            <p className="text-base text-[#3F3F46]">
+              View and manage patient records
+            </p>
+          </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm">
-          {/* Table toolbar */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 sm:p-5 border-b border-gray-100">
-            <h2 className="text-sm font-bold text-gray-800">Patients</h2>
-            <div className="flex items-center gap-2 flex-wrap">
-              {/* Search */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
-                <input
-                  type="text"
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
-                  placeholder="Search by patient name or ID"
-                  className="pl-8 pr-3 py-2 border border-gray-200 rounded-lg text-xs text-gray-600 w-52 focus:outline-none focus:ring-1 focus:ring-[#1AC073] bg-white"
-                />
-              </div>
-
-              {/* Last Visit — reuses the shared PeriodFilterButton wrapped in a bordered button style */}
-              <div className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg bg-white">
-                <PeriodFilterButton label="Last Visit" />
-              </div>
-
-              {/* Gender */}
-              <FilterDropdown
-                label="Gender"
-                options={["All", "Male", "Female"]}
-                selected={gender}
-                onChange={setGender}
+        <DataTable
+          title="Patients"
+          data={patients}
+          columns={columns}
+          showSearch
+          searchPlaceholder="Search by patient name or ID"
+          onSearch={(val) => setLocalSearch(val)}
+          totalPages={totalPages}
+          emptyMessage={
+            isLoading ? "Loading patients..." : "No patients found."
+          }
+          toolbarActions={
+            <>
+              <CustomDropdown
+                options={PAGE_SIZES}
+                selected={pageSize.toString()}
+                onSelect={(val) => updateUrlParams("page_size", val)}
+                placeholder="Rows per page"
               />
-            </div>
-          </div>
-
-          {/* Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[700px]">
-              <thead>
-                <tr className="border-b border-gray-100">
-                  {TABLE_HEADERS.map(h => (
-                    <th key={h} className="px-5 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">
-                      <span className="flex items-center gap-1">{h} <ChevronDown size={12} /></span>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {patients.map((p, i) => (
-                  <tr key={i} className="hover:bg-gray-50/60 transition-colors">
-                    <td className="px-5 py-4 text-sm text-gray-600 font-medium">{p.id}</td>
-                    <td className="px-5 py-4 text-sm text-gray-800 font-semibold">{p.name}</td>
-                    <td className="px-5 py-4 text-sm text-gray-500">{p.ageGender}</td>
-                    <td className="px-5 py-4 text-sm text-gray-500">{p.lastVisit}</td>
-                    <td className="px-5 py-4 text-sm text-gray-500">{p.condition}</td>
-                    <td className="px-5 py-4">
-                      <Link
-                        href={`/doctor-dashboard/patients/${i + 1}`}
-                        className="text-sm font-semibold"
-                        style={{ color: "#046C3F" }}
-                      >
-                        View profile
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {isLoading && <p className="px-5 pb-4 text-xs text-gray-400">Loading patient records...</p>}
-          <Pagination currentPage={page} totalPages={patientsData?.total_pages || 68} onPageChange={setPage} />
-        </div>
+            </>
+          }
+        />
       </div>
     </div>
   );

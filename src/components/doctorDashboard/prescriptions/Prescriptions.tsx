@@ -4,17 +4,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { ChevronDown, Search, ArrowLeft, Pill } from "lucide-react";
+import { ChevronDown, Search, Pill } from "lucide-react";
 import DoctorHeader from "@/src/components/doctorDashboard/generics/Header";
 import { PeriodFilterButton } from "@/src/components/doctorDashboard/generics/PeriodFilterButton";
 import FilterDropdown from "@/src/components/adminDashboard/generics/FilterDropdown";
 import { ColumnDef, DataTable } from "@/src/components/generic/ui/DataTable";
-import {
-  useCreateDoctorPrescription,
-  useDoctorPrescriptions,
-} from "@/src/hooks/doctors/use-doctors";
 import type {
-  DoctorPrescriptionApiPayload,
   DoctorPrescriptionRow,
   DoctorPrescriptionStatus,
 } from "@/src/components/doctorDashboard/type";
@@ -237,33 +232,10 @@ function SimpleSelect({ label, placeholder, options, value, onChange, compact }:
 // ── Prescription History tab ──────────────────────────────────────────────────
 
 function PrescriptionHistory() {
-  const [search, setSearch] = useState("");
+  const [, setSearch] = useState("");
   const [status, setStatus] = useState("All Status");
-  const { data: prescriptionsData, isLoading } = useDoctorPrescriptions({
-    page: 1,
-    page_size: 10,
-    search,
-    status,
-  });
-
-  const prescriptions = useMemo<DoctorPrescriptionRow[]>(() => {
-    const payload = prescriptionsData as DoctorPrescriptionApiPayload | undefined;
-    const apiRows = payload?.results || payload?.data?.results;
-    if (!apiRows?.length) return [];
-
-    return apiRows.map((row) => ({
-      prescribedId: row.prescription_id || row.prescribed_id || row.id || "-",
-      patientId: row.patient_id || row.patient?.patient_id || "-",
-      patientName: row.patient_name || row.patient?.full_name || "-",
-      drugName: row.drug_name || row.medications || `${row.items?.length || 0} items`,
-      dosage: row.dosage || row.items?.[0]?.dosage || "-",
-      frequency: row.frequency || row.items?.[0]?.frequency || "-",
-      duration: row.duration || row.items?.[0]?.duration || "-",
-      date: row.date || row.created_at || "-",
-      status: (row.status || "Pending") as DoctorPrescriptionStatus,
-    }));
-  }, [prescriptionsData]);
-  const totalPages = (prescriptionsData as DoctorPrescriptionApiPayload | undefined)?.total_pages || 1;
+  const prescriptions = useMemo<DoctorPrescriptionRow[]>(() => [], []);
+  const totalPages = 1;
 
   const columns = useMemo<ColumnDef<DoctorPrescriptionRow>[]>(() => [
     { header: "Prescribed ID", accessorKey: "prescribedId", sortable: true },
@@ -296,7 +268,7 @@ function PrescriptionHistory() {
         searchPlaceholder="Search patient by Drug name..."
         onSearch={setSearch}
         totalPages={totalPages}
-        emptyMessage={isLoading ? "Loading prescriptions..." : "No prescriptions found."}
+        emptyMessage="No prescriptions found."
         toolbarActions={(
           <>
           <PeriodFilterButton label="Date Range" />
@@ -372,7 +344,6 @@ export function CreatePrescription() {
   const router = useRouter();
   const [medRows, setMedRows] = useState<MedRow[]>([{ id: 1, drug: "", dosage: "", frequency: "", duration: "" }]);
   const [submitted, setSubmitted] = useState(false);
-  const createPrescription = useCreateDoctorPrescription();
 
   const addRow = () => setMedRows(r => [...r, { id: Date.now(), drug: "", dosage: "", frequency: "", duration: "" }]);
   const removeRow = (id: number) => setMedRows(r => r.filter(m => m.id !== id));
@@ -474,31 +445,13 @@ export function CreatePrescription() {
           </button>
           <button
             onClick={() => {
-              createPrescription.mutate(
-                {
-                  patient: "PAT-PLT-000234",
-                  clinical_notes: "Static doctor prescription entry",
-                  notes: "Additional prescription notes",
-                  items: medRows.map((row) => ({
-                    drug: row.drug || "Paracetamol 500mg",
-                    dosage: row.dosage || "500mg 1 tab",
-                    frequency: row.frequency || "Twice daily",
-                    duration: row.duration || "7 days",
-                  })),
-                },
-                {
-                  onSuccess: () => {
-                    setSubmitted(true);
-                    router.push("/doctor-dashboard/prescriptions");
-                  },
-                  onError: () => setSubmitted(true),
-                },
-              );
+              setSubmitted(true);
+              window.setTimeout(() => router.push("/doctor-dashboard/prescriptions"), 500);
             }}
             className="px-6 py-2.5 rounded-xl text-sm font-semibold text-white"
             style={{ background: "#046C3F" }}
           >
-            {createPrescription.isPending ? "Creating..." : "Create Prescription"}
+            Create Prescription
           </button>
         </div>
       </div>
