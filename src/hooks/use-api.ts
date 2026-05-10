@@ -49,10 +49,12 @@ export function useApi() {
         }
       } catch (error) {
         if (error instanceof ApiError && error.isTokenInvalid) {
-          console.warn(
-            "🔐 Expired or invalid token detected. Automatically logging out...",
-          );
-          signOut({ redirect: true, callbackUrl: "/login" });
+          if (session?.access) {
+            console.warn(
+              "🔐 Expired or invalid token detected. Logging out...",
+            );
+            signOut({ redirect: true, callbackUrl: "/login" });
+          }
         }
         throw error;
       }
