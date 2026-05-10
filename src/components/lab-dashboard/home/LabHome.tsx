@@ -1,7 +1,13 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { CheckCircle2, ClipboardList, MoreHorizontal, PackageCheck } from "lucide-react";
+import {
+  CheckCircle2,
+  ClipboardList,
+  MoreHorizontal,
+  PackageCheck,
+} from "lucide-react";
 import DashboardStatCard from "@/src/components/generic/dashboard/DashboardStatCard";
 import { ColumnDef, DataTable } from "@/src/components/generic/ui/DataTable";
 import { StatusBadge } from "@/src/components/generic/ui/TableHelpers";
@@ -14,6 +20,7 @@ import {
 import { LabRequest } from "./types";
 import LabDateRangeFilter from "../generics/LabDateRangeFilter";
 import { useSession } from "next-auth/react";
+import { useState } from "react";
 
 const formatBadgeLabel = (str: string) => {
   if (!str) return "Unknown";
