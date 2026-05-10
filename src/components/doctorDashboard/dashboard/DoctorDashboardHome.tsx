@@ -4,71 +4,44 @@ import { Clock, Stethoscope, CheckCircle2, FlaskConical, ChevronDown, ArrowRight
 import Link from "next/link";
 import DoctorHeader from "@/src/components/doctorDashboard/generics/Header";
 import { PeriodFilterButton } from "@/src/components/doctorDashboard/generics/PeriodFilterButton";
+import DashboardStatCard from "@/src/components/generic/dashboard/DashboardStatCard";
+import { StatusBadge } from "@/src/components/generic/ui/TableHelpers";
+import {
+  useDoctorAlerts,
+  useDoctorPendingLabs,
+  useDoctorStats,
+} from "@/src/hooks/doctors/use-doctors";
+import type {
+  DoctorDashboardAlertItem,
+  DoctorDashboardAlertSeverity,
+  DoctorDashboardApiRecord,
+  DoctorDashboardConsultationRow,
+  DoctorDashboardConsultationStatus,
+  DoctorDashboardLabResult,
+  DoctorDashboardLabStatus,
+} from "./DoctorDashboardHome.types";
 
-// ── Types ─────────────────────────────────────────────────────────────────────
-
-type LabStatus = "Ready" | "Pending" | "Processing" | "Urgent";
-type AlertSeverity = "High risk" | "Urgent" | "Awaiting" | "Ready";
-type ConsultationStatus = "In-consultation" | "Urgent" | "Waiting" | "Completed";
-
-interface LabResult {
-  test: string;
-  patient: string;
-  time: string;
-  status: LabStatus;
+function getRecord(value: unknown): DoctorDashboardApiRecord {
+  return value && typeof value === "object" ? (value as DoctorDashboardApiRecord) : {};
 }
 
-interface AlertItem {
-  title: string;
-  subtitle: string;
-  time: string;
-  severity: AlertSeverity;
+function getText(record: DoctorDashboardApiRecord, keys: string[], fallback: string) {
+  for (const key of keys) {
+    const value = record[key];
+    if (typeof value === "string" && value) return value;
+  }
+  return fallback;
 }
 
-interface ConsultationRow {
-  patientId: string;
-  patientName: string;
-  chiefComplaint: string;
-  status: ConsultationStatus;
+function getStat(record: DoctorDashboardApiRecord, keys: string[], fallback: number) {
+  for (const key of keys) {
+    const value = record[key];
+    if (typeof value === "number" || typeof value === "string") return value;
+  }
+  return fallback;
 }
 
-// ── Static data ───────────────────────────────────────────────────────────────
-
-const LAB_RESULTS: LabResult[] = [
-  { test: "Malaria RDT", patient: "Emeka Dike", time: "Requested 9:12am", status: "Ready" },
-  { test: "FBC", patient: "Ngozi Eze", time: "Requested 8:45am", status: "Pending" },
-  { test: "Urinalysis", patient: "Fatima Musa", time: "Requested 8:20am", status: "Processing" },
-  { test: "Urinalysis", patient: "Fatima Musa", time: "Requested 8:20am", status: "Urgent" },
-];
-
-const ALERTS: AlertItem[] = [
-  {
-    title: "High-risk pregnancy — Amina Bello (32wks, pre-eclampsia)",
-    subtitle: "Maternal alert",
-    time: "now",
-    severity: "High risk",
-  },
-  {
-    title: "Immunizations due — 5 children this week",
-    subtitle: "Immunization",
-    time: "today",
-    severity: "Urgent",
-  },
-  {
-    title: "Referral pending — Emeka Dike (cardiology)",
-    subtitle: "Referral awaiting",
-    time: "today",
-    severity: "Awaiting",
-  },
-  {
-    title: "Lab result ready — Fatima Musa urinalysis",
-    subtitle: "Lab",
-    time: "2 min ago",
-    severity: "Ready",
-  },
-];
-
-const CONSULTATION_QUEUE: ConsultationRow[] = [
+const CONSULTATION_QUEUE: DoctorDashboardConsultationRow[] = [
   {
     patientId: "PAT-PLT-000234",
     patientName: "Ngozi Eze",
@@ -97,90 +70,53 @@ const CONSULTATION_QUEUE: ConsultationRow[] = [
 
 // ── Badge styles (inline to avoid Tailwind purge on dynamic keys) ─────────────
 
-const LAB_BADGE_STYLE: Record<LabStatus, React.CSSProperties> = {
-  Ready:      { background: "#E8F7F0", color: "#046C3F" },
-  Pending:    { background: "#FFF7ED", color: "#C2410C" },
-  Processing: { background: "#EFF6FF", color: "#1D4ED8" },
-  Urgent:     { background: "#FEF2F2", color: "#DC2626" },
+const LAB_BADGE_STYLE: Record<DoctorDashboardLabStatus, { bg: string; text: string }> = {
+  Ready: { bg: "#E8F7F0", text: "#046C3F" },
+  Pending: { bg: "#FFF7ED", text: "#C2410C" },
+  Processing: { bg: "#EFF6FF", text: "#1D4ED8" },
+  Urgent: { bg: "#FEF2F2", text: "#DC2626" },
 };
 
-const ALERT_BADGE_STYLE: Record<AlertSeverity, React.CSSProperties> = {
-  "High risk": { background: "#FEF2F2", color: "#DC2626" },
-  "Urgent":    { background: "#FFF7ED", color: "#C2410C" },
-  "Awaiting":  { background: "#FFFBEB", color: "#B45309" },
-  "Ready":     { background: "#E8F7F0", color: "#046C3F" },
+const ALERT_BADGE_STYLE: Record<DoctorDashboardAlertSeverity, { bg: string; text: string }> = {
+  "High risk": { bg: "#FEF2F2", text: "#DC2626" },
+  Urgent: { bg: "#FFF7ED", text: "#C2410C" },
+  Awaiting: { bg: "#FFFBEB", text: "#B45309" },
+  Ready: { bg: "#E8F7F0", text: "#046C3F" },
 };
 
-const CONSULTATION_BADGE_STYLE: Record<ConsultationStatus, React.CSSProperties> = {
-  "In-consultation": { background: "#EFF6FF", color: "#1D4ED8" },
-  "Urgent":          { background: "#FEF2F2", color: "#DC2626" },
-  "Waiting":         { background: "#FFFBEB", color: "#B45309" },
-  "Completed":       { background: "#E8F7F0", color: "#046C3F" },
+const CONSULTATION_BADGE_STYLE: Record<DoctorDashboardConsultationStatus, { bg: string; text: string }> = {
+  "In-consultation": { bg: "#EFF6FF", text: "#1D4ED8" },
+  Urgent: { bg: "#FEF2F2", text: "#DC2626" },
+  Waiting: { bg: "#FFFBEB", text: "#B45309" },
+  Completed: { bg: "#E8F7F0", text: "#046C3F" },
 };
-
-// ── Stat card ─────────────────────────────────────────────────────────────────
-
-interface StatCardProps {
-  icon: React.ElementType;
-  label: string;
-  value: number | string;
-}
-
-function StatCard({ icon: Icon, label, value }: StatCardProps) {
-  return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-5 flex flex-col justify-between min-h-[120px]">
-      <div className="flex items-center justify-between">
-        <div className="p-2 bg-gray-50 rounded-lg text-gray-400">
-          <Icon size={18} />
-        </div>
-        <PeriodFilterButton label="This Week" />
-      </div>
-      <div className="mt-3">
-        <p className="text-sm text-gray-500 font-medium mb-1">{label}</p>
-        <p className="text-4xl font-bold text-gray-900">{value}</p>
-      </div>
-    </div>
-  );
-}
 
 // ── Badges ────────────────────────────────────────────────────────────────────
 
-function LabBadge({ status }: { status: LabStatus }) {
+function LabBadge({ status }: { status: DoctorDashboardLabStatus }) {
+  const badge = LAB_BADGE_STYLE[status];
   return (
-    <span
-      className="px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap"
-      style={LAB_BADGE_STYLE[status]}
-    >
-      {status}
-    </span>
+    <StatusBadge label={status} bgColorHex={badge.bg} textColorHex={badge.text} />
   );
 }
 
-function AlertBadge({ severity }: { severity: AlertSeverity }) {
+function AlertBadge({ severity }: { severity: DoctorDashboardAlertSeverity }) {
+  const badge = ALERT_BADGE_STYLE[severity];
   return (
-    <span
-      className="px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap"
-      style={ALERT_BADGE_STYLE[severity]}
-    >
-      {severity}
-    </span>
+    <StatusBadge label={severity} bgColorHex={badge.bg} textColorHex={badge.text} />
   );
 }
 
-function ConsultationBadge({ status }: { status: ConsultationStatus }) {
+function ConsultationBadge({ status }: { status: DoctorDashboardConsultationStatus }) {
+  const badge = CONSULTATION_BADGE_STYLE[status];
   return (
-    <span
-      className="px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap"
-      style={CONSULTATION_BADGE_STYLE[status]}
-    >
-      {status}
-    </span>
+    <StatusBadge label={status} bgColorHex={badge.bg} textColorHex={badge.text} />
   );
 }
 
 // ── Action button ─────────────────────────────────────────────────────────────
 
-function ActionButton({ status }: { status: ConsultationStatus }) {
+function ActionButton({ status }: { status: DoctorDashboardConsultationStatus }) {
   if (status === "In-consultation") {
     return (
       <button className="px-4 py-1.5 rounded-lg border border-gray-300 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
@@ -206,6 +142,52 @@ function ActionButton({ status }: { status: ConsultationStatus }) {
 
 export default function DoctorDashboardHome() {
   const breadcrumbs = [{ label: "", active: true }];
+  const { data: statsData } = useDoctorStats({});
+  const { data: alertsData } = useDoctorAlerts();
+  const { data: pendingLabsData } = useDoctorPendingLabs({ page: 1, page_size: 4 });
+
+  const statsPayload = getRecord(statsData);
+  const stats = getRecord(statsPayload.stats || statsPayload);
+  const pendingPayload = getRecord(pendingLabsData);
+  const pendingDataPayload = getRecord(pendingPayload.data);
+  const pendingRows = pendingPayload.results || pendingDataPayload.results || pendingPayload.data || pendingLabsData;
+  const labResults = (Array.isArray(pendingRows) ? pendingRows : [])
+    ?.slice?.(0, 4)
+    ?.map?.((item) => {
+      const record = getRecord(item);
+      const patient = getRecord(record.patient);
+      const status = record.status === "COMPLETED"
+        ? "Ready"
+        : record.status === "IN_PROGRESS"
+          ? "Processing"
+          : record.priority === "URGENT"
+            ? "Urgent"
+            : "Pending";
+      return {
+        test: getText(record, ["test_type", "test", "lab_test"], "Lab request"),
+        patient: getText(record, ["patient_name", "patient"], getText(patient, ["full_name"], "Patient")),
+        time: typeof record.created_at === "string" ? `Requested ${record.created_at}` : getText(record, ["time"], "Requested today"),
+        status: status as DoctorDashboardLabStatus,
+      };
+    }) ?? [];
+  const alertsPayload = getRecord(alertsData);
+  const alertsDataPayload = getRecord(alertsPayload.data);
+  const alertRows = alertsPayload.results || alertsDataPayload.results || alertsPayload.data || alertsData;
+  const alerts = (Array.isArray(alertRows) ? alertRows : [])
+    ?.slice?.(0, 4)
+    ?.map?.((alert) => {
+      const record = getRecord(alert);
+      const rawSeverity = getText(record, ["severity", "status"], "Awaiting");
+      const severity = ["High risk", "Urgent", "Awaiting", "Ready"].includes(rawSeverity)
+        ? rawSeverity
+        : "Awaiting";
+      return {
+        title: getText(record, ["title", "message", "description"], "Clinical alert"),
+        subtitle: getText(record, ["category", "type"], "Alert"),
+        time: getText(record, ["created_at", "time"], "today"),
+        severity: severity as DoctorDashboardAlertSeverity,
+      };
+    }) ?? [];
 
   return (
     <div className="flex-1 flex flex-col bg-[#F9FAFB] min-w-0">
@@ -213,12 +195,16 @@ export default function DoctorDashboardHome() {
 
       <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 pt-4 pb-10 space-y-6">
 
+        <div className="flex justify-end">
+          <PeriodFilterButton label="This Week" />
+        </div>
+
         {/* Stat cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard icon={Clock} label="Waiting" value={14} />
-          <StatCard icon={Stethoscope} label="In Consultations" value={8} />
-          <StatCard icon={CheckCircle2} label="Completed" value={32} />
-          <StatCard icon={FlaskConical} label="Pending Labs" value={11} />
+          <DashboardStatCard icon={Clock} title="Waiting" value={getStat(stats, ["waiting", "waiting_queue"], 0)} active showPeriod={false} />
+          <DashboardStatCard icon={Stethoscope} title="In Consultations" value={getStat(stats, ["in_consultation", "in_consultations"], 0)} showPeriod={false} />
+          <DashboardStatCard icon={CheckCircle2} title="Completed" value={getStat(stats, ["completed", "completed_today"], 0)} showPeriod={false} />
+          <DashboardStatCard icon={FlaskConical} title="Pending Labs" value={getStat(stats, ["pending_labs", "pending_lab_requests"], 0)} showPeriod={false} />
         </div>
 
         {/* Pending Lab Results + Alerts */}
@@ -239,7 +225,7 @@ export default function DoctorDashboardHome() {
               </Link>
             </div>
             <div className="space-y-4">
-              {LAB_RESULTS.map((item, i) => (
+              {labResults.length ? labResults.map((item: DoctorDashboardLabResult, i: number) => (
                 <div key={i} className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-gray-800 truncate">{item.test}</p>
@@ -249,7 +235,9 @@ export default function DoctorDashboardHome() {
                   </div>
                   <LabBadge status={item.status} />
                 </div>
-              ))}
+              )) : (
+                <p className="text-sm text-gray-400">No pending lab results.</p>
+              )}
             </div>
           </div>
 
@@ -260,7 +248,7 @@ export default function DoctorDashboardHome() {
               <h2 className="text-base font-bold text-gray-800">Alerts</h2>
             </div>
             <div className="space-y-4">
-              {ALERTS.map((alert, i) => (
+              {alerts.length ? alerts.map((alert: DoctorDashboardAlertItem, i: number) => (
                 <div key={i} className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-gray-800 leading-snug">{alert.title}</p>
@@ -270,7 +258,9 @@ export default function DoctorDashboardHome() {
                   </div>
                   <AlertBadge severity={alert.severity} />
                 </div>
-              ))}
+              )) : (
+                <p className="text-sm text-gray-400">No alerts yet.</p>
+              )}
             </div>
           </div>
         </div>

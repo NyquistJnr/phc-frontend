@@ -17,6 +17,7 @@ type DashboardHeaderProps = {
   title: string;
   breadcrumbs?: DashboardBreadcrumb[];
   notificationHref: string;
+  profileHref?: string;
   fallbackName: string;
   fallbackRole: string;
 };
@@ -34,6 +35,7 @@ export default function DashboardHeader({
   title,
   breadcrumbs = [],
   notificationHref,
+  profileHref,
   fallbackName,
   fallbackRole,
 }: DashboardHeaderProps) {
@@ -88,20 +90,32 @@ export default function DashboardHeader({
               </span>
             )}
           </button>
-          <div className="hidden text-right sm:block">
+          <Link
+            href={profileHref ?? "#"}
+            className={`hidden text-right sm:block ${
+              profileHref ? "transition-opacity hover:opacity-75" : "pointer-events-none"
+            }`}
+            aria-label="Open profile"
+          >
             <p className="text-sm font-semibold leading-tight text-gray-800">
               {firstName}
             </p>
             <p className="text-[11px] leading-tight text-gray-500">{role}</p>
-          </div>
-          <div className="relative h-10 w-10 overflow-hidden rounded-full border border-gray-200 bg-gray-100">
+          </Link>
+          <Link
+            href={profileHref ?? "#"}
+            className={`relative h-10 w-10 overflow-hidden rounded-full border border-gray-200 bg-gray-100 ${
+              profileHref ? "transition-opacity hover:opacity-80" : "pointer-events-none"
+            }`}
+            aria-label="Open profile"
+          >
             <Image
               src={profilePic}
               alt="Profile"
               fill
               className="object-cover"
             />
-          </div>
+          </Link>
         </div>
       </header>
 

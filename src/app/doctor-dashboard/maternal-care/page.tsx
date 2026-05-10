@@ -1,5 +1,10 @@
-import MaternalCare from "@/src/components/doctorDashboard/maternalCare/MaternalCare";
+import { Suspense } from "react";
+import MaternalCareEpisodes from "@/src/components/doctorDashboard/maternalCare/MaternalCareEpisodes";
 
 export default function MaternalCarePage() {
-  return <MaternalCare />;
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <MaternalCareEpisodes />
+    </Suspense>
+  );
 }

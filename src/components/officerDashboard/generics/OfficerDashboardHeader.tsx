@@ -18,6 +18,7 @@ export default function OfficerDashboardHeader({
       title={title}
       breadcrumbs={breadcrumbs}
       notificationHref="/oic-dashboard/notifications"
+      profileHref="/oic-dashboard/profile"
       fallbackName="Nobert"
       fallbackRole="OIC"
     />

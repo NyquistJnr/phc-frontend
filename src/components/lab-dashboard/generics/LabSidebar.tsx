@@ -74,7 +74,7 @@ export default function LabSidebar() {
             const Icon = item.icon;
             const isActive =
               item.path === "/lab-dashboard"
-                ? pathname === item.path
+                ? pathname === item.path || pathname === "/lab-dashboard/profile"
                 : pathname === item.path ||
                   pathname.startsWith(`${item.path}/`);
 
