@@ -1,5 +1,5 @@
-import Laboratory from "@/src/components/lab-dashboard/laboratory/Laboratory";
+import LaboratoryListing from "@/src/components/lab-dashboard/laboratory/LaboratoryListing";
 
 export default function LabDashboardLaboratoryPage() {
-  return <Laboratory />;
+  return <LaboratoryListing />;
 }

@@ -36,7 +36,12 @@ import {
 type Tab = "requests" | "results" | "enter";
 
 const stats = [
-  { title: "Pending lab Requests", value: 0, icon: ClipboardList, active: true },
+  {
+    title: "Pending lab Requests",
+    value: 0,
+    icon: ClipboardList,
+    active: true,
+  },
   { title: "In Progress", value: 0, icon: ClipboardList },
   { title: "Completed Today", value: 0, icon: CheckCircle2 },
 ];
@@ -68,21 +73,31 @@ function StatCard({
         >
           <Icon size={21} />
         </span>
-        <span className={`flex items-center gap-1 text-xs ${active ? "text-white" : "text-gray-300"}`}>
+        <span
+          className={`flex items-center gap-1 text-xs ${active ? "text-white" : "text-gray-300"}`}
+        >
           This Week <ChevronDown size={14} />
         </span>
       </div>
       <p className={`mb-3 text-sm ${active ? "text-white" : "text-gray-400"}`}>
         {title}
       </p>
-      <p className={`text-3xl font-semibold ${active ? "text-white" : "text-gray-800"}`}>
+      <p
+        className={`text-3xl font-semibold ${active ? "text-white" : "text-gray-800"}`}
+      >
         {value}
       </p>
     </div>
   );
 }
 
-function SegmentedTabs({ tab, setTab }: { tab: Tab; setTab: (tab: Tab) => void }) {
+function SegmentedTabs({
+  tab,
+  setTab,
+}: {
+  tab: Tab;
+  setTab: (tab: Tab) => void;
+}) {
   return (
     <div className="mb-6 grid max-w-[400px] grid-cols-2 overflow-hidden rounded-lg bg-[#EEF7F4]">
       <button
@@ -175,7 +190,12 @@ function RequestActionMenu({
         createPortal(
           <div
             ref={menuRef}
-            style={{ position: "fixed", top: coords.top, left: coords.left, width: 190 }}
+            style={{
+              position: "fixed",
+              top: coords.top,
+              left: coords.left,
+              width: 190,
+            }}
             className="z-[9999] rounded-lg border border-gray-200 bg-white py-3 shadow-xl"
           >
             <MenuButton
@@ -260,7 +280,12 @@ function ResultActionMenu({
         createPortal(
           <div
             ref={menuRef}
-            style={{ position: "fixed", top: coords.top, left: coords.left, width: 190 }}
+            style={{
+              position: "fixed",
+              top: coords.top,
+              left: coords.left,
+              width: 190,
+            }}
             className="z-[9999] rounded-lg border border-gray-200 bg-white py-3 shadow-xl"
           >
             <MenuButton
@@ -419,7 +444,12 @@ function EnterResultForm({
     <div className="rounded-xl bg-white px-6 py-7 lg:px-8">
       <SectionTitle icon={<UserRound size={18} />} title="Patient Info" />
       <div className="mb-8 grid max-w-4xl grid-cols-1 gap-7 md:grid-cols-3">
-        <Field label="Search patient" value="Musa Abdullahi" icon={<Search size={24} />} readOnly />
+        <Field
+          label="Search patient"
+          value="Musa Abdullahi"
+          icon={<Search size={24} />}
+          readOnly
+        />
         <Field label="Encounter ID" value="ENC-PLT-000234" readOnly />
         <Field label="Lab Request ID" value="LAB-PLT-000234" readOnly />
         <Field label="Patient ID" value="PAT-PLT-000234" readOnly />
@@ -433,7 +463,12 @@ function EnterResultForm({
         <Field label="Requested By" value="Dr Reyes" readOnly />
         <Field label="Sample Type (Optional)" value="Blood" readOnly />
         <Field label="Priority" value="Urgent" readOnly />
-        <Field label="Request Date" value="12/12/2020" icon={<Calendar size={22} />} readOnly />
+        <Field
+          label="Request Date"
+          value="12/12/2020"
+          icon={<Calendar size={22} />}
+          readOnly
+        />
         <div className="md:col-span-3">
           <TextArea label="Clinical notes for lab" value="Filled" readOnly />
         </div>
@@ -445,13 +480,27 @@ function EnterResultForm({
         <Field label="Test Method" placeholder="e.g RDT, Microscopy" />
         <ResultValueDropdown selected={resultValue} onSelect={setResultValue} />
         <Field label="Result Units" value="0 mg/dL" readOnly />
-        <Field label="Entered By" placeholder="Search" icon={<Search size={24} />} />
-        <Field label="Result Date" value="12/12/2020" icon={<Calendar size={22} />} />
+        <Field
+          label="Entered By"
+          placeholder="Search"
+          icon={<Search size={24} />}
+        />
+        <Field
+          label="Result Date"
+          value="12/12/2020"
+          icon={<Calendar size={22} />}
+        />
         <div className="md:col-span-2">
-          <TextArea label="Result Interpretation (Optional)" placeholder="Clinical interpretation" />
+          <TextArea
+            label="Result Interpretation (Optional)"
+            placeholder="Clinical interpretation"
+          />
         </div>
         <div className="md:col-span-2">
-          <TextArea label="Notes (Optional)" placeholder="Additional lab comments" />
+          <TextArea
+            label="Notes (Optional)"
+            placeholder="Additional lab comments"
+          />
         </div>
       </div>
 
@@ -488,7 +537,12 @@ function ResultViewModal({ onClose }: { onClose: () => void }) {
         </div>
         <SectionTitle icon={<UserRound size={18} />} title="Patient Info" />
         <div className="mb-8 grid grid-cols-1 gap-7 md:grid-cols-3">
-          <Field label="Search patient" value="Musa Abdullahi" icon={<Search size={24} />} readOnly />
+          <Field
+            label="Search patient"
+            value="Musa Abdullahi"
+            icon={<Search size={24} />}
+            readOnly
+          />
           <Field label="Encounter ID" value="ENC-PLT-000234" readOnly />
           <Field label="Lab Request ID" value="LAB-PLT-000234" readOnly />
           <Field label="Patient ID" value="PAT-PLT-000234" readOnly />
@@ -502,7 +556,12 @@ function ResultViewModal({ onClose }: { onClose: () => void }) {
           <Field label="Requested By" value="Dr Reyes" readOnly />
           <Field label="Sample Type (Optional)" value="Blood" readOnly />
           <Field label="Priority" value="Disabled" readOnly />
-          <Field label="Request Date" value="12/12/2020" icon={<Calendar size={22} />} readOnly />
+          <Field
+            label="Request Date"
+            value="12/12/2020"
+            icon={<Calendar size={22} />}
+            readOnly
+          />
           <div className="md:col-span-3">
             <TextArea label="Clinical notes for lab" value="Filled" readOnly />
           </div>
@@ -514,10 +573,24 @@ function ResultViewModal({ onClose }: { onClose: () => void }) {
           <Field label="Test Method" value="Microscopy" readOnly />
           <Field label="Result Value" value="Negative" readOnly />
           <Field label="Result Units" value="100 mg/dL" readOnly />
-          <Field label="Entered By" value="Festus" icon={<Search size={24} />} readOnly />
-          <Field label="Result Date" value="12/12/2020" icon={<Calendar size={22} />} readOnly />
+          <Field
+            label="Entered By"
+            value="Festus"
+            icon={<Search size={24} />}
+            readOnly
+          />
+          <Field
+            label="Result Date"
+            value="12/12/2020"
+            icon={<Calendar size={22} />}
+            readOnly
+          />
           <div className="md:col-span-2">
-            <TextArea label="Result Interpretation (Optional)" value="Filled" readOnly />
+            <TextArea
+              label="Result Interpretation (Optional)"
+              value="Filled"
+              readOnly
+            />
           </div>
           <div className="md:col-span-2">
             <TextArea label="Notes (Optional)" value="Filled" readOnly />
@@ -663,10 +736,18 @@ export default function Laboratory() {
   ];
 
   const pageTitle =
-    tab === "enter" ? "Enter Lab Result" : tab === "results" ? "Lab Results" : "Lab Requests";
+    tab === "enter"
+      ? "Enter Lab Result"
+      : tab === "results"
+        ? "Lab Results"
+        : "Lab Requests";
   const breadcrumbs =
     tab === "enter"
-      ? [{ label: "Laboratory" }, { label: "Lab results" }, { label: "Enter New Result" }]
+      ? [
+          { label: "Laboratory" },
+          { label: "Lab results" },
+          { label: "Enter New Result" },
+        ]
       : tab === "results"
         ? [{ label: "Laboratory" }, { label: "Lab results" }]
         : [{ label: "Laboratory" }];
@@ -676,7 +757,9 @@ export default function Laboratory() {
       <LabDashboardHeader title="Laboratory" breadcrumbs={breadcrumbs} />
 
       <div className="px-4 py-6 sm:px-6 lg:py-8">
-        {tab === "enter" && <NurseBackButton onClick={() => setTab("results")} />}
+        {tab === "enter" && (
+          <NurseBackButton onClick={() => setTab("results")} />
+        )}
 
         <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
@@ -741,7 +824,12 @@ export default function Laboratory() {
                   onSelect={setRequestPriority}
                 />
                 <CustomDropdown
-                  options={["All Status", "Pending", "In-Progress", "Completed"]}
+                  options={[
+                    "All Status",
+                    "Pending",
+                    "In-Progress",
+                    "Completed",
+                  ]}
                   selected={requestStatus}
                   onSelect={setRequestStatus}
                 />
