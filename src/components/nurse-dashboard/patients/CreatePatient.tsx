@@ -262,7 +262,6 @@ export default function CreateNewPatient() {
 
   const { mutate: createPatient, isPending: isCreating } = useCreatePatient();
 
-  // Location Data Fetching (Safeguard with || "" to ensure strict string passing)
   const { data: statesList = [], isLoading: isLoadingStates } = useStates();
   const { data: lgasList = [], isLoading: isLoadingLgas } = useLgas(
     form.state || "",
@@ -272,7 +271,6 @@ export default function CreateNewPatient() {
     form.lga || "",
   );
 
-  // Formatting location data for SelectField
   const stateOptions = statesList.map((state: string) => ({
     label: state,
     value: state,
@@ -294,7 +292,6 @@ export default function CreateNewPatient() {
     setFormError("");
   };
 
-  // Handlers for dependent dropdowns
   const handleLocationChange = (
     field: "state" | "lga" | "ward",
     value: string,
@@ -391,7 +388,6 @@ export default function CreateNewPatient() {
               </div>
             )}
 
-            {/* --- Personal Details --- */}
             <SectionHeader icon={User} title="Personal Details" />
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               <FieldShell label="First Name *">
@@ -437,7 +433,6 @@ export default function CreateNewPatient() {
               />
             </div>
 
-            {/* --- Contact & Location --- */}
             <SectionHeader icon={MapPin} title="Contact & Location" />
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               <FieldShell label="Phone Number *">
@@ -515,7 +510,6 @@ export default function CreateNewPatient() {
               </div>
             </div>
 
-            {/* --- Next of Kin --- */}
             <SectionHeader icon={UserPlus} title="Next of Kin" />
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               <FieldShell label="Next of Kin Name">
@@ -540,7 +534,6 @@ export default function CreateNewPatient() {
               </FieldShell>
             </div>
 
-            {/* --- Medical Information --- */}
             <SectionHeader icon={HeartPulse} title="Medical Information" />
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               <SelectField
@@ -590,7 +583,6 @@ export default function CreateNewPatient() {
               </div>
             </div>
 
-            {/* --- Insurance Information --- */}
             <SectionHeader icon={ShieldCheck} title="Insurance Information" />
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               <SelectField

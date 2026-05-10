@@ -125,12 +125,10 @@ export interface MaternalVisitFilters {
   outcome?: string;
 }
 
-// --- Shared Types ---
 export type CareTab = "anc" | "pnc";
 export type Mode = "list" | "ancForm" | "pncForm";
 export type MaternalForm = Record<string, string>;
 
-// --- Constants ---
 export const ATTENDANCE_TYPES = ["All Types", "NEW", "RETURN"];
 export const TABLE_OUTCOME_OPTIONS = [
   "All Outcomes",
@@ -255,4 +253,19 @@ export interface PncVisitResult {
   referral_reason: string;
   newborn_assessments: PncNewbornAssessment[];
   created_at: string;
+}
+
+export interface AncPayloadForm {
+  attendance_type: string;
+  appointment: string;
+  hiv_status: string;
+  vdrl_syphilis: string;
+  hepatitis_b: string;
+  hemoglobin: string;
+  urinalysis: string;
+  tt_dose_given: string;
+  iptp_dose_given: string;
+  iron_folate_given: string;
+  risk_factors: string;
+  notes: string;
 }
