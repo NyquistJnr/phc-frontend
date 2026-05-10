@@ -13,7 +13,9 @@ import {
   Loader2,
 } from "lucide-react";
 import Header from "@/src/components/stateDashboard/generics/Header";
-import DataTable, { Column } from "@/src/components/adminDashboard/generics/DataTable";
+import DataTable, {
+  Column,
+} from "@/src/components/adminDashboard/generics/DataTable";
 import Pagination from "@/src/components/adminDashboard/generics/Pagination";
 import ActionMenu from "@/src/components/adminDashboard/generics/ActionMenu";
 import FilterDropdown from "@/src/components/adminDashboard/generics/FilterDropdown";
@@ -26,16 +28,166 @@ import { useUsers, User } from "@/src/hooks/useUsers";
 const ITEMS_PER_PAGE = 10;
 
 const DUMMY_USERS: User[] = [
-  { id: "1", staff_id: "STF-PLT-000045", first_name: "Dr. Abubakar", last_name: "Musa", middle_name: null, email: "abubakar.musa@phc.gov.ng", phone_number: "+2348012345678", role: "DOCTOR", is_active: true, facility_name: "PHC Surulere", facility_id: "f1", suspended_at: null, last_login: null, created_at: "2026-03-05T07:15:00Z" },
-  { id: "2", staff_id: "STF-PLT-000046", first_name: "Gustova", last_name: "Abubaka", middle_name: null, email: "gustova.abubaka@phc.gov.ng", phone_number: "+2348023456789", role: "NURSE", is_active: false, facility_name: "PHC Ikeja", facility_id: "f2", suspended_at: null, last_login: null, created_at: "2026-03-05T07:15:00Z" },
-  { id: "3", staff_id: "STF-PLT-000047", first_name: "Chidi", last_name: "Okonkwo", middle_name: null, email: "chidi.okonkwo@phc.gov.ng", phone_number: "+2348034567890", role: "LAB_TECHNICIAN", is_active: true, facility_name: "PHC Ajah", facility_id: "f3", suspended_at: null, last_login: null, created_at: "2026-03-05T07:15:00Z" },
-  { id: "4", staff_id: "STF-PLT-000048", first_name: "Amina", last_name: "Bello", middle_name: null, email: "amina.bello@phc.gov.ng", phone_number: "+2348045678901", role: "CHEW", is_active: false, facility_name: "PHC Ajah", facility_id: "f3", suspended_at: null, last_login: null, created_at: "2026-03-05T07:15:00Z" },
-  { id: "5", staff_id: "STF-PLT-000049", first_name: "Emeka", last_name: "Eze", middle_name: null, email: "emeka.eze@phc.gov.ng", phone_number: "+2348056789012", role: "PHARMACIST", is_active: true, facility_name: "PHC Ajah", facility_id: "f3", suspended_at: null, last_login: null, created_at: "2026-03-05T07:15:00Z" },
-  { id: "6", staff_id: "STF-PLT-000050", first_name: "Fatima", last_name: "Usman", middle_name: null, email: "fatima.usman@phc.gov.ng", phone_number: "+2348067890123", role: "DOCTOR", is_active: false, facility_name: "PHC Ajah", facility_id: "f3", suspended_at: null, last_login: null, created_at: "2026-03-05T07:15:00Z" },
-  { id: "7", staff_id: "STF-PLT-000051", first_name: "Ngozi", last_name: "Adeyemi", middle_name: null, email: "ngozi.adeyemi@phc.gov.ng", phone_number: "+2348078901234", role: "NURSE", is_active: true, facility_name: "PHC Ajah", facility_id: "f3", suspended_at: null, last_login: null, created_at: "2026-03-05T07:15:00Z" },
-  { id: "8", staff_id: "STF-PLT-000052", first_name: "Tunde", last_name: "Salami", middle_name: null, email: "tunde.salami@phc.gov.ng", phone_number: "+2348089012345", role: "LAB_TECHNICIAN", is_active: false, facility_name: "PHC Ajah", facility_id: "f3", suspended_at: null, last_login: null, created_at: "2026-03-05T07:15:00Z" },
-  { id: "9", staff_id: "STF-PLT-000053", first_name: "Kemi", last_name: "Owolabi", middle_name: null, email: "kemi.owolabi@phc.gov.ng", phone_number: "+2348090123456", role: "CHEW", is_active: true, facility_name: "PHC Ajah", facility_id: "f3", suspended_at: null, last_login: null, created_at: "2026-03-05T07:15:00Z" },
-  { id: "10", staff_id: "STF-PLT-000054", first_name: "Biodun", last_name: "Afolabi", middle_name: null, email: "biodun.afolabi@phc.gov.ng", phone_number: "+2348001234567", role: "PHARMACIST", is_active: false, facility_name: "PHC Ajah", facility_id: "f3", suspended_at: null, last_login: null, created_at: "2026-03-05T07:15:00Z" },
+  {
+    id: "1",
+    staff_id: "STF-PLT-000045",
+    first_name: "Dr. Abubakar",
+    last_name: "Musa",
+    middle_name: null,
+    email: "abubakar.musa@phc.gov.ng",
+    phone_number: "+2348012345678",
+    role: "DOCTOR",
+    is_active: true,
+    facility_name: "PHC Surulere",
+    facility_id: "f1",
+    suspended_at: null,
+    last_login: null,
+    created_at: "2026-03-05T07:15:00Z",
+  },
+  {
+    id: "2",
+    staff_id: "STF-PLT-000046",
+    first_name: "Gustova",
+    last_name: "Abubaka",
+    middle_name: null,
+    email: "gustova.abubaka@phc.gov.ng",
+    phone_number: "+2348023456789",
+    role: "NURSE",
+    is_active: false,
+    facility_name: "PHC Ikeja",
+    facility_id: "f2",
+    suspended_at: null,
+    last_login: null,
+    created_at: "2026-03-05T07:15:00Z",
+  },
+  {
+    id: "3",
+    staff_id: "STF-PLT-000047",
+    first_name: "Chidi",
+    last_name: "Okonkwo",
+    middle_name: null,
+    email: "chidi.okonkwo@phc.gov.ng",
+    phone_number: "+2348034567890",
+    role: "LAB_TECHNICIAN",
+    is_active: true,
+    facility_name: "PHC Ajah",
+    facility_id: "f3",
+    suspended_at: null,
+    last_login: null,
+    created_at: "2026-03-05T07:15:00Z",
+  },
+  {
+    id: "4",
+    staff_id: "STF-PLT-000048",
+    first_name: "Amina",
+    last_name: "Bello",
+    middle_name: null,
+    email: "amina.bello@phc.gov.ng",
+    phone_number: "+2348045678901",
+    role: "CHEW",
+    is_active: false,
+    facility_name: "PHC Ajah",
+    facility_id: "f3",
+    suspended_at: null,
+    last_login: null,
+    created_at: "2026-03-05T07:15:00Z",
+  },
+  {
+    id: "5",
+    staff_id: "STF-PLT-000049",
+    first_name: "Emeka",
+    last_name: "Eze",
+    middle_name: null,
+    email: "emeka.eze@phc.gov.ng",
+    phone_number: "+2348056789012",
+    role: "PHARMACIST",
+    is_active: true,
+    facility_name: "PHC Ajah",
+    facility_id: "f3",
+    suspended_at: null,
+    last_login: null,
+    created_at: "2026-03-05T07:15:00Z",
+  },
+  {
+    id: "6",
+    staff_id: "STF-PLT-000050",
+    first_name: "Fatima",
+    last_name: "Usman",
+    middle_name: null,
+    email: "fatima.usman@phc.gov.ng",
+    phone_number: "+2348067890123",
+    role: "DOCTOR",
+    is_active: false,
+    facility_name: "PHC Ajah",
+    facility_id: "f3",
+    suspended_at: null,
+    last_login: null,
+    created_at: "2026-03-05T07:15:00Z",
+  },
+  {
+    id: "7",
+    staff_id: "STF-PLT-000051",
+    first_name: "Ngozi",
+    last_name: "Adeyemi",
+    middle_name: null,
+    email: "ngozi.adeyemi@phc.gov.ng",
+    phone_number: "+2348078901234",
+    role: "NURSE",
+    is_active: true,
+    facility_name: "PHC Ajah",
+    facility_id: "f3",
+    suspended_at: null,
+    last_login: null,
+    created_at: "2026-03-05T07:15:00Z",
+  },
+  {
+    id: "8",
+    staff_id: "STF-PLT-000052",
+    first_name: "Tunde",
+    last_name: "Salami",
+    middle_name: null,
+    email: "tunde.salami@phc.gov.ng",
+    phone_number: "+2348089012345",
+    role: "LAB_TECHNICIAN",
+    is_active: false,
+    facility_name: "PHC Ajah",
+    facility_id: "f3",
+    suspended_at: null,
+    last_login: null,
+    created_at: "2026-03-05T07:15:00Z",
+  },
+  {
+    id: "9",
+    staff_id: "STF-PLT-000053",
+    first_name: "Kemi",
+    last_name: "Owolabi",
+    middle_name: null,
+    email: "kemi.owolabi@phc.gov.ng",
+    phone_number: "+2348090123456",
+    role: "CHEW",
+    is_active: true,
+    facility_name: "PHC Ajah",
+    facility_id: "f3",
+    suspended_at: null,
+    last_login: null,
+    created_at: "2026-03-05T07:15:00Z",
+  },
+  {
+    id: "10",
+    staff_id: "STF-PLT-000054",
+    first_name: "Biodun",
+    last_name: "Afolabi",
+    middle_name: null,
+    email: "biodun.afolabi@phc.gov.ng",
+    phone_number: "+2348001234567",
+    role: "PHARMACIST",
+    is_active: false,
+    facility_name: "PHC Ajah",
+    facility_id: "f3",
+    suspended_at: null,
+    last_login: null,
+    created_at: "2026-03-05T07:15:00Z",
+  },
 ];
 
 const formatDate = (isoString: string) => {
@@ -104,7 +256,11 @@ export default function ManageUsers() {
   }, [searchInput]);
 
   const isActiveParam =
-    statusFilter === "Active" ? true : statusFilter === "Inactive" ? false : undefined;
+    statusFilter === "Active"
+      ? true
+      : statusFilter === "Inactive"
+        ? false
+        : undefined;
 
   useUsers({
     page: currentPage,
@@ -121,17 +277,32 @@ export default function ManageUsers() {
   const isLoading = false;
 
   const filteredUsers = dummyUsers.filter((u) => {
-    const matchSearch = !debouncedSearch ||
-      `${u.first_name} ${u.last_name}`.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
-      (u.staff_id || "").toLowerCase().includes(debouncedSearch.toLowerCase()) ||
-      (u.facility_name || "").toLowerCase().includes(debouncedSearch.toLowerCase());
-    const matchRole = roleFilter === "All" || u.role === mapRoleToApi(roleFilter);
-    const matchStatus = isActiveParam === undefined || u.is_active === isActiveParam;
+    const matchSearch =
+      !debouncedSearch ||
+      `${u.first_name} ${u.last_name}`
+        .toLowerCase()
+        .includes(debouncedSearch.toLowerCase()) ||
+      (u.staff_id || "")
+        .toLowerCase()
+        .includes(debouncedSearch.toLowerCase()) ||
+      (u.facility_name || "")
+        .toLowerCase()
+        .includes(debouncedSearch.toLowerCase());
+    const matchRole =
+      roleFilter === "All" || u.role === mapRoleToApi(roleFilter);
+    const matchStatus =
+      isActiveParam === undefined || u.is_active === isActiveParam;
     return matchSearch && matchRole && matchStatus;
   });
 
-  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / ITEMS_PER_PAGE));
-  const users = filteredUsers.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredUsers.length / ITEMS_PER_PAGE),
+  );
+  const users = filteredUsers.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE,
+  );
 
   const showToast = (
     title: string,
@@ -192,13 +363,17 @@ export default function ManageUsers() {
               label: "View",
               icon: Eye,
               onClick: () =>
-                router.push(`/state-dashboard/user-management/view-user?id=${row.id}`),
+                router.push(
+                  `/state-dashboard/user-management/view-user?id=${row.id}`,
+                ),
             },
             {
               label: "Modify",
               icon: Edit2,
               onClick: () =>
-                router.push(`/state-dashboard/user-management/modify-user?id=${row.id}`),
+                router.push(
+                  `/state-dashboard/user-management/modify-user?id=${row.id}`,
+                ),
             },
             {
               label: "Reset Password",
@@ -223,9 +398,15 @@ export default function ManageUsers() {
                   icon: RotateCcw,
                   onClick: () => {
                     setDummyUsers((prev) =>
-                      prev.map((u) => (u.id === row.id ? { ...u, is_active: true } : u)),
+                      prev.map((u) =>
+                        u.id === row.id ? { ...u, is_active: true } : u,
+                      ),
                     );
-                    showToast("User Reactivated", `${row.first_name} has been reactivated`, "success");
+                    showToast(
+                      "User Reactivated",
+                      `${row.first_name} has been reactivated`,
+                      "success",
+                    );
                   },
                 },
           ]}
@@ -245,8 +426,12 @@ export default function ManageUsers() {
 
       <div className="p-4 sm:p-8 space-y-6">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">Manage Users</h2>
-          <p className="text-gray-500 text-sm mt-1">Manage users across all facilities</p>
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">
+            Manage Users
+          </h2>
+          <p className="text-gray-500 text-sm mt-1">
+            Manage users across all facilities
+          </p>
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100">
@@ -270,15 +455,29 @@ export default function ManageUsers() {
 
               <FilterDropdown
                 label="All Role"
-                options={["All", "Staff", "State Admin", "Facility IT Admin", "Doctor", "Nurse", "Patient"]}
+                options={[
+                  "All",
+                  "Staff",
+                  "State Admin",
+                  "Facility IT Admin",
+                  "Doctor",
+                  "Nurse",
+                  "Patient",
+                ]}
                 selected={roleFilter}
-                onChange={(v) => { setRoleFilter(v); setCurrentPage(1); }}
+                onChange={(v) => {
+                  setRoleFilter(v);
+                  setCurrentPage(1);
+                }}
               />
               <FilterDropdown
                 label="All Status"
                 options={["All", "Active", "Inactive"]}
                 selected={statusFilter}
-                onChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}
+                onChange={(v) => {
+                  setStatusFilter(v);
+                  setCurrentPage(1);
+                }}
               />
 
               <div className="relative" ref={dateFilterRef}>
@@ -330,7 +529,11 @@ export default function ManageUsers() {
               <DataTable
                 columns={columns}
                 data={users}
-                emptyMessage={debouncedSearch ? "No users match your criteria." : "No users found."}
+                emptyMessage={
+                  debouncedSearch
+                    ? "No users match your criteria."
+                    : "No users found."
+                }
               />
               <Pagination
                 currentPage={currentPage}
@@ -352,24 +555,37 @@ export default function ManageUsers() {
 
       <ResetPasswordModal
         isOpen={resetModalOpen}
-        onClose={() => { setResetModalOpen(false); setSelectedUser(null); }}
+        onClose={() => {
+          setResetModalOpen(false);
+          setSelectedUser(null);
+        }}
         onContinue={() => {
           setResetModalOpen(false);
-          router.push(`/state-dashboard/user-management/reset-password?id=${selectedUser?.id}`);
+          router.push(
+            `/state-dashboard/user-management/reset-password?id=${selectedUser?.id}`,
+          );
         }}
-        userName={selectedUser ? `${selectedUser.first_name} ${selectedUser.last_name}` : undefined}
+        userName={
+          selectedUser
+            ? `${selectedUser.first_name} ${selectedUser.last_name}`
+            : undefined
+        }
         staffId={selectedUser?.staff_id || undefined}
-        facility={selectedUser?.facility_name || undefined}
       />
 
       <SuspendAccountModal
         isOpen={suspendModalOpen}
-        onClose={() => { setSuspendModalOpen(false); setSelectedUser(null); }}
+        onClose={() => {
+          setSuspendModalOpen(false);
+          setSelectedUser(null);
+        }}
         onConfirm={() => {
           if (!selectedUser) return;
           const user = selectedUser;
           setDummyUsers((prev) =>
-            prev.map((u) => (u.id === user.id ? { ...u, is_active: false } : u)),
+            prev.map((u) =>
+              u.id === user.id ? { ...u, is_active: false } : u,
+            ),
           );
           setSuspendModalOpen(false);
           setSelectedUser(null);
@@ -379,7 +595,11 @@ export default function ManageUsers() {
             "error",
           );
         }}
-        userName={selectedUser ? `${selectedUser.first_name} ${selectedUser.last_name}` : undefined}
+        userName={
+          selectedUser
+            ? `${selectedUser.first_name} ${selectedUser.last_name}`
+            : undefined
+        }
         staffId={selectedUser?.staff_id || undefined}
         facility={selectedUser?.facility_name || undefined}
       />
