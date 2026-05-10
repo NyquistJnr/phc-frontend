@@ -220,3 +220,39 @@ export const INITIAL_FORM: MaternalForm = {
   transportOut: "",
   createdAt: "",
 };
+
+export interface AncVisitResult {
+  id: string;
+  appointment_date: string;
+  attendance_type: "NEW" | "RETURN";
+  hiv_status: string;
+  vdrl_syphilis: string;
+  hepatitis_b: string;
+  hemoglobin: string;
+  urinalysis: string;
+  tt_dose_given: string;
+  iptp_dose_given: string;
+  iron_folate_given: boolean;
+  risk_factors: string;
+  notes: string;
+  episode: string;
+  appointment: string;
+  created_at: string;
+}
+
+export interface PncVisitResult {
+  id: string;
+  episode: string;
+  appointment: string;
+  appointment_date: string;
+  attendance_type: "NEW" | "RETURN";
+  timing_of_visit: string;
+  vaginal_examination_conducted: boolean;
+  hemoglobin_pcv: string;
+  urinalysis: string;
+  counselling_topics: string;
+  outcome: "TREATED" | "ADMITTED" | "REFERRED";
+  referral_reason: string;
+  newborn_assessments: PncNewbornAssessment[];
+  created_at: string;
+}

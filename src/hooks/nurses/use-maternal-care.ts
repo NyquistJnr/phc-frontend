@@ -8,6 +8,8 @@ import {
   AncVisitsResponse,
   PncVisitsResponse,
   MaternalVisitFilters,
+  AncVisitResult,
+  PncVisitResult,
 } from "@/src/components/nurse-dashboard/maternal-care/type";
 
 export function useEpisodes(filters: EpisodeFilters) {
@@ -150,5 +152,31 @@ export function usePncVisits(filters: MaternalVisitFilters) {
     },
     enabled: !!filters.episode_id && api.isAuthenticated && !api.isLoading,
     placeholderData: (previousData) => previousData,
+  });
+}
+
+export function useAncVisitDetails(id: string) {
+  const api = useApi();
+
+  return useQuery<AncVisitResult>({
+    queryKey: ["anc-visit", id],
+    queryFn: async () => {
+      const res = await api.get<any>(`/maternal-care/anc-visits/${id}/`);
+      return res?.data?.data || res?.data || res;
+    },
+    enabled: !!id && api.isAuthenticated && !api.isLoading,
+  });
+}
+
+export function usePncVisitDetails(id: string) {
+  const api = useApi();
+
+  return useQuery<PncVisitResult>({
+    queryKey: ["pnc-visit", id],
+    queryFn: async () => {
+      const res = await api.get<any>(`/maternal-care/pnc-visits/${id}/`);
+      return res?.data?.data || res?.data || res;
+    },
+    enabled: !!id && api.isAuthenticated && !api.isLoading,
   });
 }
