@@ -1,59 +1,41 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useMemo, useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import {
-  ChevronDown, Search, Eye, Upload, MoreHorizontal, Calendar as CalendarIcon, ClipboardList,
+  ChevronDown, Search, Eye, Upload, MoreHorizontal, Calendar as CalendarIcon, ClipboardList, RefreshCcw,
 } from "lucide-react";
 import DoctorHeader from "@/src/components/doctorDashboard/generics/Header";
 import { PeriodFilterButton } from "@/src/components/doctorDashboard/generics/PeriodFilterButton";
 import FilterDropdown from "@/src/components/adminDashboard/generics/FilterDropdown";
-import Pagination from "@/src/components/adminDashboard/generics/Pagination";
+import {
+  useCreateDoctorLabRequest,
+  useDoctorLabRequests,
+  useRequestDoctorLabRepeat,
+} from "@/src/hooks/doctors/use-doctors";
+import { ColumnDef, DataTable } from "@/src/components/generic/ui/DataTable";
+import type {
+  DoctorLabApiPayload,
+  DoctorLabRow,
+  DoctorLabStatus,
+} from "@/src/components/doctorDashboard/type";
 
-// ── Types & data ──────────────────────────────────────────────────────────────
-
-type LabStatus = "Ready" | "Processing";
-
-interface LabRow {
-  requestId: string;
-  patientId: string;
-  patientName: string;
-  labTest: string;
-  result: string;
-  date: string;
-  status: LabStatus;
-}
-
-const LAB_RESULTS: LabRow[] = [
-  { requestId: "LAB-PLT-000234", patientId: "PAT-PLT-000234", patientName: "Musa Abdullahi", labTest: "Fasting Blood Sugar", result: "POSITIVE (P.f)", date: "2026-03-30", status: "Ready" },
-  { requestId: "LAB-PLT-000234", patientId: "PAT-PLT-000234", patientName: "Amina Yusuf",    labTest: "Hemoglobin",          result: "---",            date: "2026-03-29", status: "Processing" },
-  { requestId: "LAB-PLT-000234", patientId: "PAT-PLT-000234", patientName: "Fatima Ibrahim", labTest: "Malaria RDT",         result: "Normal",         date: "2026-03-28", status: "Ready" },
-  { requestId: "LAB-PLT-000234", patientId: "PAT-PLT-000234", patientName: "Bayo Ogunleye",  labTest: "Full Blood Count",    result: "Normal",         date: "2026-03-27", status: "Ready" },
-  { requestId: "LAB-PLT-000234", patientId: "PAT-PLT-000234", patientName: "Bayo Ogunleye",  labTest: "Widal test",          result: "O: 1/160 (high)",date: "2026-03-26", status: "Ready" },
-  { requestId: "LAB-PLT-000234", patientId: "PAT-PLT-000234", patientName: "Bayo Ogunleye",  labTest: "Urinalysis",          result: "142 mg/dL",      date: "2026-03-25", status: "Ready" },
-  { requestId: "LAB-PLT-000234", patientId: "PAT-PLT-000234", patientName: "Bayo Ogunleye",  labTest: "Urinalysis",          result: "---",            date: "2026-03-24", status: "Processing" },
-  { requestId: "LAB-PLT-000234", patientId: "PAT-PLT-000234", patientName: "Bayo Ogunleye",  labTest: "Urinalysis",          result: "---",            date: "2026-03-23", status: "Processing" },
-  { requestId: "LAB-PLT-000234", patientId: "PAT-PLT-000234", patientName: "Bayo Ogunleye",  labTest: "Urinalysis",          result: "9.2 g/dL",       date: "2026-03-22", status: "Ready" },
-  { requestId: "LAB-PLT-000234", patientId: "PAT-PLT-000234", patientName: "Bayo Ogunleye",  labTest: "Urinalysis",          result: "9.2 g/dL",       date: "2026-03-21", status: "Ready" },
-];
-
-const STATUS_BADGE: Record<LabStatus, React.CSSProperties> = {
+const STATUS_BADGE: Record<DoctorLabStatus, React.CSSProperties> = {
   Ready:      { background: "#E8F7F0", color: "#046C3F" },
   Processing: { background: "#FFFBEB", color: "#B45309" },
 };
 
-const TABLE_HEADERS = ["Lab request ID", "Patient ID", "Patient Name", "Lab Tests", "Result", "Date", "Status", "Action"];
-
 // ── Action menu (... dots) ────────────────────────────────────────────────────
 
-function ActionMenu() {
+function ActionMenu({ row }: { row: DoctorLabRow }) {
   const [open, setOpen] = useState(false);
   const [coords, setCoords] = useState({ top: 0, left: 0 });
-  const [mounted, setMounted] = useState(false);
+  const [mounted] = useState(() => typeof document !== "undefined");
   const btnRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => { setMounted(true); }, []);
+  const repeatRequest = useRequestDoctorLabRepeat();
 
   useEffect(() => {
     function handler(e: MouseEvent) {
@@ -97,6 +79,17 @@ function ActionMenu() {
             <Eye size={15} className="text-gray-400" /> View result
           </button>
           <button
+            onClick={() => {
+              repeatRequest.mutate(
+                { labRequestId: row.requestId, notes: `Repeat ${row.labTest} for ${row.patientName}` },
+                { onSettled: () => setOpen(false) },
+              );
+            }}
+            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            <RefreshCcw size={15} className="text-gray-400" /> Request repeat
+          </button>
+          <button
             onClick={() => setOpen(false)}
             className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
           >
@@ -114,23 +107,64 @@ function ActionMenu() {
 function LabResults() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("All Status");
-  const [page, setPage] = useState(1);
+  const { data: labRequestsData, isLoading } = useDoctorLabRequests({
+    page: 1,
+    page_size: 10,
+    search,
+    status,
+  });
+
+  const rows = useMemo<DoctorLabRow[]>(() => {
+    const payload = labRequestsData as DoctorLabApiPayload | undefined;
+    const apiRows = payload?.results || payload?.data?.results;
+    if (!apiRows?.length) return [];
+    return apiRows.map((row) => ({
+      requestId: row.lab_request_id || row.request_id || row.id || "-",
+      patientId: row.patient_id || row.patient?.patient_id || "-",
+      patientName: row.patient_name || row.patient?.full_name || "-",
+      labTest: row.lab_test || row.test_type || row.test_name || "Lab Test",
+      result: row.result || row.result_value || "---",
+      date: row.date || row.request_date || row.created_at || "-",
+      status: (row.status || "Processing") as DoctorLabStatus,
+    }));
+  }, [labRequestsData]);
+  const totalPages = (labRequestsData as DoctorLabApiPayload | undefined)?.total_pages || 1;
+
+  const columns = useMemo<ColumnDef<DoctorLabRow>[]>(() => [
+    { header: "Lab request ID", accessorKey: "requestId", sortable: true },
+    { header: "Patient ID", accessorKey: "patientId", sortable: true },
+    { header: "Patient Name", accessorKey: "patientName", sortable: true },
+    { header: "Lab Tests", accessorKey: "labTest", sortable: true },
+    { header: "Result", accessorKey: "result", sortable: true },
+    { header: "Date", accessorKey: "date", sortable: true },
+    {
+      header: "Status",
+      accessorKey: "status",
+      sortable: true,
+      render: (row) => (
+        <span className="px-2.5 py-1 rounded-lg text-xs font-semibold" style={STATUS_BADGE[row.status]}>
+          {row.status}
+        </span>
+      ),
+    },
+    {
+      header: "Action",
+      render: (row) => <ActionMenu row={row} />,
+    },
+  ], []);
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 sm:p-5 border-b border-gray-100">
-        <h2 className="text-sm font-bold text-gray-800">Lab Results</h2>
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
-            <input
-              type="text"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search by patient name or ID"
-              className="pl-8 pr-3 py-2 border border-gray-200 rounded-lg text-xs text-gray-600 w-56 focus:outline-none focus:ring-1 focus:ring-[#1AC073] bg-white"
-            />
-          </div>
+    <DataTable
+      title="Lab Results"
+      data={rows}
+      columns={columns}
+      showSearch
+      searchPlaceholder="Search by patient name or ID"
+      onSearch={setSearch}
+      totalPages={totalPages}
+      emptyMessage={isLoading ? "Loading lab requests..." : "No lab requests found."}
+      toolbarActions={(
+        <>
           <PeriodFilterButton label="Date Range" />
           <FilterDropdown
             label="All Status"
@@ -138,45 +172,9 @@ function LabResults() {
             selected={status}
             onChange={setStatus}
           />
-        </div>
-      </div>
-
-      <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse min-w-[820px]">
-          <thead>
-            <tr className="border-b border-gray-100">
-              {TABLE_HEADERS.map(h => (
-                <th key={h} className="px-5 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">
-                  <span className="flex items-center gap-1">{h} <ChevronDown size={12} /></span>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-50">
-            {LAB_RESULTS.map((row, i) => (
-              <tr key={i} className="hover:bg-gray-50/60 transition-colors">
-                <td className="px-5 py-4 text-sm text-gray-600 font-medium">{row.requestId}</td>
-                <td className="px-5 py-4 text-sm text-gray-600">{row.patientId}</td>
-                <td className="px-5 py-4 text-sm text-gray-800 font-semibold">{row.patientName}</td>
-                <td className="px-5 py-4 text-sm text-gray-500">{row.labTest}</td>
-                <td className="px-5 py-4 text-sm text-gray-500">{row.result}</td>
-                <td className="px-5 py-4 text-sm text-gray-500">{row.date}</td>
-                <td className="px-5 py-4">
-                  <span className="px-2.5 py-1 rounded-lg text-xs font-semibold" style={STATUS_BADGE[row.status]}>
-                    {row.status}
-                  </span>
-                </td>
-                <td className="px-5 py-4">
-                  <ActionMenu />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      <Pagination currentPage={page} totalPages={68} onPageChange={setPage} />
-    </div>
+        </>
+      )}
+    />
   );
 }
 
@@ -192,11 +190,9 @@ function SearchableSelect({ label, placeholder, options }: { label: string; plac
   const [selected, setSelected] = useState("");
   const [search, setSearch] = useState("");
   const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 });
-  const [mounted, setMounted] = useState(false);
+  const [mounted] = useState(() => typeof document !== "undefined");
   const triggerRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     if (open) { document.body.style.overflow = "hidden"; }
@@ -271,11 +267,9 @@ function SimpleSelect({ label, placeholder, options }: { label: string; placehol
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState("");
   const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 });
-  const [mounted, setMounted] = useState(false);
+  const [mounted] = useState(() => typeof document !== "undefined");
   const triggerRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     if (open) { document.body.style.overflow = "hidden"; }
@@ -351,8 +345,10 @@ function FormField({ label, value, placeholder, icon }: { label: string; value?:
   );
 }
 
-function LabRequestForm() {
+export function LabRequestForm() {
+  const router = useRouter();
   const [submitted, setSubmitted] = useState(false);
+  const createLabRequest = useCreateDoctorLabRequest();
 
   return (
     <>
@@ -397,13 +393,34 @@ function LabRequestForm() {
         </div>
 
         <div className="flex items-center gap-3 mt-10">
-          <button className="px-6 py-2.5 rounded-xl text-sm font-semibold text-gray-600 bg-gray-200 hover:bg-gray-300 transition-colors">
+          <button
+            onClick={() => router.push("/doctor-dashboard/laboratory")}
+            className="px-6 py-2.5 rounded-xl text-sm font-semibold text-gray-600 bg-gray-200 hover:bg-gray-300 transition-colors"
+          >
             Cancel
           </button>
-          <button onClick={() => setSubmitted(true)}
+          <button onClick={() => {
+            createLabRequest.mutate(
+              {
+                patient: "PAT-PLT-000234",
+                requested_by: "Doctor",
+                sample_type: "Blood",
+                test_type: "Malaria RDT",
+                priority: "Routine",
+                clinical_notes: "Static doctor lab request entry",
+              },
+              {
+                onSuccess: () => {
+                  setSubmitted(true);
+                  router.push("/doctor-dashboard/laboratory");
+                },
+                onError: () => setSubmitted(true),
+              },
+            );
+          }}
             className="px-6 py-2.5 rounded-xl text-sm font-semibold text-white"
             style={{ background: "#046C3F" }}>
-            Send to lab
+            {createLabRequest.isPending ? "Sending..." : "Send to lab"}
           </button>
         </div>
       </div>
@@ -424,52 +441,32 @@ function LabRequestForm() {
   );
 }
 
-// ── Page ──────────────────────────────────────────────────────────────────────
-
-type ActiveTab = "results" | "request";
-
 export default function Laboratory() {
-  const [activeTab, setActiveTab] = useState<ActiveTab>("results");
-
-  const breadcrumbs = [{ label: "Laboratory", active: true }];
+  const breadcrumbs = [
+    { label: "Laboratory", active: true },
+  ];
 
   return (
     <div className="flex-1 flex flex-col bg-[#F9FAFB] min-w-0">
       <DoctorHeader title="Laboratory" breadcrumbs={breadcrumbs} />
 
       <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 pt-6 pb-10">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">
-            {activeTab === "results" ? "Laboratory" : "New lab request"}
-          </h1>
-          {activeTab === "request" && (
-            <p className="text-sm text-gray-500 mt-1">Request diagnostic tests for a patient</p>
-          )}
+        <div className="flex items-start justify-between gap-4 mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Laboratory</h1>
+            <p className="text-sm text-gray-500 mt-1">Review results and request repeat diagnostics</p>
+          </div>
+
+          <Link
+              href="/doctor-dashboard/laboratory/new"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white shrink-0"
+              style={{ background: "#046C3F" }}
+            >
+              <span className="text-lg leading-none">+</span> Lab Request
+          </Link>
         </div>
 
-        {/* Tab switcher */}
-        <div className="flex mb-6">
-          <button
-            onClick={() => setActiveTab("results")}
-            className="px-5 py-2 text-sm font-semibold rounded-lg transition-colors"
-            style={activeTab === "results"
-              ? { background: "#046C3F", color: "#fff" }
-              : { background: "transparent", color: "#6B7280" }}
-          >
-            Lab results
-          </button>
-          <button
-            onClick={() => setActiveTab("request")}
-            className="px-5 py-2 text-sm font-semibold rounded-lg transition-colors"
-            style={activeTab === "request"
-              ? { background: "#046C3F", color: "#fff" }
-              : { background: "transparent", color: "#6B7280" }}
-          >
-            Lab Request
-          </button>
-        </div>
-
-        {activeTab === "results" ? <LabResults /> : <LabRequestForm />}
+        <LabResults />
       </div>
     </div>
   );

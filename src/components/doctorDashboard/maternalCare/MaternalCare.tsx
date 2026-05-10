@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import {
   ChevronDown, ChevronUp, Search, ArrowLeft, Calendar as CalendarIcon,
@@ -8,6 +8,10 @@ import {
 import DoctorHeader from "@/src/components/doctorDashboard/generics/Header";
 import { PeriodFilterButton } from "@/src/components/doctorDashboard/generics/PeriodFilterButton";
 import Pagination from "@/src/components/adminDashboard/generics/Pagination";
+import {
+  useDoctorAncVisits,
+  useDoctorPncVisits,
+} from "@/src/hooks/doctors/use-doctors";
 
 // ── Data ──────────────────────────────────────────────────────────────────────
 
@@ -19,6 +23,37 @@ interface ANCRow {
   riskFactors: string;
   notes: string;
 }
+
+type MaternalApiRow = {
+  patient_id?: string;
+  patient_display_id?: string;
+  patient_name?: string;
+  gestational_age?: string;
+  gestationalAge?: string;
+  visit_date?: string;
+  date_of_visit?: string;
+  created_at?: string;
+  risk_factors?: string;
+  riskFactors?: string;
+  notes?: string;
+  delivery_date?: string;
+  delivery_type?: string;
+  follow_up_schedule?: string;
+  follow_up?: string;
+  complications?: string;
+  patient?: {
+    patient_id?: string;
+    full_name?: string;
+  };
+};
+
+type MaternalApiPayload = {
+  results?: MaternalApiRow[];
+  data?: {
+    results?: MaternalApiRow[];
+  } | MaternalApiRow[];
+  total_pages?: number;
+};
 
 const ANC_RECORDS: ANCRow[] = [
   { patientId: "PAT-PLT-000234", patientName: "Emeka Dike", gestationalAge: "28 weeks", visitDate: "12 Mar 2026", riskFactors: "None",                     notes: "Normal progress" },
@@ -51,11 +86,10 @@ function SimpleSelect({ label, placeholder, options }: SelectProps) {
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState("");
   const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 });
-  const [mounted, setMounted] = useState(false);
+  const [mounted] = useState(() => typeof document !== "undefined");
   const triggerRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => { setMounted(true); }, []);
   useEffect(() => {
     if (open) { document.body.style.overflow = "hidden"; }
     else { document.body.style.overflow = ""; }
@@ -183,6 +217,28 @@ function Section({ title, icon, children }: { title: string; icon: React.ReactNo
 function ANCVisitRecords() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const { data: ancVisitsData, isLoading } = useDoctorAncVisits({
+    page,
+    page_size: 10,
+    search,
+  });
+
+  const rows = useMemo<ANCRow[]>(() => {
+    const payload = ancVisitsData as MaternalApiPayload | undefined;
+    const apiRows =
+      payload?.results ||
+      (Array.isArray(payload?.data) ? payload.data : payload?.data?.results);
+    if (!apiRows?.length) return ANC_RECORDS;
+    return apiRows.map((row) => ({
+      patientId: row.patient_id || row.patient?.patient_id || row.patient_display_id || "PAT-PLT-000234",
+      patientName: row.patient_name || row.patient?.full_name || "Unknown Patient",
+      gestationalAge: row.gestational_age || row.gestationalAge || "28 weeks",
+      visitDate: row.visit_date || row.date_of_visit || row.created_at || "12 Mar 2026",
+      riskFactors: row.risk_factors || row.riskFactors || "None",
+      notes: row.notes || "Normal progress",
+    }));
+  }, [ancVisitsData]);
+  const totalPages = (ancVisitsData as MaternalApiPayload | undefined)?.total_pages || 68;
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm">
@@ -211,7 +267,7 @@ function ANCVisitRecords() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
-            {ANC_RECORDS.map((row, i) => (
+            {rows.map((row, i) => (
               <tr key={i} className="hover:bg-gray-50/60 transition-colors">
                 <td className="px-5 py-4 text-sm text-gray-600 font-medium">{row.patientId}</td>
                 <td className="px-5 py-4 text-sm text-gray-800 font-semibold">{row.patientName}</td>
@@ -221,10 +277,17 @@ function ANCVisitRecords() {
                 <td className="px-5 py-4 text-sm text-gray-500">{row.notes}</td>
               </tr>
             ))}
+            {isLoading && (
+              <tr>
+                <td colSpan={6} className="px-5 py-5 text-center text-sm text-gray-400">
+                  Loading ANC visit records...
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
-      <Pagination currentPage={page} totalPages={68} onPageChange={setPage} />
+      <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
     </div>
   );
 }
@@ -415,6 +478,28 @@ const TRANSPORT_OPTIONS    = ["Ambulance", "Others"];
 function PNCVisitRecords() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const { data: pncVisitsData, isLoading } = useDoctorPncVisits({
+    page,
+    page_size: 10,
+    search,
+  });
+
+  const rows = useMemo<PNCRow[]>(() => {
+    const payload = pncVisitsData as MaternalApiPayload | undefined;
+    const apiRows =
+      payload?.results ||
+      (Array.isArray(payload?.data) ? payload.data : payload?.data?.results);
+    if (!apiRows?.length) return PNC_RECORDS;
+    return apiRows.map((row) => ({
+      patientId: row.patient_id || row.patient?.patient_id || row.patient_display_id || "PAT-PLT-000234",
+      patientName: row.patient_name || row.patient?.full_name || "Unknown Patient",
+      deliveryDate: row.delivery_date || row.created_at || "12 Mar 2026",
+      deliveryType: row.delivery_type || "Normal Vaginal Delivery (NVD)",
+      followUp: row.follow_up_schedule || row.follow_up || "12 Mar 2026",
+      complications: row.complications || "Yes/No (specify)",
+    }));
+  }, [pncVisitsData]);
+  const totalPages = (pncVisitsData as MaternalApiPayload | undefined)?.total_pages || 68;
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm">
@@ -442,7 +527,7 @@ function PNCVisitRecords() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
-            {PNC_RECORDS.map((row, i) => (
+            {rows.map((row, i) => (
               <tr key={i} className="hover:bg-gray-50/60 transition-colors">
                 <td className="px-5 py-4 text-sm text-gray-600 font-medium">{row.patientId}</td>
                 <td className="px-5 py-4 text-sm text-gray-800 font-semibold">{row.patientName}</td>
@@ -452,10 +537,17 @@ function PNCVisitRecords() {
                 <td className="px-5 py-4 text-sm text-gray-500">{row.complications}</td>
               </tr>
             ))}
+            {isLoading && (
+              <tr>
+                <td colSpan={6} className="px-5 py-5 text-center text-sm text-gray-400">
+                  Loading postnatal visit records...
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
-      <Pagination currentPage={page} totalPages={68} onPageChange={setPage} />
+      <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
     </div>
   );
 }
@@ -625,26 +717,7 @@ function PNCRegistration() {
   );
 }
 
-// ── Tab switcher ──────────────────────────────────────────────────────────────
-
 type ActiveTab = "anc" | "postnatal";
-
-function TabSwitcher({ active, onChange }: { active: ActiveTab; onChange: (t: ActiveTab) => void }) {
-  return (
-    <div className="flex mb-6">
-      <button onClick={() => onChange("anc")}
-        className="px-5 py-2 text-sm font-semibold rounded-lg transition-colors"
-        style={active === "anc" ? { background: "#046C3F", color: "#fff" } : { background: "transparent", color: "#6B7280" }}>
-        ANC Visits
-      </button>
-      <button onClick={() => onChange("postnatal")}
-        className="px-5 py-2 text-sm font-semibold rounded-lg transition-colors"
-        style={active === "postnatal" ? { background: "#046C3F", color: "#fff" } : { background: "transparent", color: "#6B7280" }}>
-        Postnatal Care
-      </button>
-    </div>
-  );
-}
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
@@ -679,7 +752,6 @@ export default function MaternalCare() {
     ...(isRegister ? [{ label: tab === "anc" ? "ANC Visits" : "Postnatal Care", active: true }] : []),
   ];
 
-  const newBtnLabel = tab === "anc" ? "+ New ANC Visit" : "+ New Postnatal Visit";
   const handleNew = () => tab === "anc" ? setAncView("register") : setPncView("register");
   const handleBack = () => tab === "anc" ? setAncView("records") : setPncView("records");
 

@@ -99,11 +99,7 @@ export default function NurseDateRangeFilter({
             className="fixed inset-0 z-[9998] bg-black/10 backdrop-blur-sm"
             onClick={() => setOpen(false)}
           />
-          <div
-            ref={dropdownRef}
-            className="fixed z-[9999] lg:absolute lg:top-full lg:mt-2"
-            style={dropdownStyle}
-          >
+          <div className="fixed left-1/2 top-1/2 z-[9999] -translate-x-1/2 -translate-y-1/2 lg:absolute lg:left-auto lg:right-0 lg:top-full lg:mt-2 lg:translate-x-0 lg:-translate-y-0 origin-top">
             <CustomDateFilter
               initialStartDate={startDate}
               initialEndDate={endDate}

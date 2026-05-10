@@ -1,14 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type ElementType } from "react";
-import { useSearchParams } from "next/navigation";
-import {
-  CheckCircle2,
-  ClipboardList,
-  MoreHorizontal,
-  PackageCheck,
-} from "lucide-react";
+import { CheckCircle2, ClipboardList, MoreHorizontal, PackageCheck } from "lucide-react";
+import DashboardStatCard from "@/src/components/generic/dashboard/DashboardStatCard";
 import { ColumnDef, DataTable } from "@/src/components/generic/ui/DataTable";
 import { StatusBadge } from "@/src/components/generic/ui/TableHelpers";
 import LabDashboardHeader from "@/src/components/lab-dashboard/generics/LabDashboardHeader";
@@ -25,61 +19,6 @@ const formatBadgeLabel = (str: string) => {
   if (!str) return "Unknown";
   return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
 };
-
-function StatCard({
-  title,
-  value,
-  icon: Icon,
-  href,
-  active,
-  isLoading,
-}: {
-  title: string;
-  value: number;
-  icon: ElementType;
-  href: string;
-  active?: boolean;
-  isLoading?: boolean;
-}) {
-  return (
-    <Link
-      href={href}
-      className={`min-h-36 rounded-xl p-4 transition-colors ${
-        active
-          ? "bg-[#046C3F] text-white"
-          : "bg-white text-gray-500 hover:bg-[#F9FFFC] border border-gray-100 shadow-sm"
-      }`}
-    >
-      <div className="mb-8 flex items-start justify-between">
-        <span
-          className={`flex h-9 w-9 items-center justify-center rounded-lg ${
-            active ? "bg-[#0B7F4D] text-white" : "bg-[#FFF7ED] text-gray-700"
-          }`}
-        >
-          <Icon size={21} />
-        </span>
-      </div>
-      <p className={`mb-2 text-sm ${active ? "text-white" : "text-gray-400"}`}>
-        {title}
-      </p>
-      {isLoading ? (
-        <div
-          className={`h-8 w-16 animate-pulse rounded ${
-            active ? "bg-[#0B7F4D]" : "bg-gray-200"
-          }`}
-        ></div>
-      ) : (
-        <p
-          className={`text-3xl font-semibold ${
-            active ? "text-white" : "text-gray-800"
-          }`}
-        >
-          {value}
-        </p>
-      )}
-    </Link>
-  );
-}
 
 export default function LabHome() {
   const { data: session } = useSession();
@@ -237,7 +176,7 @@ export default function LabHome() {
 
         <div className="mb-6 grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
           {stats.map((stat) => (
-            <StatCard key={stat.title} {...stat} isLoading={isLoadingStats} />
+            <DashboardStatCard key={stat.title} {...stat} />
           ))}
         </div>
 

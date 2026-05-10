@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Search, ChevronDown } from "lucide-react";
 import Link from "next/link";
 import DoctorHeader from "@/src/components/doctorDashboard/generics/Header";
 import { PeriodFilterButton } from "@/src/components/doctorDashboard/generics/PeriodFilterButton";
 import FilterDropdown from "@/src/components/adminDashboard/generics/FilterDropdown";
 import Pagination from "@/src/components/adminDashboard/generics/Pagination";
+import { useDoctorPatients } from "@/src/hooks/doctors/use-doctors";
 
 interface Patient {
   id: string;
@@ -15,6 +16,22 @@ interface Patient {
   lastVisit: string;
   condition: string;
 }
+
+type PatientApiRow = {
+  id?: string;
+  patient_id?: string;
+  full_name?: string;
+  first_name?: string;
+  last_name?: string;
+  name?: string;
+  age?: number | string;
+  gender?: string;
+  sex?: string;
+  last_visit?: string;
+  last_visited?: string;
+  condition?: string;
+  diagnosis?: string;
+};
 
 const PATIENTS: Patient[] = [
   { id: "PAT-PLT-000234", name: "Musa Abdullahi",  ageGender: "35 / F", lastVisit: "Today",          condition: "Malaria" },
@@ -35,6 +52,26 @@ export default function PatientList() {
   const [search, setSearch] = useState("");
   const [gender, setGender] = useState("All");
   const [page, setPage] = useState(1);
+  const { data: patientsData, isLoading } = useDoctorPatients({
+    page,
+    page_size: 10,
+    search,
+  });
+
+  const patients = useMemo<Patient[]>(() => {
+    if (!patientsData?.results?.length) return PATIENTS;
+    return patientsData.results.map((patient: PatientApiRow) => ({
+      id: patient.patient_id || patient.id || "PAT-PLT-000234",
+      name:
+        patient.full_name ||
+        [patient.first_name, patient.last_name].filter(Boolean).join(" ") ||
+        patient.name ||
+        "Unknown Patient",
+      ageGender: `${patient.age ?? "35"} / ${patient.gender?.[0] || patient.sex?.[0] || "F"}`,
+      lastVisit: patient.last_visit || patient.last_visited || "Today",
+      condition: patient.condition || patient.diagnosis || "Not specified",
+    }));
+  }, [patientsData]);
 
   const breadcrumbs = [{ label: "Patients", active: true }];
 
@@ -93,7 +130,7 @@ export default function PatientList() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {PATIENTS.map((p, i) => (
+                {patients.map((p, i) => (
                   <tr key={i} className="hover:bg-gray-50/60 transition-colors">
                     <td className="px-5 py-4 text-sm text-gray-600 font-medium">{p.id}</td>
                     <td className="px-5 py-4 text-sm text-gray-800 font-semibold">{p.name}</td>
@@ -115,7 +152,8 @@ export default function PatientList() {
             </table>
           </div>
 
-          <Pagination currentPage={page} totalPages={68} onPageChange={setPage} />
+          {isLoading && <p className="px-5 pb-4 text-xs text-gray-400">Loading patient records...</p>}
+          <Pagination currentPage={page} totalPages={patientsData?.total_pages || 68} onPageChange={setPage} />
         </div>
       </div>
     </div>
