@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable react-hooks/set-state-in-effect */
+
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
@@ -8,6 +10,7 @@ import { signOut } from "next-auth/react";
 import {
   LayoutDashboard,
   Users,
+  CalendarClock,
   Stethoscope,
   FlaskConical,
   Pill,
@@ -22,6 +25,7 @@ import { useSidebar } from "@/src/components/adminDashboard/generics/sidebar";
 const navItems = [
   { name: "Dashboard", icon: LayoutDashboard, path: "/doctor-dashboard" },
   { name: "Patients", icon: Users, path: "/doctor-dashboard/patients" },
+  { name: "Appointments", icon: CalendarClock, path: "/doctor-dashboard/appointments" },
   { name: "Consultations", icon: Stethoscope, path: "/doctor-dashboard/consultations" },
   { name: "Laboratory", icon: FlaskConical, path: "/doctor-dashboard/laboratory" },
   { name: "Prescriptions", icon: Pill, path: "/doctor-dashboard/prescriptions" },

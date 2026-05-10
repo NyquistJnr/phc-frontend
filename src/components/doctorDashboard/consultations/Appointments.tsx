@@ -2,34 +2,45 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Eye, MoreHorizontal, Plus } from "lucide-react";
+import { FileText, MoreHorizontal } from "lucide-react";
 import DoctorHeader from "@/src/components/doctorDashboard/generics/Header";
 import NurseDateRangeFilter from "@/src/components/nurse-dashboard/generics/NurseDateRangeFilter";
 import { ColumnDef, DataTable } from "@/src/components/generic/ui/DataTable";
 import { CustomDropdown } from "@/src/components/generic/ui/CustomDropdown";
 import { StatusBadge } from "@/src/components/generic/ui/TableHelpers";
-import { usePrescriptions } from "@/src/hooks/doctors/use-prescriptions";
-import type { PaginatedResponse, PrescriptionRecord } from "./types";
+import { useMyAppointments } from "@/src/hooks/doctors/use-consultation";
+import type { MyAppointment, PaginatedResponse } from "./types";
 
 const STATUS_OPTIONS = [
   "All Status",
-  "PENDING",
-  "PARTIAL",
-  "DISPENSED",
+  "SCHEDULED",
+  "IN_PROGRESS",
+  "COMPLETED",
   "CANCELLED",
+  "NO_SHOW",
+  "VITALS_DONE",
 ];
-const PAGE_SIZES = ["10", "50", "100"];
+const VISIT_TYPES = [
+  "All Visit Type",
+  "GENERAL",
+  "FOLLOW_UP",
+  "ANTENATAL",
+  "IMMUNIZATION",
+  "EMERGENCY",
+  "OTHER",
+];
 
 const statusColors: Record<string, { bg: string; text: string }> = {
-  PENDING: { bg: "#FFF4E5", text: "#1F2937" },
-  PARTIAL: { bg: "#E2E7FF", text: "#046C3F" },
-  DISPENSED: { bg: "#DFF3EA", text: "#039855" },
+  SCHEDULED: { bg: "#FFF4E5", text: "#1F2937" },
+  IN_PROGRESS: { bg: "#E2E7FF", text: "#046C3F" },
+  COMPLETED: { bg: "#DFF3EA", text: "#039855" },
   CANCELLED: { bg: "#FDE8E8", text: "#F33131" },
+  NO_SHOW: { bg: "#FDE8E8", text: "#F33131" },
+  VITALS_DONE: { bg: "#E2E7FF", text: "#046C3F" },
 };
 
-function PrescriptionActionMenu({ row }: { row: PrescriptionRecord }) {
+function AppointmentActionMenu({ row }: { row: MyAppointment }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [coords, setCoords] = useState({ top: 0, left: 0 });
@@ -56,7 +67,7 @@ function PrescriptionActionMenu({ row }: { row: PrescriptionRecord }) {
       const rect = buttonRef.current.getBoundingClientRect();
       setCoords({
         top: rect.bottom + window.scrollY + 4,
-        left: Math.max(12, rect.right + window.scrollX - 190),
+        left: Math.max(12, rect.right + window.scrollX - 220),
       });
     }
     setOpen((current) => !current);
@@ -78,18 +89,18 @@ function PrescriptionActionMenu({ row }: { row: PrescriptionRecord }) {
           <div
             ref={menuRef}
             style={{ top: coords.top, left: coords.left }}
-            className="absolute z-[999] w-48 rounded-xl border border-gray-100 bg-white py-2 shadow-[0_8px_30px_rgb(0,0,0,0.12)]"
+            className="absolute z-[999] w-56 rounded-xl border border-gray-100 bg-white py-2 shadow-[0_8px_30px_rgb(0,0,0,0.12)]"
           >
             <button
               type="button"
               onClick={() => {
-                router.push(`/doctor-dashboard/prescriptions/${row.id}`);
+                router.push(`/doctor-dashboard/consultations/new?appointment=${row.id}`);
                 setOpen(false);
               }}
               className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
-              <Eye size={16} className="text-gray-500" />
-              View Detail
+              <FileText size={16} className="text-gray-500" />
+              Add Consultation Note
             </button>
           </div>,
           document.body,
@@ -98,30 +109,13 @@ function PrescriptionActionMenu({ row }: { row: PrescriptionRecord }) {
   );
 }
 
-function formatDate(value?: string) {
-  if (!value) return "-";
-  return new Date(value).toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
-
-function getMedicationNames(row: PrescriptionRecord) {
-  const names = row.items
-    ?.map((item) => item.drug_name || item.medication_name || item.custom_drug_name || item.drug)
-    .filter(Boolean);
-  return names?.length ? names.join(", ") : "-";
-}
-
-export default function Prescriptions() {
+export default function DoctorAppointments() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const page = Number(searchParams.get("page")) || 1;
-  const pageSize = Number(searchParams.get("page_size")) || 10;
   const statusFilter = searchParams.get("status") || "All Status";
+  const visitType = searchParams.get("visit_type") || "All Visit Type";
   const startDate = searchParams.get("start_date") || "";
   const endDate = searchParams.get("end_date") || "";
   const initialSearch = searchParams.get("search") || "";
@@ -135,72 +129,68 @@ export default function Prescriptions() {
       const params = new URLSearchParams(searchParams.toString());
       if (localSearch) params.set("search", localSearch);
       else params.delete("search");
-      params.set("page", "1");
       router.push(`${pathname}?${params.toString()}`, { scroll: false });
     }, 500);
 
     return () => clearTimeout(handler);
   }, [localSearch, pathname, router, searchParams]);
 
-  const { data, isLoading } = usePrescriptions({
-    page,
-    page_size: pageSize,
-    status: statusFilter,
+  const { data, isLoading } = useMyAppointments({
+    status: statusFilter === "All Status" ? undefined : statusFilter,
+    visit_type: visitType === "All Visit Type" ? undefined : visitType,
     search: searchParams.get("search") || undefined,
     start_date: startDate,
     end_date: endDate,
   });
 
-  const prescriptionsData = data as PaginatedResponse<PrescriptionRecord> | undefined;
+  const appointmentData = data as PaginatedResponse<MyAppointment> | MyAppointment[] | undefined;
+  const appointments = Array.isArray(appointmentData)
+    ? appointmentData
+    : appointmentData?.results || [];
 
   const updateUrlParams = useCallback(
     (key: string, value: string) => {
       const params = new URLSearchParams(searchParams.toString());
-      if (value && value !== "All Status") params.set(key, value);
-      else params.delete(key);
-      if (key !== "page") params.set("page", "1");
+      if (value && value !== "All Status" && value !== "All Visit Type") {
+        params.set(key, value);
+      } else {
+        params.delete(key);
+      }
       router.push(`${pathname}?${params.toString()}`, { scroll: false });
     },
     [pathname, router, searchParams],
   );
 
-  const columns = useMemo<ColumnDef<PrescriptionRecord>[]>(
+  const columns = useMemo<ColumnDef<MyAppointment>[]>(
     () => [
-      { header: "Prescription ID", accessorKey: "prescription_id", sortable: true },
+      { header: "Appointment ID", accessorKey: "appointment_id", sortable: true },
       { header: "Patient ID", accessorKey: "patient_display_id", sortable: true },
       { header: "Patient Name", accessorKey: "patient_name", sortable: true },
-      { header: "Drug Name", render: getMedicationNames, sortable: true },
       {
-        header: "Dosage",
-        render: (row) => row.items?.[0]?.dosage || "-",
+        header: "Date & Time",
         sortable: true,
+        render: (row) =>
+          [row.appointment_date, row.appointment_time?.slice(0, 5)]
+            .filter(Boolean)
+            .join(" - ") || "-",
       },
-      {
-        header: "Frequency",
-        render: (row) => row.items?.[0]?.frequency || "-",
-        sortable: true,
-      },
-      {
-        header: "Duration",
-        render: (row) => row.items?.[0]?.duration || "-",
-        sortable: true,
-      },
-      { header: "Date", render: (row) => formatDate(row.created_at), sortable: true },
+      { header: "Visit Type", accessorKey: "visit_type", sortable: true },
+      { header: "Reason", accessorKey: "reason_for_visit", sortable: true },
       {
         header: "Status",
         render: (row) => {
-          const status = row.status || "PENDING";
+          const status = row.status || "UNKNOWN";
           const color = statusColors[status] || { bg: "#F3F4F6", text: "#374151" };
           return (
             <StatusBadge
-              label={status.charAt(0) + status.slice(1).toLowerCase()}
+              label={status.replaceAll("_", " ")}
               bgColorHex={color.bg}
               textColorHex={color.text}
             />
           );
         },
       },
-      { header: "Action", render: (row) => <PrescriptionActionMenu row={row} /> },
+      { header: "Action", render: (row) => <AppointmentActionMenu row={row} /> },
     ],
     [],
   );
@@ -208,37 +198,28 @@ export default function Prescriptions() {
   return (
     <div className="min-h-screen bg-[#F6F7FC]">
       <DoctorHeader
-        title="Prescriptions"
-        breadcrumbs={[{ label: "Prescriptions", active: true }]}
+        title="Consultations"
+        breadcrumbs={[{ label: "Consultations" }, { label: "Appointments", active: true }]}
       />
       <div className="px-4 py-6 sm:px-6 lg:py-8">
-        <div className="mb-7 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-          <div>
-            <h2 className="mb-1 text-2xl font-semibold text-black sm:text-3xl">
-              Prescriptions
-            </h2>
-            <p className="text-base text-[#3F3F46]">
-              Create and manage prescriptions
-            </p>
-          </div>
-          <Link
-            href="/doctor-dashboard/prescriptions/new"
-            className="inline-flex h-11 items-center justify-center gap-3 rounded-xl bg-[#046C3F] px-7 text-base font-medium text-white transition-colors hover:bg-[#035a34]"
-          >
-            <Plus size={20} />
-            Create Prescription
-          </Link>
+        <div className="mb-7">
+          <h2 className="mb-1 text-2xl font-semibold text-black sm:text-3xl">
+            My Appointments
+          </h2>
+          <p className="text-base text-[#3F3F46]">
+            Select an assigned appointment to add a consultation note.
+          </p>
         </div>
 
         <DataTable
-          title="Prescription History"
-          data={prescriptionsData?.results || []}
+          title="Assigned Appointments"
+          data={appointments}
           columns={columns}
           showSearch
-          searchPlaceholder="Search by patient, ID, or drug"
+          searchPlaceholder="Search by patient name or ID"
           onSearch={setLocalSearch}
-          totalPages={prescriptionsData?.total_pages}
-          emptyMessage={isLoading ? "Loading prescriptions..." : "No prescriptions found."}
+          totalPages={Array.isArray(appointmentData) ? 1 : appointmentData?.total_pages}
+          emptyMessage={isLoading ? "Loading appointments..." : "No assigned appointments found."}
           toolbarActions={
             <>
               <NurseDateRangeFilter
@@ -250,27 +231,24 @@ export default function Prescriptions() {
                   else params.delete("start_date");
                   if (end) params.set("end_date", end);
                   else params.delete("end_date");
-                  params.set("page", "1");
                   router.push(`${pathname}?${params.toString()}`, { scroll: false });
                 }}
                 onClear={() => {
                   const params = new URLSearchParams(searchParams.toString());
                   params.delete("start_date");
                   params.delete("end_date");
-                  params.set("page", "1");
                   router.push(`${pathname}?${params.toString()}`, { scroll: false });
                 }}
+              />
+              <CustomDropdown
+                options={VISIT_TYPES}
+                selected={visitType}
+                onSelect={(value) => updateUrlParams("visit_type", value)}
               />
               <CustomDropdown
                 options={STATUS_OPTIONS}
                 selected={statusFilter}
                 onSelect={(value) => updateUrlParams("status", value)}
-              />
-              <CustomDropdown
-                options={PAGE_SIZES}
-                selected={pageSize.toString()}
-                onSelect={(value) => updateUrlParams("page_size", value)}
-                placeholder="Rows per page"
               />
             </>
           }
