@@ -18,6 +18,7 @@ export default function LabDashboardHeader({
       title={title}
       breadcrumbs={breadcrumbs}
       notificationHref="/lab-dashboard/notifications"
+      profileHref="/lab-dashboard/profile"
       fallbackName="Festus"
       fallbackRole="Lab Tech"
     />

@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown, Search, ArrowLeft, Eye, Calendar as CalendarIcon } from "lucide-react";
 import DoctorHeader from "@/src/components/doctorDashboard/generics/Header";
 import { PeriodFilterButton } from "@/src/components/doctorDashboard/generics/PeriodFilterButton";
 import FilterDropdown from "@/src/components/adminDashboard/generics/FilterDropdown";
 import Pagination from "@/src/components/adminDashboard/generics/Pagination";
+import { useDoctorImmunizationRecords } from "@/src/hooks/doctors/use-doctors";
 
 // ── Types & data ──────────────────────────────────────────────────────────────
 
@@ -21,6 +22,33 @@ interface ImmunizationRow {
   dueDate: string;
   status: ImmunizationStatus;
 }
+
+type ImmunizationApiRow = {
+  patient_id?: string;
+  patient_name?: string;
+  age?: string;
+  age_at_vaccination?: string;
+  scheduled_date?: string;
+  date_of_visit?: string;
+  created_at?: string;
+  vaccine_name?: string;
+  vaccinations_given?: string;
+  vaccine?: string | { name?: string };
+  due_date?: string;
+  status?: string;
+  patient?: {
+    patient_id?: string;
+    full_name?: string;
+  };
+};
+
+type ImmunizationApiPayload = {
+  results?: ImmunizationApiRow[];
+  data?: {
+    results?: ImmunizationApiRow[];
+  } | ImmunizationApiRow[];
+  total_pages?: number;
+};
 
 const RECORDS: ImmunizationRow[] = [
   { patientId: "PAT-PLT-000234", patientName: "Emeka Dike", age: "8 months", scheduledDate: "12 Mar 2026", vaccine: "PCV (3rd dose)",    dueDate: "12 Mar 2026", status: "Completed" },
@@ -68,14 +96,12 @@ function SearchableSelect({ label, placeholder, options, value, onChange }: Sele
   const [internal, setInternal] = useState("");
   const [search, setSearch] = useState("");
   const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 });
-  const [mounted, setMounted] = useState(false);
+  const [mounted] = useState(() => typeof document !== "undefined");
   const triggerRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const selected = value !== undefined ? value : internal;
   const setSelected = (v: string) => { setInternal(v); onChange?.(v); };
-
-  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     if (open) { document.body.style.overflow = "hidden"; }
@@ -153,14 +179,12 @@ function SimpleSelect({ label, placeholder, options, value, onChange }: SelectPr
   const [open, setOpen] = useState(false);
   const [internal, setInternal] = useState("");
   const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 });
-  const [mounted, setMounted] = useState(false);
+  const [mounted] = useState(() => typeof document !== "undefined");
   const triggerRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const selected = value !== undefined ? value : internal;
   const setSelected = (v: string) => { setInternal(v); onChange?.(v); };
-
-  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     if (open) { document.body.style.overflow = "hidden"; }
@@ -226,11 +250,9 @@ function SimpleSelect({ label, placeholder, options, value, onChange }: SelectPr
 function ActionMenu() {
   const [open, setOpen] = useState(false);
   const [coords, setCoords] = useState({ top: 0, left: 0 });
-  const [mounted, setMounted] = useState(false);
+  const [mounted] = useState(() => typeof document !== "undefined");
   const btnRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     if (open) { document.body.style.overflow = "hidden"; }
@@ -310,10 +332,38 @@ function Field({ label, placeholder, value, icon, readOnly }: {
 
 // ── Immunization Records table ────────────────────────────────────────────────
 
-function ImmunizationRecords({ onRegister }: { onRegister: () => void }) {
+function ImmunizationRecords() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("All Status");
   const [page, setPage] = useState(1);
+  const { data: recordsData, isLoading } = useDoctorImmunizationRecords({
+    page,
+    page_size: 10,
+    search,
+    status,
+  });
+
+  const records = useMemo<ImmunizationRow[]>(() => {
+    const payload = recordsData as ImmunizationApiPayload | undefined;
+    const apiRows =
+      payload?.results ||
+      (Array.isArray(payload?.data) ? payload.data : payload?.data?.results);
+    if (!apiRows?.length) return RECORDS;
+    return apiRows.map((row) => ({
+      patientId: row.patient_id || row.patient?.patient_id || "PAT-PLT-000234",
+      patientName: row.patient_name || row.patient?.full_name || "Unknown Patient",
+      age: row.age || row.age_at_vaccination || "8 months",
+      scheduledDate: row.scheduled_date || row.date_of_visit || row.created_at || "12 Mar 2026",
+      vaccine:
+        row.vaccine_name ||
+        (typeof row.vaccine === "object" ? row.vaccine?.name : row.vaccine) ||
+        row.vaccinations_given ||
+        "PCV (3rd dose)",
+      dueDate: row.due_date || row.scheduled_date || "12 Mar 2026",
+      status: (row.status === "COMPLETED" ? "Completed" : row.status === "DUE" ? "Due" : row.status === "Completed" || row.status === "Due" ? row.status : "Pending") as ImmunizationStatus,
+    }));
+  }, [recordsData]);
+  const totalPages = (recordsData as ImmunizationApiPayload | undefined)?.total_pages || 68;
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm">
@@ -352,7 +402,7 @@ function ImmunizationRecords({ onRegister }: { onRegister: () => void }) {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
-            {RECORDS.map((row, i) => (
+            {records.map((row, i) => (
               <tr key={i} className="hover:bg-gray-50/60 transition-colors">
                 <td className="px-5 py-4 text-sm text-gray-600 font-medium">{row.patientId}</td>
                 <td className="px-5 py-4 text-sm text-gray-800 font-semibold">{row.patientName}</td>
@@ -370,11 +420,18 @@ function ImmunizationRecords({ onRegister }: { onRegister: () => void }) {
                 </td>
               </tr>
             ))}
+            {isLoading && (
+              <tr>
+                <td colSpan={TABLE_HEADERS.length} className="px-5 py-5 text-center text-sm text-gray-400">
+                  Loading immunization records...
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
 
-      <Pagination currentPage={page} totalPages={68} onPageChange={setPage} />
+      <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
     </div>
   );
 }
@@ -534,7 +591,7 @@ export default function Immunization() {
         </div>
 
         {view === "records"
-          ? <ImmunizationRecords onRegister={() => setView("register")} />
+          ? <ImmunizationRecords />
           : <RegisterChild />}
       </div>
     </div>

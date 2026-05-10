@@ -6,23 +6,35 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import {
-  Beaker,
+  AlertOctagon,
   Box,
+  CreditCard,
   LayoutDashboard,
   LogOut,
+  ReceiptText,
   Users,
   X,
 } from "lucide-react";
 import { useSidebar } from "@/src/components/adminDashboard/generics/sidebar";
 
 const navItems = [
-  { name: "Dashboard", icon: LayoutDashboard, path: "/lab-dashboard" },
-  { name: "Laboratory", icon: Beaker, path: "/lab-dashboard/laboratory" },
-  { name: "Patients", icon: Users, path: "/lab-dashboard/patients" },
-  { name: "Lab Inventory", icon: Box, path: "/lab-dashboard/lab-inventory" },
+  { name: "Dashboard", icon: LayoutDashboard, path: "/pharmacist-dashboard" },
+  {
+    name: "Prescriptions",
+    icon: ReceiptText,
+    path: "/pharmacist-dashboard/prescriptions",
+  },
+  { name: "Patients", icon: Users, path: "/pharmacist-dashboard/patients" },
+  { name: "Inventory", icon: Box, path: "/pharmacist-dashboard/inventory" },
+  { name: "Payments", icon: CreditCard, path: "/pharmacist-dashboard/payments" },
+  {
+    name: "Adverse Events",
+    icon: AlertOctagon,
+    path: "/pharmacist-dashboard/adverse-events",
+  },
 ];
 
-export default function LabSidebar() {
+export default function PharmacistSidebar() {
   const pathname = usePathname();
   const [logoutModalOpen, setLogoutModalOpen] = useState(false);
   const { mobileOpen, setMobileOpen } = useSidebar();
@@ -73,8 +85,8 @@ export default function LabSidebar() {
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive =
-              item.path === "/lab-dashboard"
-                ? pathname === item.path || pathname === "/lab-dashboard/profile"
+              item.path === "/pharmacist-dashboard"
+                ? pathname === item.path || pathname === "/pharmacist-dashboard/profile"
                 : pathname === item.path ||
                   pathname.startsWith(`${item.path}/`);
 
@@ -90,7 +102,9 @@ export default function LabSidebar() {
               >
                 <Icon
                   size={20}
-                  className={`${isActive ? "text-white" : "text-gray-400 group-hover:text-gray-600"} shrink-0 transition-colors`}
+                  className={`${
+                    isActive ? "text-white" : "text-gray-400 group-hover:text-gray-600"
+                  } shrink-0 transition-colors`}
                 />
                 <span className="text-sm font-medium">{item.name}</span>
               </Link>

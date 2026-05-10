@@ -73,7 +73,7 @@ export const OICSidebar = () => {
             const Icon = item.icon;
             const isActive =
               item.path === "/oic-dashboard"
-                ? pathname === item.path
+                ? pathname === item.path || pathname === "/oic-dashboard/profile"
                 : pathname === item.path ||
                   pathname.startsWith(`${item.path}/`);
 

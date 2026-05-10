@@ -4,23 +4,23 @@ import DashboardHeader, {
   DashboardBreadcrumb,
 } from "@/src/components/generic/dashboard/DashboardHeader";
 
-type OfficerDashboardHeaderProps = {
+type PharmacistDashboardHeaderProps = {
   title: string;
   breadcrumbs?: DashboardBreadcrumb[];
 };
 
-export default function OfficerDashboardHeader({
+export default function PharmacistDashboardHeader({
   title,
   breadcrumbs = [],
-}: OfficerDashboardHeaderProps) {
+}: PharmacistDashboardHeaderProps) {
   return (
     <DashboardHeader
       title={title}
       breadcrumbs={breadcrumbs}
-      notificationHref="/oic-dashboard/notifications"
-      profileHref="/oic-dashboard/profile"
-      fallbackName="Nobert"
-      fallbackRole="OIC"
+      notificationHref="/pharmacist-dashboard/notifications"
+      profileHref="/pharmacist-dashboard/profile"
+      fallbackName="Festus"
+      fallbackRole="Pharmacist"
     />
   );
 }
