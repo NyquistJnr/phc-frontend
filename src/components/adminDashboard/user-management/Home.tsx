@@ -277,6 +277,8 @@ function UserActionMenu({
           setShowResetModal(false);
           router.push(`/dashboard/user-management/reset-password?id=${row.id}`);
         }}
+        userName={`${row.first_name} ${row.last_name}`}
+        staffId={row.staff_id || "N/A"}
       />
     </>
   );
