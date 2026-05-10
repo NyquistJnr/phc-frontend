@@ -1,174 +1,157 @@
 "use client";
 
-import { useMemo, useState, useRef, useEffect } from "react";
-import { createPortal } from "react-dom";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, FileUp, MoreHorizontal, PlusCircle, X } from "lucide-react";
+import { Eye, FileUp, PlusCircle } from "lucide-react";
 import { ColumnDef, DataTable } from "@/src/components/generic/ui/DataTable";
 import { StatusBadge } from "@/src/components/generic/ui/TableHelpers";
 import { CustomDropdown } from "@/src/components/generic/ui/CustomDropdown";
-import DateRangeFilter from "@/src/components/generic/ui/DateRangeFilter";
-import { LAB_REQUESTS, LabRequestRow, labBadgeColors } from "./labData";
-import { MenuButton, ResultViewModal } from "./LabSharedUI";
+import LabDateRangeFilter from "@/src/components/lab-dashboard/generics/LabDateRangeFilter";
+import {
+  LabRequest,
+  LabTest,
+} from "@/src/components/lab-dashboard/home/types";
+import { useAdvancedLabRequests } from "@/src/hooks/laboratory/use-laboratory";
+import LabActionMenu from "./LabActionMenu";
+import { labBadgeColors } from "./labData";
 
-function RequestActionMenu({
-  onView,
-  onEnter,
-  onExport,
-}: {
-  onView: () => void;
-  onEnter: () => void;
-  onExport: () => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [coords, setCoords] = useState({ top: 0, left: 0 });
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
+const priorityOptions = ["All Priority", "NORMAL", "URGENT"];
+const statusOptions = [
+  "All Status",
+  "PENDING",
+  "PARTIAL",
+  "PROCESSING",
+  "COMPLETED",
+  "CANCELLED",
+];
 
-  useEffect(() => {
-    const close = (event: MouseEvent) => {
-      if (
-        menuRef.current &&
-        !menuRef.current.contains(event.target as Node) &&
-        buttonRef.current &&
-        !buttonRef.current.contains(event.target as Node)
-      ) {
-        setOpen(false);
-      }
-    };
-    if (open) document.addEventListener("mousedown", close);
-    return () => document.removeEventListener("mousedown", close);
-  }, [open]);
+const formatDate = (date?: string | null) =>
+  date ? new Date(date).toLocaleDateString() : "-";
 
-  const toggle = () => {
-    if (!open && buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect();
-      setCoords({ top: rect.bottom + 6, left: rect.right - 190 });
-    }
-    setOpen((value) => !value);
-  };
+const formatLabel = (value?: string | null) => {
+  if (!value) return "-";
+  return value
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join("-");
+};
 
+const getBadgeColor = (value?: string | null) => {
+  const label = formatLabel(value);
   return (
-    <>
-      <button
-        ref={buttonRef}
-        onClick={toggle}
-        className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100"
-      >
-        <MoreHorizontal size={18} />
-      </button>
-      {open &&
-        typeof document !== "undefined" &&
-        createPortal(
-          <div
-            ref={menuRef}
-            style={{
-              position: "fixed",
-              top: coords.top,
-              left: coords.left,
-              width: 190,
-            }}
-            className="z-[9999] rounded-lg border border-gray-200 bg-white py-3 shadow-xl"
-          >
-            <MenuButton
-              onClick={() => {
-                setOpen(false);
-                onView();
-              }}
-            >
-              <Eye size={20} /> View
-            </MenuButton>
-            <MenuButton
-              onClick={() => {
-                setOpen(false);
-                onEnter();
-              }}
-            >
-              <PlusCircle size={20} /> Enter Result
-            </MenuButton>
-            <MenuButton
-              onClick={() => {
-                setOpen(false);
-                onExport();
-              }}
-            >
-              <FileUp size={20} /> Export
-            </MenuButton>
-          </div>,
-          document.body,
-        )}
-    </>
+    labBadgeColors[label as keyof typeof labBadgeColors] || {
+      bg: "#FFF4E5",
+      text: "#1F2937",
+    }
   );
-}
+};
+
+const firstPendingTestId = (tests?: LabTest[]) =>
+  tests?.find((test) => test.test_status !== "RESULT_READY")?.id ||
+  tests?.[0]?.id;
 
 export default function LabRequests() {
   const router = useRouter();
-  const [requestSearch, setRequestSearch] = useState("");
-  const [requestPriority, setRequestPriority] = useState("All Priority");
-  const [requestStatus, setRequestStatus] = useState("All Status");
-  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const [priority, setPriority] = useState("All Priority");
+  const [status, setStatus] = useState("All Status");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [toast, setToast] = useState<string | null>(null);
 
-  const filteredRequests = useMemo(() => {
-    const term = requestSearch.toLowerCase();
-    return LAB_REQUESTS.filter((row) => {
-      const matchesSearch = [
-        row.requestId,
-        row.patientId,
-        row.patientName,
-        row.testType,
-        row.requestedBy,
-      ].some((val) => val.toLowerCase().includes(term));
-      const matchesPriority =
-        requestPriority === "All Priority" || row.priority === requestPriority;
-      const matchesStatus =
-        requestStatus === "All Status" || row.status === requestStatus;
-      return matchesSearch && matchesPriority && matchesStatus;
-    });
-  }, [requestPriority, requestSearch, requestStatus]);
+  const { data, isLoading } = useAdvancedLabRequests({
+    page: 1,
+    page_size: 10,
+    search,
+    priority: priority === "All Priority" ? undefined : priority,
+    status,
+    start_date: startDate,
+    end_date: endDate,
+  });
 
-  const requestColumns: ColumnDef<LabRequestRow>[] = [
-    { header: "Lab request ID", accessorKey: "requestId", sortable: true },
-    { header: "Patient ID", accessorKey: "patientId", sortable: true },
-    { header: "Patient Name", accessorKey: "patientName", sortable: true },
-    { header: "Test Type", accessorKey: "testType", sortable: true },
-    { header: "Requested by", accessorKey: "requestedBy", sortable: true },
+  const requests = data?.results || [];
+
+  const requestColumns: ColumnDef<LabRequest>[] = [
+    { header: "Lab request ID", accessorKey: "request_id", sortable: true },
+    { header: "Patient ID", accessorKey: "patient_display_id", sortable: true },
+    { header: "Patient Name", accessorKey: "patient_name", sortable: true },
+    {
+      header: "Test Type",
+      sortable: true,
+      render: (row) =>
+        row.tests?.length
+          ? row.tests.map((test) => test.test_name).join(", ")
+          : "-",
+    },
+    { header: "Requested by", accessorKey: "requested_by_name", sortable: true },
     {
       header: "Priority",
       sortable: true,
-      render: (row) => (
-        <StatusBadge
-          label={row.priority}
-          bgColorHex={labBadgeColors[row.priority].bg}
-          textColorHex={labBadgeColors[row.priority].text}
-        />
-      ),
+      render: (row) => {
+        const color = getBadgeColor(row.priority);
+        return (
+          <StatusBadge
+            label={formatLabel(row.priority)}
+            bgColorHex={color.bg}
+            textColorHex={color.text}
+          />
+        );
+      },
     },
-    { header: "Date", accessorKey: "date", sortable: true },
+    {
+      header: "Date",
+      sortable: true,
+      render: (row) => formatDate(row.created_at),
+    },
     {
       header: "Status",
       sortable: true,
-      render: (row) => (
-        <StatusBadge
-          label={row.status}
-          bgColorHex={labBadgeColors[row.status].bg}
-          textColorHex={labBadgeColors[row.status].text}
-        />
-      ),
+      render: (row) => {
+        const color = getBadgeColor(row.status);
+        return (
+          <StatusBadge
+            label={formatLabel(row.status)}
+            bgColorHex={color.bg}
+            textColorHex={color.text}
+          />
+        );
+      },
     },
     {
       header: "Action",
-      sortable: true,
-      render: () => (
-        <RequestActionMenu
-          onView={() => setViewModalOpen(true)}
-          onEnter={() => router.push("/laboratory/new")}
-          onExport={() => {
-            setToast("Export started");
-            setTimeout(() => setToast(null), 2500);
-          }}
-        />
-      ),
+      sortable: false,
+      render: (row) => {
+        const testId = firstPendingTestId(row.tests);
+        const actions = [
+          {
+            label: "View Request",
+            icon: Eye,
+            onClick: () => router.push(`/lab-dashboard/laboratory/${row.id}`),
+          },
+          ...(testId
+            ? [
+                {
+                  label: "Enter Result",
+                  icon: PlusCircle,
+                  onClick: () =>
+                    router.push(
+                      `/lab-dashboard/laboratory/new?test_id=${testId}&request_id=${row.id}`,
+                    ),
+                },
+              ]
+            : []),
+          {
+            label: "Export",
+            icon: FileUp,
+            onClick: () => {
+              setToast("Export started");
+              setTimeout(() => setToast(null), 2500);
+            },
+          },
+        ];
+
+        return <LabActionMenu items={actions} />;
+      },
     },
   ];
 
@@ -176,33 +159,41 @@ export default function LabRequests() {
     <>
       <DataTable
         title="Lab Request"
-        data={filteredRequests}
+        data={requests}
         columns={requestColumns}
         showSearch
         searchPlaceholder="Search by patient name or ID"
-        onSearch={setRequestSearch}
+        onSearch={setSearch}
         toolbarActions={
           <>
-            <DateRangeFilter
-              startDate=""
-              endDate=""
-              onApply={() => {}}
-              onClear={() => {}}
+            <LabDateRangeFilter
+              startDate={startDate}
+              endDate={endDate}
+              onApply={(start, end) => {
+                setStartDate(start);
+                setEndDate(end);
+              }}
+              onClear={() => {
+                setStartDate("");
+                setEndDate("");
+              }}
             />
             <CustomDropdown
-              options={["All Priority", "Routine", "Urgent"]}
-              selected={requestPriority}
-              onSelect={setRequestPriority}
+              options={priorityOptions}
+              selected={priority}
+              onSelect={setPriority}
             />
             <CustomDropdown
-              options={["All Status", "Pending", "In-Progress", "Completed"]}
-              selected={requestStatus}
-              onSelect={setRequestStatus}
+              options={statusOptions}
+              selected={status}
+              onSelect={setStatus}
             />
           </>
         }
-        totalPages={68}
-        emptyMessage="No lab requests match your criteria."
+        totalPages={data?.total_pages}
+        emptyMessage={
+          isLoading ? "Loading lab requests..." : "No lab requests found."
+        }
       />
       {toast && (
         <div className="fixed bottom-8 right-8 z-50 flex w-[350px] max-w-[calc(100vw-2rem)] items-start gap-3 rounded border border-gray-200 bg-white p-4 shadow-xl">
@@ -211,12 +202,9 @@ export default function LabRequests() {
             <p className="font-semibold text-gray-900">{toast}</p>
           </div>
           <button onClick={() => setToast(null)} className="text-gray-900">
-            <X size={18} />
+            x
           </button>
         </div>
-      )}
-      {viewModalOpen && typeof document !== "undefined" && (
-        <ResultViewModal onClose={() => setViewModalOpen(false)} />
       )}
     </>
   );

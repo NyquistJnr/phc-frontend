@@ -58,3 +58,62 @@ export interface LabFilters {
   start_date?: string;
   end_date?: string;
 }
+
+
+export interface AdvancedLabRequestFilters {
+  page?: number;
+  page_size?: number;
+  appointment_ID?: string;
+  patient_id?: string;
+  priority?: "NORMAL" | "URGENT" | string;
+  search?: string;
+  start_date?: string;
+  end_date?: string;
+  status?: "PENDING" | "PARTIAL" | "COMPLETED" | "CANCELLED" | string;
+}
+
+export interface LabTestFilters {
+  page?: number;
+  page_size?: number;
+  lab_request_id?: string;
+  search?: string;
+  start_date?: string;
+  end_date?: string;
+  test_status?: "PENDING" | "SAMPLE_COLLECTED" | "PROCESSING" | "RESULT_READY" | string;
+}
+
+export interface StatsFilters {
+  start_date?: string;
+  end_date?: string;
+}
+
+export interface LabTestPayload {
+  test_name: string;
+  sample_type: string;
+}
+
+export interface CreateLabRequestPayload {
+  appointment: string;
+  requested_by: string;
+  priority: string;
+  clinical_notes: string;
+  tests: LabTestPayload[];
+}
+
+export interface UpdateLabRequestPayload {
+  patient: string;
+  appointment: string;
+  recorded_by: string;
+  requested_by: string;
+  priority: string;
+  clinical_notes: string;
+  status: string;
+}
+
+export interface SubmitTestResultPayload {
+  result_value: string;
+  result_unit: string;
+  test_method: string;
+  result_interpretation: string;
+  result_notes: string;
+}

@@ -181,7 +181,7 @@ export default function LabHome() {
 
         <div className="mb-6 grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
           {stats.map((stat) => (
-            <DashboardStatCard key={stat.title} {...stat} />
+            <DashboardStatCard key={stat.title} {...stat} showPeriod={false} />
           ))}
         </div>
 
