@@ -12,6 +12,7 @@ import {
   useNurseStats,
   useDashboardVitalsQueue,
 } from "@/src/hooks/nurses/use-dashboard";
+import { useSession } from "next-auth/react";
 
 const maternalAlerts = [
   {
@@ -180,6 +181,8 @@ function ListRow({
 }
 
 export default function NurseHome() {
+  const { data: session } = useSession();
+
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
@@ -306,7 +309,7 @@ export default function NurseHome() {
         <div className="mb-8 flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
           <div>
             <h1 className="mb-1 text-2xl font-semibold text-black sm:text-3xl">
-              Good morning, Nurse Grace
+              Good morning, Nurse {session?.user?.first_name}
             </h1>
             <p className="text-base text-[#3F3F46]">
               Here&apos;s your patient workload for today

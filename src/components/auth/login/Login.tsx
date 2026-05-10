@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { signIn, getSession } from "next-auth/react";
 import { Mail, Lock, EyeOff, Loader2 } from "lucide-react";
 import AuthShell from "../../auth-shell";
-import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "react-toastify";
@@ -14,6 +14,18 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  const ROLE_REDIRECTS: Record<string, string> = {
+    ADMIN: "/state-dashboard",
+    FACILITY_IT_ADMIN: "/dashboard",
+    OFFICER_IN_CHARGE: "/oic-dashboard",
+    DOCTOR: "/doctor-dashboard",
+    PHARMACIST: "/dashboard",
+    LAB_TECHNICIAN: "/dashboard",
+    NURSE: "/nurse-dashboard",
+    CHEW: "/chew-dashboard",
+    PATIENT: "/dashboard",
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,8 +47,12 @@ export default function Login() {
         toast.error(result.error);
         setLoading(false);
       } else {
+        const session = await getSession();
+        const role = session?.user?.role as string;
+        const redirectPath = ROLE_REDIRECTS[role] ?? "/dashboard";
+
         toast.success("Login successful! Redirecting...");
-        router.push("/dashboard");
+        router.push(redirectPath);
       }
     } catch (err: any) {
       toast.error("An unexpected error occurred.");
