@@ -7,7 +7,7 @@ import {
   BarChart2, Eye, Upload, X, Calendar, Clock, Activity,
   Users, Heart, Megaphone,
 } from "lucide-react";
-import DoctorHeader from "@/src/components/doctorDashboard/generics/Header";
+import ChewDashboardHeader from "@/src/components/chewDashboard/generics/ChewDashboardHeader";
 import { PeriodFilterButton } from "@/src/components/doctorDashboard/generics/PeriodFilterButton";
 import Pagination from "@/src/components/adminDashboard/generics/Pagination";
 
@@ -459,7 +459,7 @@ export default function ChewActivityReports() {
   return (
     <>
     <div className="flex-1 flex flex-col bg-[#F9FAFB] min-w-0">
-      <DoctorHeader
+      <ChewDashboardHeader
         title="Activity Reports"
         breadcrumbs={[{ label: "Activity Reports", active: true }]}
       />

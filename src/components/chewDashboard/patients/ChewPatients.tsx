@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Search, Plus, ChevronDown, Check, ArrowLeft, UserCircle2, Calendar, X } from "lucide-react";
-import DoctorHeader from "@/src/components/doctorDashboard/generics/Header";
+import ChewDashboardHeader from "@/src/components/chewDashboard/generics/ChewDashboardHeader";
 import { PeriodFilterButton } from "@/src/components/doctorDashboard/generics/PeriodFilterButton";
 import Pagination from "@/src/components/adminDashboard/generics/Pagination";
 
@@ -580,7 +580,7 @@ function PatientProfile({ onBack }: { onBack: () => void }) {
 
   return (
     <div className="flex-1 flex flex-col bg-[#F9FAFB] min-w-0">
-      <DoctorHeader
+      <ChewDashboardHeader
         title="Patients"
         breadcrumbs={[
           { label: "Patients", href: "#" },
@@ -637,7 +637,7 @@ function PatientsList({ onViewProfile }: { onViewProfile: () => void }) {
 
   return (
     <div className="flex-1 flex flex-col bg-[#F9FAFB] min-w-0">
-      <DoctorHeader
+      <ChewDashboardHeader
         title="Patients"
         breadcrumbs={[{ label: "Patients", active: true }]}
       />
