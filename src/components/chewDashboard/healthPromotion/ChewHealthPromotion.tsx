@@ -8,7 +8,7 @@ import {
   Calendar, X, TrendingUp, MoreHorizontal, Eye, Save,
   Pencil, Upload, RefreshCw, Send,
 } from "lucide-react";
-import DoctorHeader from "@/src/components/doctorDashboard/generics/Header";
+import ChewDashboardHeader from "@/src/components/chewDashboard/generics/ChewDashboardHeader";
 import { PeriodFilterButton } from "@/src/components/doctorDashboard/generics/PeriodFilterButton";
 import Pagination from "@/src/components/adminDashboard/generics/Pagination";
 
@@ -594,7 +594,7 @@ function HealthPromotionList({
 
   return (
     <div className="flex-1 flex flex-col bg-[#F9FAFB] min-w-0">
-      <DoctorHeader
+      <ChewDashboardHeader
         title="Health Promotion"
         breadcrumbs={[{ label: "Health Promotion" }, { label: "Health Promotion", active: true }]}
       />
@@ -767,7 +767,7 @@ function NewActivityForm({ onBack }: { onBack: () => void }) {
 
   return (
     <div className="flex-1 flex flex-col bg-[#F9FAFB] min-w-0">
-      <DoctorHeader
+      <ChewDashboardHeader
         title="Health Promotion"
         breadcrumbs={[
           { label: "Health Promotion" },
@@ -918,7 +918,7 @@ function PostActivityForm({
 
   return (
     <div className="flex-1 flex flex-col bg-[#F9FAFB] min-w-0">
-      <DoctorHeader title="Health Promotion" breadcrumbs={breadcrumbs} />
+      <ChewDashboardHeader title="Health Promotion" breadcrumbs={breadcrumbs} />
       <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 pt-6 pb-10 space-y-5">
 
         <button onClick={onBack}
@@ -1110,7 +1110,7 @@ function HealthActivityForm({
 
   return (
     <div className="flex-1 flex flex-col bg-[#F9FAFB] min-w-0">
-      <DoctorHeader
+      <ChewDashboardHeader
         title="Health Promotion"
         breadcrumbs={[
           { label: "Health Promotion" },

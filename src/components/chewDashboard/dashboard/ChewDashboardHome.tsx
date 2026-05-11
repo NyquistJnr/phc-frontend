@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import { Users, ArrowRight, MoreHorizontal, CheckCircle2, Baby, Megaphone, Eye, Pencil, Upload } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import DoctorHeader from "@/src/components/doctorDashboard/generics/Header";
+import ChewDashboardHeader from "@/src/components/chewDashboard/generics/ChewDashboardHeader";
 import { PeriodFilterButton } from "@/src/components/doctorDashboard/generics/PeriodFilterButton";
 import Pagination from "@/src/components/adminDashboard/generics/Pagination";
 
@@ -169,7 +169,7 @@ export default function ChewDashboardHome() {
 
   return (
     <div className="flex-1 flex flex-col bg-[#F9FAFB] min-w-0">
-      <DoctorHeader title="Dashboard" breadcrumbs={breadcrumbs} />
+      <ChewDashboardHeader title="Dashboard" breadcrumbs={breadcrumbs} />
 
       <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 pt-6 pb-10 space-y-6">
 

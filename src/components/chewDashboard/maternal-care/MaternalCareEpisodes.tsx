@@ -19,7 +19,7 @@ import {
   useDeleteEpisode,
   useUpdateEpisodeStatus,
 } from "@/src/hooks/nurses/use-maternal-care";
-import { EpisodeResult } from "../maternal-care/type";
+import { EpisodeResult } from "./type";
 
 const STATUS_OPTIONS = [
   "All Status",

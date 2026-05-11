@@ -11,6 +11,7 @@ import {
   useDoctorPendingLabs,
   useDoctorStats,
 } from "@/src/hooks/doctors/use-doctors";
+import { useConsultations } from "@/src/hooks/doctors/use-consultation";
 import type {
   DoctorDashboardAlertItem,
   DoctorDashboardAlertSeverity,
@@ -40,33 +41,6 @@ function getStat(record: DoctorDashboardApiRecord, keys: string[], fallback: num
   }
   return fallback;
 }
-
-const CONSULTATION_QUEUE: DoctorDashboardConsultationRow[] = [
-  {
-    patientId: "PAT-PLT-000234",
-    patientName: "Ngozi Eze",
-    chiefComplaint: "Fever, headache, Chest pain, Cough, runny nose",
-    status: "In-consultation",
-  },
-  {
-    patientId: "PAT-PLT-000234",
-    patientName: "Emeka Dike",
-    chiefComplaint: "Fever, headache, Chest pain, Cough, runny nose",
-    status: "Urgent",
-  },
-  {
-    patientId: "PAT-PLT-000234",
-    patientName: "Amina Bello",
-    chiefComplaint: "Fever, headache, Chest pain, Cough, runny nose",
-    status: "Waiting",
-  },
-  {
-    patientId: "PAT-PLT-000234",
-    patientName: "Chukwu Obi",
-    chiefComplaint: "Fever, headache, Chest pain, Cough, runny nose",
-    status: "Completed",
-  },
-];
 
 // ── Badge styles (inline to avoid Tailwind purge on dynamic keys) ─────────────
 
@@ -145,6 +119,8 @@ export default function DoctorDashboardHome() {
   const { data: statsData } = useDoctorStats({});
   const { data: alertsData } = useDoctorAlerts();
   const { data: pendingLabsData } = useDoctorPendingLabs({ page: 1, page_size: 4 });
+  const { data: consultationsData, isLoading: isLoadingConsultations } =
+    useConsultations({ page: 1, page_size: 4 });
 
   const statsPayload = getRecord(statsData);
   const stats = getRecord(statsPayload.stats || statsPayload);
@@ -188,6 +164,51 @@ export default function DoctorDashboardHome() {
         severity: severity as DoctorDashboardAlertSeverity,
       };
     }) ?? [];
+  const consultationsPayload = getRecord(consultationsData);
+  const consultationsDataPayload = getRecord(consultationsPayload.data);
+  const consultationRows =
+    consultationsPayload.results ||
+    consultationsDataPayload.results ||
+    consultationsPayload.data ||
+    consultationsData;
+  const consultationQueue: DoctorDashboardConsultationRow[] = (
+    Array.isArray(consultationRows) ? consultationRows : []
+  )
+    .slice(0, 4)
+    .map((consultation) => {
+      const record = getRecord(consultation);
+      const appointment = getRecord(record.appointment);
+      const patient = getRecord(record.patient);
+      const rawStatus = getText(record, ["status"], "");
+      const appointmentStatus = getText(appointment, ["status"], rawStatus);
+      const status: DoctorDashboardConsultationStatus =
+        appointmentStatus === "COMPLETED"
+          ? "Completed"
+          : appointmentStatus === "IN_PROGRESS"
+            ? "In-consultation"
+            : getText(appointment, ["priority"], "") === "URGENT"
+              ? "Urgent"
+              : "Waiting";
+
+      return {
+        patientId: getText(
+          record,
+          ["patient_display_id"],
+          getText(appointment, ["patient_display_id"], getText(patient, ["patient_id"], "-")),
+        ),
+        patientName: getText(
+          record,
+          ["patient_name"],
+          getText(appointment, ["patient_name"], getText(patient, ["full_name"], "Patient")),
+        ),
+        chiefComplaint: getText(
+          record,
+          ["chief_complaint", "presenting_complaint"],
+          getText(appointment, ["reason_for_visit", "notes"], "-"),
+        ),
+        status,
+      };
+    });
 
   return (
     <div className="flex-1 flex flex-col bg-[#F9FAFB] min-w-0">
@@ -289,7 +310,7 @@ export default function DoctorDashboardHome() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {CONSULTATION_QUEUE.map((row, i) => (
+                {consultationQueue.map((row, i) => (
                   <tr key={i} className="hover:bg-gray-50/60 transition-colors">
                     <td className="py-4 px-2 text-sm text-gray-600 font-medium">{row.patientId}</td>
                     <td className="py-4 px-2 text-sm text-gray-800 font-semibold">{row.patientName}</td>
@@ -304,6 +325,16 @@ export default function DoctorDashboardHome() {
                 ))}
               </tbody>
             </table>
+            {!isLoadingConsultations && consultationQueue.length === 0 && (
+              <p className="py-8 text-center text-sm text-gray-400">
+                No consultations found.
+              </p>
+            )}
+            {isLoadingConsultations && (
+              <p className="py-8 text-center text-sm text-gray-400">
+                Loading consultation queue...
+              </p>
+            )}
           </div>
         </div>
 

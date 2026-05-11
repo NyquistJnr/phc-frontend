@@ -10,7 +10,7 @@ import {
   Save,
   User as UserIcon,
 } from "lucide-react";
-import PharmacistDashboardHeader from "@/src/components/pharmacist-dashboard/generics/PharmacistDashboardHeader";
+import ChewDashboardHeader from "@/src/components/chewDashboard/generics/ChewDashboardHeader";
 import Toast from "@/src/components/adminDashboard/generics/Toast";
 import {
   ProfileUpdatePayload,
@@ -49,14 +49,14 @@ function getApiErrorMessage(error: unknown, fallback: string) {
 }
 
 function formatRole(role?: string) {
-  if (!role) return "Pharmacist";
+  if (!role) return "CHEW";
   return role
     .split("_")
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(" ");
 }
 
-export default function PharmacistProfile() {
+export default function ChewProfile() {
   const { data: profileData, isLoading } = useProfile();
   const updateProfileMutation = useUpdateProfile();
   const [edits, setEdits] = useState<Partial<Record<EditableField, string>>>(
@@ -70,7 +70,7 @@ export default function PharmacistProfile() {
   });
 
   const breadcrumbs = [
-    { label: "Dashboard", href: "/pharmacist-dashboard" },
+    { label: "Dashboard", href: "/chew-dashboard" },
     { label: "My Profile" },
   ];
 
@@ -135,7 +135,7 @@ export default function PharmacistProfile() {
   if (isLoading) {
     return (
       <div className="flex min-h-screen flex-1 flex-col bg-[#F9FAFB]">
-        <PharmacistDashboardHeader title="My Profile" breadcrumbs={breadcrumbs} />
+        <ChewDashboardHeader title="My Profile" breadcrumbs={breadcrumbs} />
         <div className="flex flex-col items-center justify-center py-32 text-gray-400">
           <Loader2 className="mb-4 animate-spin text-[#046C3F]" size={32} />
           <p className="text-sm font-medium">Loading profile data...</p>
@@ -146,7 +146,7 @@ export default function PharmacistProfile() {
 
   return (
     <div className="flex min-h-screen flex-1 flex-col bg-[#F9FAFB]">
-      <PharmacistDashboardHeader title="My Profile" breadcrumbs={breadcrumbs} />
+      <ChewDashboardHeader title="My Profile" breadcrumbs={breadcrumbs} />
 
       <div className="mx-auto w-full max-w-8xl p-4 sm:p-8">
         <div className="mb-6 sm:mb-8">

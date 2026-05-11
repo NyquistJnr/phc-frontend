@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { Activity, Bell, CheckCircle2, Loader2 } from "lucide-react";
 import Pagination from "@/src/components/adminDashboard/generics/Pagination";
-import PharmacistBackButton from "@/src/components/pharmacist-dashboard/generics/PharmacistBackButton";
-import PharmacistDashboardHeader from "@/src/components/pharmacist-dashboard/generics/PharmacistDashboardHeader";
+import ChewBackButton from "@/src/components/chewDashboard/generics/ChewBackButton";
+import ChewDashboardHeader from "@/src/components/chewDashboard/generics/ChewDashboardHeader";
 import {
   Notification,
   useMarkNotificationRead,
@@ -27,7 +27,7 @@ const formatDateTime = (isoString: string) => {
   );
 };
 
-export default function PharmacistNotifications() {
+export default function ChewNotifications() {
   const [currentPage, setCurrentPage] = useState(1);
   const { data, isLoading } = useNotifications(currentPage, ITEMS_PER_PAGE);
   const markReadMutation = useMarkNotificationRead();
@@ -38,19 +38,19 @@ export default function PharmacistNotifications() {
 
   return (
     <div className="min-h-screen bg-[#F6F7FC]">
-      <PharmacistDashboardHeader
+      <ChewDashboardHeader
         title="Notifications"
         breadcrumbs={[{ label: "Notifications" }]}
       />
       <div className="px-4 py-6 sm:px-6 lg:py-8">
-        <PharmacistBackButton />
+        <ChewBackButton />
         <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="text-2xl font-semibold text-black sm:text-3xl">
               Notifications
             </h1>
             <p className="mt-2 text-base text-[#3F3F46]">
-              Pharmacy alerts, prescription updates, and system notifications.
+              Community health alerts and system updates.
             </p>
           </div>
           {unreadCount > 0 && (

@@ -34,24 +34,29 @@ function getStatValue(
 function SegmentedTabs({
   tab,
   setTab,
+  actions,
 }: {
   tab: Tab;
   setTab: (tab: Tab) => void;
+  actions?: React.ReactNode;
 }) {
   return (
-    <div className="mb-6 grid max-w-[400px] grid-cols-2 overflow-hidden rounded-lg bg-[#EEF7F4]">
-      <button
-        onClick={() => setTab("requests")}
-        className={`h-10 text-sm font-medium ${tab === "requests" ? "bg-[#046C3F] text-white" : "text-gray-400"}`}
-      >
-        Lab Requests
-      </button>
-      <button
-        onClick={() => setTab("results")}
-        className={`h-10 text-sm font-medium ${tab !== "requests" ? "bg-[#046C3F] text-white" : "text-gray-400"}`}
-      >
-        Lab Results
-      </button>
+    <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="grid w-full max-w-[400px] grid-cols-2 overflow-hidden rounded-lg bg-[#EEF7F4]">
+        <button
+          onClick={() => setTab("requests")}
+          className={`h-10 text-sm font-medium ${tab === "requests" ? "bg-[#046C3F] text-white" : "text-gray-400"}`}
+        >
+          Lab Requests
+        </button>
+        <button
+          onClick={() => setTab("results")}
+          className={`h-10 text-sm font-medium ${tab !== "requests" ? "bg-[#046C3F] text-white" : "text-gray-400"}`}
+        >
+          Lab Results
+        </button>
+      </div>
+      {actions}
     </div>
   );
 }
@@ -114,14 +119,6 @@ export default function LaboratoryListing() {
               </p>
             )}
           </div>
-          {tab === "results" && (
-            <button
-              onClick={() => router.push("/lab-dashboard/laboratory/new")}
-              className="flex h-11 items-center justify-center gap-3 rounded-xl bg-[#046C3F] px-6 text-base font-medium text-white"
-            >
-              <PlusCircle size={20} /> Enter New Lab Result
-            </button>
-          )}
           <LabDateRangeFilter
             startDate={startDate}
             endDate={endDate}
@@ -142,7 +139,20 @@ export default function LaboratoryListing() {
           ))}
         </div>
 
-        <SegmentedTabs tab={tab} setTab={setTab} />
+        <SegmentedTabs
+          tab={tab}
+          setTab={setTab}
+          actions={
+            tab === "results" ? (
+              <button
+                onClick={() => router.push("/lab-dashboard/laboratory/new")}
+                className="flex h-11 items-center justify-center gap-3 rounded-xl bg-[#046C3F] px-6 text-base font-medium text-white"
+              >
+                <PlusCircle size={20} /> Enter New Lab Result
+              </button>
+            ) : null
+          }
+        />
 
         {tab === "requests" ? <LabRequests /> : <LabResults />}
       </div>
