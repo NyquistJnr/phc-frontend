@@ -20,7 +20,7 @@ export default function DashboardStatCard({
   icon: Icon,
   active = false,
   href,
-  periodLabel = "This Week",
+  periodLabel,
   showPeriod = true,
 }: DashboardStatCardProps) {
   const content = (
@@ -39,7 +39,11 @@ export default function DashboardStatCard({
               active ? "text-white" : "text-gray-300"
             }`}
           >
-            {periodLabel} <ChevronDown size={14} />
+            {periodLabel && (
+              <>
+                <span>{periodLabel}</span> <ChevronDown size={14} />
+              </>
+            )}
           </span>
         )}
       </div>
