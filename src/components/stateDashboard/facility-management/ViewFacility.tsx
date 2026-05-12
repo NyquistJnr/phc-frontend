@@ -3,13 +3,24 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
-import { Building2, Download, Eye, Edit2, MoreHorizontal } from "lucide-react";
+import {
+  Building2,
+  Download,
+  Eye,
+  MoreHorizontal,
+  Users,
+  Power,
+  AlertCircle,
+  X,
+} from "lucide-react";
 import { createPortal } from "react-dom";
 
 import Header from "@/src/components/stateDashboard/generics/Header";
 import { CustomDropdown } from "@/src/components/generic/ui/CustomDropdown";
 import { ColumnDef, DataTable } from "@/src/components/generic/ui/DataTable";
 import { StatusBadge } from "@/src/components/generic/ui/TableHelpers";
+import Toast from "@/src/components/adminDashboard/generics/Toast";
+import { useToggleFacilityStatus } from "@/src/hooks/general/use-facilities";
 import {
   useFacilities,
   useFacilityStats,
@@ -25,7 +36,13 @@ const statusColors: Record<string, { bg: string; text: string }> = {
   Inactive: { bg: "#FFF4E5", text: "#F79009" },
 };
 
-function FacilityActionMenu({ row }: { row: Facility }) {
+function FacilityActionMenu({
+  row,
+  onToggleClick,
+}: {
+  row: Facility;
+  onToggleClick: (row: Facility) => void;
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [coords, setCoords] = useState({ top: 0, left: 0 });
@@ -76,13 +93,17 @@ function FacilityActionMenu({ row }: { row: Facility }) {
       className: "text-gray-700",
     },
     {
-      label: "Edit",
-      icon: Edit2,
+      label: "Facility Users",
+      icon: Users,
       onClick: () =>
-        router.push(
-          `/state-dashboard/facility-management/view-facility/${row.id}/edit`,
-        ),
+        router.push(`/state-dashboard/facility-management/users/${row.id}`),
       className: "text-gray-700",
+    },
+    {
+      label: row.is_active ? "Suspend Facility" : "Activate Facility",
+      icon: Power,
+      onClick: () => onToggleClick(row),
+      className: row.is_active ? "text-red-600" : "text-[#039855]",
     },
   ];
 
@@ -95,8 +116,6 @@ function FacilityActionMenu({ row }: { row: Facility }) {
       >
         <MoreHorizontal size={18} />
       </button>
-
-      {/* Action Dropdown Menu */}
       {open &&
         typeof document !== "undefined" &&
         createPortal(
@@ -140,6 +159,27 @@ export default function ViewFacility() {
   const initialSearch = searchParams.get("search") || "";
   const [localSearch, setLocalSearch] = useState(initialSearch);
 
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    facility: Facility | null;
+  }>({ isOpen: false, facility: null });
+  const [toastMsg, setToastMsg] = useState({
+    title: "",
+    message: "",
+    type: "success" as "success" | "error",
+    visible: false,
+  });
+
+  const toggleFacilityMutation = useToggleFacilityStatus();
+
+  const showToast = (
+    title: string,
+    message: string,
+    type: "success" | "error",
+  ) => {
+    setToastMsg({ title, message, type, visible: true });
+  };
+
   useEffect(() => {
     const currentSearch = searchParams.get("search") || "";
     if (localSearch === currentSearch) {
@@ -181,7 +221,6 @@ export default function ViewFacility() {
   const totalPages = facilitiesData?.total_pages ?? 1;
   const totalCount = statsData?.total_facilities ?? facilitiesData?.count ?? 0;
 
-  // Client-side level filter (API doesn't support level filter yet as per original code)
   const filteredFacilities = levelParam
     ? facilities.filter((f) => f.level === levelParam)
     : facilities;
@@ -200,6 +239,32 @@ export default function ViewFacility() {
     },
     [pathname, router, searchParams],
   );
+
+  const promptToggleFacility = (facility: Facility) => {
+    setConfirmModal({ isOpen: true, facility });
+  };
+
+  const handleConfirmToggle = async () => {
+    if (!confirmModal.facility) return;
+
+    try {
+      const newStatus = !confirmModal.facility.is_active;
+      await toggleFacilityMutation.mutateAsync({
+        facilityId: confirmModal.facility.id,
+        isActive: newStatus,
+      });
+
+      showToast(
+        "Status Updated",
+        `Facility '${confirmModal.facility.name}' has been successfully ${newStatus ? "activated" : "suspended"}.`,
+        "success",
+      );
+    } catch (error: any) {
+      showToast("Error", "Failed to update facility status.", "error");
+    } finally {
+      setConfirmModal({ isOpen: false, facility: null });
+    }
+  };
 
   const columns: ColumnDef<Facility>[] = [
     { header: "Code", accessorKey: "code", sortable: true },
@@ -228,7 +293,12 @@ export default function ViewFacility() {
         );
       },
     },
-    { header: "Action", render: (row) => <FacilityActionMenu row={row} /> },
+    {
+      header: "Action",
+      render: (row) => (
+        <FacilityActionMenu row={row} onToggleClick={promptToggleFacility} />
+      ),
+    },
   ];
 
   const breadcrumbs = [
@@ -303,6 +373,68 @@ export default function ViewFacility() {
           }
         />
       </div>
+      {confirmModal.isOpen && confirmModal.facility && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl flex flex-col overflow-hidden relative">
+            <div className="p-6 text-center space-y-4">
+              <div
+                className={`w-14 h-14 rounded-full mx-auto flex items-center justify-center ${confirmModal.facility.is_active ? "bg-red-50 text-red-600" : "bg-green-50 text-green-600"}`}
+              >
+                {confirmModal.facility.is_active ? (
+                  <AlertCircle size={28} />
+                ) : (
+                  <Power size={28} />
+                )}
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">
+                  {confirmModal.facility.is_active
+                    ? "Suspend Facility?"
+                    : "Activate Facility?"}
+                </h3>
+                <p className="text-sm text-gray-500 mt-2">
+                  Are you sure you want to{" "}
+                  {confirmModal.facility.is_active ? "suspend" : "activate"}{" "}
+                  <strong>{confirmModal.facility.name}</strong>?{" "}
+                  {confirmModal.facility.is_active
+                    ? "Staff will lose access to login."
+                    : "Staff will regain access to login."}
+                </p>
+              </div>
+            </div>
+            <div className="px-6 pb-6 flex gap-3">
+              <button
+                onClick={() =>
+                  setConfirmModal({ isOpen: false, facility: null })
+                }
+                className="flex-1 py-3 bg-gray-100 text-gray-700 font-semibold rounded-xl hover:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmToggle}
+                disabled={toggleFacilityMutation.isPending}
+                className={`flex-1 py-3 text-white font-semibold rounded-xl shadow-sm transition-colors disabled:opacity-70 disabled:cursor-not-allowed ${
+                  confirmModal.facility.is_active
+                    ? "bg-red-600 hover:bg-red-700"
+                    : "bg-[#046C3F] hover:bg-[#035a34]"
+                }`}
+              >
+                {toggleFacilityMutation.isPending
+                  ? "Updating..."
+                  : "Yes, Confirm"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      <Toast
+        type={toastMsg.type}
+        title={toastMsg.title}
+        message={toastMsg.message}
+        visible={toastMsg.visible}
+        onClose={() => setToastMsg((prev) => ({ ...prev, visible: false }))}
+      />
     </div>
   );
 }
