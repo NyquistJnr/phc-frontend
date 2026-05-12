@@ -6,7 +6,7 @@ import {
   Search, ChevronDown, ArrowLeft, Calendar, Plus,
   Eye, Pencil, Upload, X, Check, Clock, MoreHorizontal,
 } from "lucide-react";
-import DoctorHeader from "@/src/components/doctorDashboard/generics/Header";
+import ChewDashboardHeader from "@/src/components/chewDashboard/generics/ChewDashboardHeader";
 import { PeriodFilterButton } from "@/src/components/doctorDashboard/generics/PeriodFilterButton";
 import Pagination from "@/src/components/adminDashboard/generics/Pagination";
 
@@ -463,7 +463,7 @@ function AppointmentForm({ mode, row, onBack, onSwitchToEdit }: {
   return (
     <>
     <div className="flex-1 flex flex-col bg-[#F9FAFB] min-w-0">
-      <DoctorHeader
+      <ChewDashboardHeader
         title="Appointments"
         breadcrumbs={[{ label: "Appointments" }, { label: breadcrumbLabel, active: true }]}
       />
@@ -583,7 +583,7 @@ function AppointmentsList({ onView, onEdit, onCreate }: {
 
   return (
     <div className="flex-1 flex flex-col bg-[#F9FAFB] min-w-0">
-      <DoctorHeader
+      <ChewDashboardHeader
         title="Appointments"
         breadcrumbs={[{ label: "Appointments", active: true }]}
       />

@@ -1,5 +1,10 @@
-import ConsultationNotes from "@/src/components/doctorDashboard/consultations/ConsultationNotes";
+import { Suspense } from "react";
+import CreateNote from "@/src/components/doctorDashboard/consultations/CreateNote";
 
 export default function NewConsultationPage() {
-  return <ConsultationNotes />;
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <CreateNote />
+    </Suspense>
+  );
 }

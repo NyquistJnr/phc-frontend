@@ -1,5 +1,10 @@
-import ChewAppointments from "@/src/components/chewDashboard/appointments/ChewAppointments";
+import { Suspense } from "react";
+import Appointments from "@/src/components/chewDashboard/appointments/Appointments";
 
 export default function ChewAppointmentsPage() {
-  return <ChewAppointments />;
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <Appointments />
+    </Suspense>
+  );
 }

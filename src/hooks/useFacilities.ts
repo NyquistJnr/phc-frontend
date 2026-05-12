@@ -8,6 +8,7 @@ export interface Facility {
   facility_type: string;
   state: string;
   lga: string;
+  ward: string;
   address: string;
   level: string;
   manager: string | null;
@@ -54,6 +55,7 @@ export interface UpdateFacilityPayload {
   name?: string;
   facility_type?: string;
   lga?: string;
+  ward?: string;
   address?: string;
   level?: string;
   manager_first_name?: string;

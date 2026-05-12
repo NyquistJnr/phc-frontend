@@ -1,147 +1,156 @@
 "use client";
 
-import { useMemo, useState, useRef, useEffect } from "react";
-import { createPortal } from "react-dom";
-import { Eye, FileUp, MoreHorizontal, X } from "lucide-react";
+import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Eye, FileUp } from "lucide-react";
 import { ColumnDef, DataTable } from "@/src/components/generic/ui/DataTable";
 import { StatusBadge } from "@/src/components/generic/ui/TableHelpers";
 import { CustomDropdown } from "@/src/components/generic/ui/CustomDropdown";
-import DateRangeFilter from "@/src/components/generic/ui/DateRangeFilter";
-import { LAB_RESULTS, LabResultRow, labBadgeColors } from "./labData";
-import { MenuButton, ResultViewModal } from "./LabSharedUI";
+import LabDateRangeFilter from "@/src/components/lab-dashboard/generics/LabDateRangeFilter";
+import { LabTest } from "@/src/components/lab-dashboard/home/types";
+import {
+  useAdvancedLabRequests,
+  useLabTests,
+} from "@/src/hooks/laboratory/use-laboratory";
+import LabActionMenu from "./LabActionMenu";
+import { labBadgeColors } from "./labData";
+import {
+  EnrichedLabTest,
+  buildLabTestContextMap,
+  enrichLabTest,
+} from "./labTestContext";
 
-function ResultActionMenu({
-  onView,
-  onExport,
-}: {
-  onView: () => void;
-  onExport: () => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [coords, setCoords] = useState({ top: 0, left: 0 });
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
+const statusOptions = [
+  "All Status",
+  "PENDING",
+  "SAMPLE_COLLECTED",
+  "PROCESSING",
+  "RESULT_READY",
+];
 
-  useEffect(() => {
-    const close = (event: MouseEvent) => {
-      if (
-        menuRef.current &&
-        !menuRef.current.contains(event.target as Node) &&
-        buttonRef.current &&
-        !buttonRef.current.contains(event.target as Node)
-      ) {
-        setOpen(false);
-      }
-    };
-    if (open) document.addEventListener("mousedown", close);
-    return () => document.removeEventListener("mousedown", close);
-  }, [open]);
+const formatDate = (date?: string | null) =>
+  date ? new Date(date).toLocaleDateString() : "-";
 
-  const toggle = () => {
-    if (!open && buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect();
-      setCoords({ top: rect.bottom + 6, left: rect.right - 190 });
-    }
-    setOpen((value) => !value);
-  };
+const formatLabel = (value?: string | null) => {
+  if (!value) return "-";
+  return value
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join("-");
+};
 
+const getBadgeColor = (value?: string | null) => {
+  const label = formatLabel(value);
   return (
-    <>
-      <button
-        ref={buttonRef}
-        onClick={toggle}
-        className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100"
-      >
-        <MoreHorizontal size={18} />
-      </button>
-      {open &&
-        typeof document !== "undefined" &&
-        createPortal(
-          <div
-            ref={menuRef}
-            style={{
-              position: "fixed",
-              top: coords.top,
-              left: coords.left,
-              width: 190,
-            }}
-            className="z-[9999] rounded-lg border border-gray-200 bg-white py-3 shadow-xl"
-          >
-            <MenuButton
-              onClick={() => {
-                setOpen(false);
-                onView();
-              }}
-            >
-              <Eye size={20} /> View result
-            </MenuButton>
-            <MenuButton
-              onClick={() => {
-                setOpen(false);
-                onExport();
-              }}
-            >
-              <FileUp size={20} /> Export result
-            </MenuButton>
-          </div>,
-          document.body,
-        )}
-    </>
+    labBadgeColors[label as keyof typeof labBadgeColors] || {
+      bg: "#FFF4E5",
+      text: "#1F2937",
+    }
   );
-}
+};
 
 export default function LabResults() {
-  const [resultSearch, setResultSearch] = useState("");
-  const [resultStatus, setResultStatus] = useState("All Status");
-  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const router = useRouter();
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState("All Status");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [toast, setToast] = useState<string | null>(null);
 
-  const filteredResults = useMemo(() => {
-    const term = resultSearch.toLowerCase();
-    return LAB_RESULTS.filter((row) => {
-      const matchesSearch = [
-        row.requestId,
-        row.patientId,
-        row.patientName,
-        row.labTests,
-        row.result,
-      ].some((val) => val.toLowerCase().includes(term));
-      const matchesStatus =
-        resultStatus === "All Status" || row.status === resultStatus;
-      return matchesSearch && matchesStatus;
-    });
-  }, [resultSearch, resultStatus]);
+  const { data, isLoading } = useLabTests({
+    page: 1,
+    page_size: 10,
+    search,
+    test_status: status,
+    start_date: startDate,
+    end_date: endDate,
+  });
+  const { data: requestContextData } = useAdvancedLabRequests({
+    page: 1,
+    page_size: 200,
+  });
 
-  const resultColumns: ColumnDef<LabResultRow>[] = [
-    { header: "Lab request ID", accessorKey: "requestId", sortable: true },
-    { header: "Patient ID", accessorKey: "patientId", sortable: true },
-    { header: "Patient Name", accessorKey: "patientName", sortable: true },
-    { header: "Lab Tests", accessorKey: "labTests", sortable: true },
-    { header: "Result", accessorKey: "result", sortable: true },
-    { header: "Date", accessorKey: "date", sortable: true },
+  const contextMap = useMemo(
+    () => buildLabTestContextMap(requestContextData?.results || []),
+    [requestContextData?.results],
+  );
+  const results = useMemo(
+    () =>
+      ((data?.results || []) as LabTest[]).map((test) =>
+        enrichLabTest(test, contextMap),
+      ),
+    [contextMap, data?.results],
+  );
+
+  const resultColumns: ColumnDef<EnrichedLabTest>[] = [
+    {
+      header: "Lab request ID",
+      sortable: true,
+      render: (row) => row.request_id || "-",
+    },
+    {
+      header: "Patient ID",
+      sortable: true,
+      render: (row) => row.patient_display_id || "-",
+    },
+    {
+      header: "Patient Name",
+      sortable: true,
+      render: (row) => row.patient_name || "-",
+    },
+    { header: "Lab Tests", accessorKey: "test_name", sortable: true },
+    {
+      header: "Result",
+      sortable: true,
+      render: (row) => row.result_value || "-",
+    },
+    {
+      header: "Date",
+      sortable: true,
+      render: (row) => formatDate(row.result_date),
+    },
     {
       header: "Status",
       sortable: true,
-      render: (row) => (
-        <StatusBadge
-          label={row.status}
-          bgColorHex={labBadgeColors[row.status].bg}
-          textColorHex={labBadgeColors[row.status].text}
-        />
-      ),
+      render: (row) => {
+        const color = getBadgeColor(row.test_status);
+        return (
+          <StatusBadge
+            label={formatLabel(row.test_status)}
+            bgColorHex={color.bg}
+            textColorHex={color.text}
+          />
+        );
+      },
     },
     {
       header: "Action",
-      sortable: true,
-      render: () => (
-        <ResultActionMenu
-          onView={() => setViewModalOpen(true)}
-          onExport={() => {
-            setToast("Export started");
-            setTimeout(() => setToast(null), 2500);
-          }}
-        />
-      ),
+      sortable: false,
+      render: (row) => {
+        const resultHref = row.lab_request_uuid
+          ? `/lab-dashboard/laboratory/new?test_id=${row.id}&request_id=${row.lab_request_uuid}`
+          : `/lab-dashboard/laboratory/new?test_id=${row.id}`;
+
+        return (
+          <LabActionMenu
+            items={[
+              {
+                label: "View Result",
+                icon: Eye,
+                onClick: () => router.push(resultHref),
+              },
+              {
+                label: "Export Result",
+                icon: FileUp,
+                onClick: () => {
+                  setToast("Export started");
+                  setTimeout(() => setToast(null), 2500);
+                },
+              },
+            ]}
+          />
+        );
+      },
     },
   ];
 
@@ -149,28 +158,36 @@ export default function LabResults() {
     <>
       <DataTable
         title="Lab Results"
-        data={filteredResults}
+        data={results}
         columns={resultColumns}
         showSearch
         searchPlaceholder="Search by patient name or ID"
-        onSearch={setResultSearch}
+        onSearch={setSearch}
         toolbarActions={
           <>
-            <DateRangeFilter
-              startDate=""
-              endDate=""
-              onApply={() => {}}
-              onClear={() => {}}
+            <LabDateRangeFilter
+              startDate={startDate}
+              endDate={endDate}
+              onApply={(start, end) => {
+                setStartDate(start);
+                setEndDate(end);
+              }}
+              onClear={() => {
+                setStartDate("");
+                setEndDate("");
+              }}
             />
             <CustomDropdown
-              options={["All Status", "Ready", "Processing"]}
-              selected={resultStatus}
-              onSelect={setResultStatus}
+              options={statusOptions}
+              selected={status}
+              onSelect={setStatus}
             />
           </>
         }
-        totalPages={68}
-        emptyMessage="No lab results match your criteria."
+        totalPages={data?.total_pages}
+        emptyMessage={
+          isLoading ? "Loading lab results..." : "No lab results found."
+        }
       />
       {toast && (
         <div className="fixed bottom-8 right-8 z-50 flex w-[350px] max-w-[calc(100vw-2rem)] items-start gap-3 rounded border border-gray-200 bg-white p-4 shadow-xl">
@@ -179,12 +196,9 @@ export default function LabResults() {
             <p className="font-semibold text-gray-900">{toast}</p>
           </div>
           <button onClick={() => setToast(null)} className="text-gray-900">
-            <X size={18} />
+            x
           </button>
         </div>
-      )}
-      {viewModalOpen && typeof document !== "undefined" && (
-        <ResultViewModal onClose={() => setViewModalOpen(false)} />
       )}
     </>
   );

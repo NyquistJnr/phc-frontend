@@ -2,10 +2,15 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Building2, Calendar } from "lucide-react";
+import { Building2, Users } from "lucide-react";
 import Header from "@/src/components/stateDashboard/generics/Header";
 import Toast from "@/src/components/adminDashboard/generics/Toast";
 import FormSelectDropdown from "@/src/components/stateDashboard/generics/FormSelectDropdown";
+import {
+  useCreateFacility,
+  useLgas,
+  useWards,
+} from "@/src/hooks/general/use-facilities";
 
 const inputStyles =
   "block w-full border border-gray-200 rounded-xl px-5 py-3.5 text-base text-gray-900 placeholder:text-gray-400 focus:border-[#1AC073] focus:outline-none focus:ring-1 focus:ring-[#1AC073] transition-colors";
@@ -13,34 +18,20 @@ const inputStyles =
 const labelStyles =
   "absolute -top-2.5 left-4 bg-white px-1.5 text-xs text-gray-600 font-medium z-10";
 
-const FACILITY_LEVELS = ["Health Post", "PHC Clinic", "PHC Centre"];
+const FACILITY_LEVELS = Array.from({ length: 12 }, (_, i) => `Level ${i + 1}`);
+const FACILITY_TYPES = ["Public", "Private", "NGO"];
 
-const LGA_OPTIONS = [
-  "Ikeja",
-  "Surulere",
-  "Eti-Osa",
-  "Alimosho",
-  "Kosofe",
-  "Mushin",
-  "Agege",
-  "Lagos Mainland",
-  "Lagos Island",
-];
-
-const WARD_OPTIONS = [
-  "Anifowoshe / Opebi",
-  "Ojodu",
-  "Agidingbi",
-  "Alausa",
-  "Oregun",
-  "Maryland",
-];
-
-function SectionHeader({ title }: { title: string }) {
+function SectionHeader({
+  title,
+  icon: Icon = Building2,
+}: {
+  title: string;
+  icon?: any;
+}) {
   return (
     <div className="flex items-center gap-3 mb-6">
       <div className="w-9 h-9 rounded-lg bg-[#E8F7F0] flex items-center justify-center shrink-0">
-        <Building2 size={18} className="text-[#046C3F]" />
+        <Icon size={18} className="text-[#046C3F]" />
       </div>
       <h3 className="text-base font-semibold text-gray-900">{title}</h3>
     </div>
@@ -50,17 +41,33 @@ function SectionHeader({ title }: { title: string }) {
 export default function CreateFacility() {
   const router = useRouter();
 
-  // Facility Information
+  const deploymentState =
+    process.env.NEXT_PUBLIC_STATE_OF_DEPLOYMENT || "Plateau";
+
+  const { data: lgas = [], isLoading: isLoadingLgas } =
+    useLgas(deploymentState);
+  const createFacilityMutation = useCreateFacility();
+
   const [facilityName, setFacilityName] = useState("");
   const [facilityLevel, setFacilityLevel] = useState("");
+  const [facilityType, setFacilityType] = useState("");
   const [lga, setLga] = useState("");
   const [ward, setWard] = useState("");
-
-  // Facility Contact Information
   const [facilityAddress, setFacilityAddress] = useState("");
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const [dateCreated, setDateCreated] = useState("");
-  const [isActive, setIsActive] = useState(false);
+
+  const { data: wards = [], isLoading: isLoadingWards } = useWards(
+    deploymentState,
+    lga,
+  );
+
+  const [managerFirstName, setManagerFirstName] = useState("");
+  const [managerLastName, setManagerLastName] = useState("");
+  const [managerEmail, setManagerEmail] = useState("");
+  const [managerPhone, setManagerPhone] = useState("");
+  const [itAdminFirstName, setItAdminFirstName] = useState("");
+  const [itAdminLastName, setItAdminLastName] = useState("");
+  const [itAdminEmail, setItAdminEmail] = useState("");
+  const [itAdminPhone, setItAdminPhone] = useState("");
 
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMsg, setToastMsg] = useState({
@@ -69,32 +76,72 @@ export default function CreateFacility() {
     type: "success" as "success" | "error",
   });
 
-  const showToast = (title: string, message: string, type: "success" | "error") => {
+  const showToast = (
+    title: string,
+    message: string,
+    type: "success" | "error",
+  ) => {
     setToastMsg({ title, message, type });
     setToastVisible(true);
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleLgaSelect = (selectedLga: string) => {
+    setLga(selectedLga);
+    setWard("");
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    if (!facilityName || !facilityLevel || !lga || !ward) {
-      showToast("Validation Error", "Please fill in all required fields.", "error");
+    if (!facilityName || !facilityLevel || !facilityType || !lga || !ward) {
+      showToast(
+        "Validation Error",
+        "Please fill in all required facility fields.",
+        "error",
+      );
       return;
     }
 
-    // API call will be wired here by backend integration
-    showToast(
-      "Facility Created successfully",
-      `${facilityName} has been added`,
-      "success",
-    );
-    setTimeout(() => {
-      router.push("/state-dashboard/facility-management/view-facility");
-    }, 1800);
+    try {
+      await createFacilityMutation.mutateAsync({
+        name: facilityName,
+        facility_type: facilityType,
+        lga: lga,
+        ward: ward,
+        address: facilityAddress,
+        level: facilityLevel,
+        manager_first_name: managerFirstName,
+        manager_last_name: managerLastName,
+        manager_email: managerEmail,
+        manager_phone: managerPhone,
+        it_admin_first_name: itAdminFirstName,
+        it_admin_last_name: itAdminLastName,
+        it_admin_email: itAdminEmail,
+        it_admin_phone: itAdminPhone,
+      });
+
+      showToast(
+        "Facility Created",
+        `${facilityName} has been successfully added`,
+        "success",
+      );
+      setTimeout(() => {
+        router.push("/state-dashboard/facility-management/view-facility");
+      }, 1800);
+    } catch (error: any) {
+      showToast(
+        "Submission Error",
+        error?.message || "Failed to create facility",
+        "error",
+      );
+    }
   };
 
   const breadcrumbs = [
-    { label: "Facility Management", href: "/state-dashboard/facility-management/view-facility" },
+    {
+      label: "Facility Management",
+      href: "/state-dashboard/facility-management/view-facility",
+    },
     { label: "Create Facility", active: true },
   ];
 
@@ -116,12 +163,10 @@ export default function CreateFacility() {
           onSubmit={handleSubmit}
           className="bg-white p-5 sm:p-8 rounded-2xl sm:rounded-3xl shadow-sm border border-gray-100 space-y-8"
         >
-          {/* ── Facility Information ─────────────────────────────── */}
           <section>
             <SectionHeader title="Facility Information" />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-7">
-              {/* Facility Name */}
               <div className="relative">
                 <label className={labelStyles}>Facility Name</label>
                 <input
@@ -133,67 +178,44 @@ export default function CreateFacility() {
                   required
                 />
               </div>
-
-              {/* Facility ID — auto-generated */}
-              <div className="relative">
-                <label className={labelStyles}>Facility ID</label>
-                <input
-                  type="text"
-                  value=""
-                  readOnly
-                  placeholder="Auto-generated upon creation"
-                  className={`${inputStyles} bg-gray-50 text-gray-400 cursor-not-allowed`}
-                />
-              </div>
-
-              {/* Facility Level */}
+              <FormSelectDropdown
+                label="Facility Type"
+                placeholder="Select type"
+                options={FACILITY_TYPES}
+                selected={facilityType}
+                onSelect={setFacilityType}
+              />
               <FormSelectDropdown
                 label="Facility Level"
-                placeholder="select level"
+                placeholder="Select level"
                 options={FACILITY_LEVELS}
                 selected={facilityLevel}
                 onSelect={setFacilityLevel}
               />
-
-              {/* State — auto-filled */}
               <div className="relative">
                 <label className={labelStyles}>State</label>
                 <input
                   type="text"
-                  value=""
+                  value={deploymentState}
                   readOnly
-                  placeholder="Auto-filled (based on deployment)"
-                  className={`${inputStyles} bg-gray-50 text-gray-400 cursor-not-allowed`}
+                  className={`${inputStyles} bg-gray-50 text-gray-700 cursor-not-allowed`}
                 />
               </div>
-
-              {/* LGA */}
               <FormSelectDropdown
-                label="LGA"
-                placeholder="select LGA"
-                options={LGA_OPTIONS}
+                label={isLoadingLgas ? "Loading LGAs..." : "LGA"}
+                placeholder="Select LGA"
+                options={lgas}
                 selected={lga}
-                onSelect={setLga}
+                onSelect={handleLgaSelect}
               />
-
-              {/* Ward */}
               <FormSelectDropdown
-                label="Ward"
-                placeholder="select ward"
-                options={WARD_OPTIONS}
+                label={isLoadingWards ? "Loading Wards..." : "Ward"}
+                placeholder={lga ? "Select Ward" : "Select an LGA first"}
+                options={wards}
                 selected={ward}
                 onSelect={setWard}
               />
-            </div>
-          </section>
-
-          {/* ── Facility Contact Information ─────────────────────── */}
-          <section className="pt-6 border-t border-gray-100">
-            <SectionHeader title="Facility Contact Information" />
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-7">
-              {/* Facility Address */}
-              <div className="relative">
+              <div className="relative md:col-span-2">
                 <label className={labelStyles}>Facility Address</label>
                 <input
                   type="text"
@@ -201,90 +223,137 @@ export default function CreateFacility() {
                   onChange={(e) => setFacilityAddress(e.target.value)}
                   placeholder="Enter full address"
                   className={inputStyles}
+                  required
                 />
-              </div>
-
-              {/* Code + Phone Number — right col, row 1, side by side */}
-              <div className="grid grid-cols-[110px_1fr] gap-x-4">
-                <div className="relative">
-                  <label className={labelStyles}>Code</label>
-                  <div className={`${inputStyles} flex items-center gap-2 cursor-not-allowed bg-gray-50`}>
-                    <div className="w-5 h-5 rounded-sm flex overflow-hidden shrink-0">
-                      <div className="w-1/3 h-full bg-[#006C35]" />
-                      <div className="w-1/3 h-full bg-white" />
-                      <div className="w-1/3 h-full bg-[#006C35]" />
-                    </div>
-                    <span className="text-gray-700">+234</span>
-                    <svg className="ml-auto shrink-0" width="12" height="12" viewBox="0 0 12 12" fill="none">
-                      <path d="M3 4.5L6 7.5L9 4.5" stroke="#6B7280" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </div>
-                </div>
-                <div className="relative">
-                  <label className={labelStyles}>Phone Number</label>
-                  <input
-                    type="tel"
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ""))}
-                    placeholder="80 0000 0000"
-                    className={inputStyles}
-                  />
-                </div>
-              </div>
-
-              {/* Date Created — left col, row 2 */}
-              <div className="relative">
-                <label className={labelStyles}>Date Created</label>
-                <div className="relative">
-                  <Calendar size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                  <input
-                    type="date"
-                    value={dateCreated}
-                    onChange={(e) => setDateCreated(e.target.value)}
-                    className={`${inputStyles} pl-10`}
-                  />
-                </div>
-              </div>
-
-              {/* Status toggle — right col, row 2 */}
-              <div className="flex flex-col gap-2 justify-center">
-                <span className="text-xs text-gray-600 font-medium">Status</span>
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setIsActive(!isActive)}
-                    className={`w-11 h-6 rounded-full transition-colors relative flex items-center shrink-0 border border-transparent ${
-                      isActive ? "bg-[#046C3F]" : "bg-gray-200"
-                    }`}
-                  >
-                    <div
-                      className={`w-[18px] h-[18px] bg-white rounded-full shadow-sm transform transition-transform ${
-                        isActive ? "translate-x-[22px]" : "translate-x-1"
-                      }`}
-                    />
-                  </button>
-                  <span className="text-sm text-gray-400 font-medium">
-                    Active / Inactive
-                  </span>
-                </div>
               </div>
             </div>
           </section>
+          <section className="pt-6 border-t border-gray-100">
+            <SectionHeader title="Facility Personnel" icon={Users} />
 
-          {/* ── Actions ───────────────────────────────────────────── */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 pt-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-7">
+              <div className="relative">
+                <label className={labelStyles}>Manager First Name</label>
+                <input
+                  type="text"
+                  value={managerFirstName}
+                  onChange={(e) => setManagerFirstName(e.target.value)}
+                  placeholder="First Name"
+                  className={inputStyles}
+                  required
+                />
+              </div>
+              <div className="relative">
+                <label className={labelStyles}>Manager Last Name</label>
+                <input
+                  type="text"
+                  value={managerLastName}
+                  onChange={(e) => setManagerLastName(e.target.value)}
+                  placeholder="Last Name"
+                  className={inputStyles}
+                  required
+                />
+              </div>
+              <div className="relative">
+                <label className={labelStyles}>Manager Email</label>
+                <input
+                  type="email"
+                  value={managerEmail}
+                  onChange={(e) => setManagerEmail(e.target.value)}
+                  placeholder="manager@example.com"
+                  className={inputStyles}
+                  required
+                />
+              </div>
+              <div className="relative">
+                <label className={labelStyles}>Manager Phone</label>
+                <input
+                  type="tel"
+                  value={managerPhone}
+                  onChange={(e) =>
+                    setManagerPhone(e.target.value.replace(/\D/g, ""))
+                  }
+                  placeholder="08000000000"
+                  className={inputStyles}
+                  required
+                />
+              </div>
+              <div className="md:col-span-2 border-b border-gray-50 my-2"></div>
+              <div className="relative">
+                <label className={labelStyles}>IT Admin First Name</label>
+                <input
+                  type="text"
+                  value={itAdminFirstName}
+                  onChange={(e) => setItAdminFirstName(e.target.value)}
+                  placeholder="First Name"
+                  className={inputStyles}
+                  required
+                />
+              </div>
+              <div className="relative">
+                <label className={labelStyles}>IT Admin Last Name</label>
+                <input
+                  type="text"
+                  value={itAdminLastName}
+                  onChange={(e) => setItAdminLastName(e.target.value)}
+                  placeholder="Last Name"
+                  className={inputStyles}
+                  required
+                />
+              </div>
+              <div className="relative">
+                <label className={labelStyles}>IT Admin Email</label>
+                <input
+                  type="email"
+                  value={itAdminEmail}
+                  onChange={(e) => setItAdminEmail(e.target.value)}
+                  placeholder="itadmin@example.com"
+                  className={inputStyles}
+                  required
+                />
+              </div>
+              <div className="relative">
+                <label className={labelStyles}>IT Admin Phone</label>
+                <input
+                  type="tel"
+                  value={itAdminPhone}
+                  onChange={(e) =>
+                    setItAdminPhone(e.target.value.replace(/\D/g, ""))
+                  }
+                  placeholder="08000000000"
+                  className={inputStyles}
+                  required
+                />
+              </div>
+            </div>
+          </section>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 pt-4">
             <button
               type="submit"
-              className="px-8 py-3.5 bg-[#046C3F] text-white rounded-xl font-semibold flex items-center gap-2.5 shadow-md hover:bg-[#035a34] transition-colors"
+              disabled={createFacilityMutation.isPending}
+              className={`px-8 py-3.5 bg-[#046C3F] text-white rounded-xl font-semibold flex items-center gap-2.5 shadow-md hover:bg-[#035a34] transition-colors ${
+                createFacilityMutation.isPending
+                  ? "opacity-70 cursor-not-allowed"
+                  : ""
+              }`}
             >
-              <span className="w-5 h-5 border-2 border-dashed border-white rounded-full flex items-center justify-center text-xs font-bold">
-                +
-              </span>
-              Create Facility
+              {!createFacilityMutation.isPending && (
+                <span className="w-5 h-5 border-2 border-dashed border-white rounded-full flex items-center justify-center text-xs font-bold">
+                  +
+                </span>
+              )}
+              {createFacilityMutation.isPending
+                ? "Creating..."
+                : "Create Facility"}
             </button>
             <button
               type="button"
-              onClick={() => router.push("/state-dashboard/facility-management/view-facility")}
+              disabled={createFacilityMutation.isPending}
+              onClick={() =>
+                router.push(
+                  "/state-dashboard/facility-management/view-facility",
+                )
+              }
               className="px-8 py-3.5 bg-gray-100 text-gray-600 rounded-xl font-semibold hover:bg-gray-200 transition-colors"
             >
               Cancel

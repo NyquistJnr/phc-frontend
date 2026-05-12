@@ -1,5 +1,10 @@
-import ConsultationQueue from "@/src/components/doctorDashboard/consultations/ConsultationQueue";
+import { Suspense } from "react";
+import Consultation from "@/src/components/doctorDashboard/consultations/Consultation";
 
 export default function ConsultationsPage() {
-  return <ConsultationQueue />;
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <Consultation />
+    </Suspense>
+  );
 }

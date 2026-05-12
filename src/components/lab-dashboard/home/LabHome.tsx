@@ -1,13 +1,11 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import {
-  CheckCircle2,
-  ClipboardList,
-  MoreHorizontal,
-  PackageCheck,
-} from "lucide-react";
+import { useState } from "react";
+import { useSession } from "next-auth/react";
+import { useSearchParams } from "next/navigation";
+
+import { CheckCircle2, ClipboardList, MoreHorizontal, PackageCheck } from "lucide-react";
 import DashboardStatCard from "@/src/components/generic/dashboard/DashboardStatCard";
 import { ColumnDef, DataTable } from "@/src/components/generic/ui/DataTable";
 import { StatusBadge } from "@/src/components/generic/ui/TableHelpers";
@@ -19,8 +17,8 @@ import {
 } from "@/src/hooks/laboratory/use-laboratory";
 import { LabRequest } from "./types";
 import LabDateRangeFilter from "../generics/LabDateRangeFilter";
-import { useSession } from "next-auth/react";
-import { useState } from "react";
+
+
 
 const formatBadgeLabel = (str: string) => {
   if (!str) return "Unknown";
@@ -40,7 +38,7 @@ export default function LabHome() {
   );
   const [endDate, setEndDate] = useState(searchParams.get("end_date") || "");
 
-  const { data: statsData, isLoading: isLoadingStats } = useLabStats({
+  const { data: statsData } = useLabStats({
     start_date: startDate,
     end_date: endDate,
   });
@@ -183,7 +181,7 @@ export default function LabHome() {
 
         <div className="mb-6 grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
           {stats.map((stat) => (
-            <DashboardStatCard key={stat.title} {...stat} />
+            <DashboardStatCard key={stat.title} {...stat} showPeriod={false} />
           ))}
         </div>
 

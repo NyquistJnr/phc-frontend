@@ -1,5 +1,3 @@
-"use client";
-
 import { Suspense } from "react";
 import PatientList from "@/src/components/doctorDashboard/patients/PatientList";
 

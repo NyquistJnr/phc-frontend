@@ -1,153 +1,299 @@
 "use client";
 
-import { useState } from "react";
-import { ChevronDown, Search, Plus } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Eye, FileText, MoreHorizontal, Plus } from "lucide-react";
 import DoctorHeader from "@/src/components/doctorDashboard/generics/Header";
-import FilterDropdown from "@/src/components/adminDashboard/generics/FilterDropdown";
-import Pagination from "@/src/components/adminDashboard/generics/Pagination";
+import NurseDateRangeFilter from "@/src/components/nurse-dashboard/generics/NurseDateRangeFilter";
+import { ColumnDef, DataTable } from "@/src/components/generic/ui/DataTable";
+import { StatusBadge } from "@/src/components/generic/ui/TableHelpers";
+import { CustomDropdown } from "@/src/components/generic/ui/CustomDropdown";
+import { useConsultations } from "@/src/hooks/doctors/use-consultation";
+import type { ConsultationRecord, PaginatedResponse } from "./types";
 
-type ConsultationStatus = "In-consultation" | "Urgent" | "Waiting" | "Completed";
+const PAGE_SIZES = ["10", "50", "100"];
+const STATUS_OPTIONS = ["All Status", "IN_PROGRESS", "COMPLETED"];
 
-interface ConsultationRow {
-  patientId: string;
-  patientName: string;
-  chiefComplaint: string;
-  status: ConsultationStatus;
-}
-
-const CONSULTATION_BADGE_STYLE: Record<ConsultationStatus, React.CSSProperties> = {
-  "In-consultation": { background: "#EFF6FF", color: "#1D4ED8" },
-  "Urgent":          { background: "#FEF2F2", color: "#DC2626" },
-  "Waiting":         { background: "#FFFBEB", color: "#B45309" },
-  "Completed":       { background: "#E8F7F0", color: "#046C3F" },
+const statusColors: Record<string, { bg: string; text: string }> = {
+  IN_PROGRESS: { bg: "#E2E7FF", text: "#046C3F" },
+  COMPLETED: { bg: "#DFF3EA", text: "#039855" },
+  UNKNOWN: { bg: "#F3F4F6", text: "#374151" },
 };
 
-const ACTION_LABEL: Record<ConsultationStatus, string> = {
-  "In-consultation": "Continue",
-  "Urgent":          "Start",
-  "Waiting":         "Start",
-  "Completed":       "View",
+type ConsultationRow = ConsultationRecord & {
+  status?: string;
+  appointment_date?: string;
+  appointment_time?: string;
 };
 
-const QUEUE: ConsultationRow[] = [
-  { patientId: "PAT-PLT-000234", patientName: "Ngozi Eze",    chiefComplaint: "Fever, headache, Chest pain, Cough, runny nose", status: "In-consultation" },
-  { patientId: "PAT-PLT-000234", patientName: "Emeka Dike",   chiefComplaint: "Fever, headache, Chest pain, Cough, runny nose", status: "Urgent" },
-  { patientId: "PAT-PLT-000234", patientName: "Amina Bello",  chiefComplaint: "Fever, headache, Chest pain, Cough, runny nose", status: "Waiting" },
-  { patientId: "PAT-PLT-000234", patientName: "Chukwu Obi",   chiefComplaint: "Fever, headache, Chest pain, Cough, runny nose", status: "Completed" },
-  { patientId: "PAT-PLT-000234", patientName: "Kemi Adeyemi", chiefComplaint: "Fever, headache, Chest pain, Cough, runny nose", status: "In-consultation" },
-  { patientId: "PAT-PLT-000234", patientName: "Kemi Adeyemi", chiefComplaint: "Fever, headache, Chest pain, Cough, runny nose", status: "Urgent" },
-  { patientId: "PAT-PLT-000234", patientName: "Kemi Adeyemi", chiefComplaint: "Fever, headache, Chest pain, Cough, runny nose", status: "Urgent" },
-  { patientId: "PAT-PLT-000234", patientName: "Kemi Adeyemi", chiefComplaint: "Fever, headache, Chest pain, Cough, runny nose", status: "Completed" },
-  { patientId: "PAT-PLT-000234", patientName: "Kemi Adeyemi", chiefComplaint: "Fever, headache, Chest pain, Cough, runny nose", status: "Completed" },
-  { patientId: "PAT-PLT-000234", patientName: "Kemi Adeyemi", chiefComplaint: "Fever, headache, Chest pain, Cough, runny nose", status: "Completed" },
-];
-
-const STATUS_OPTIONS = ["All Status", "In-consultation", "Urgent", "Waiting", "Completed"];
-const TABLE_HEADERS = ["Patient ID", "Patient Name", "Chief Complaint", "Status", "Action"];
-
-function ConsultationBadge({ status }: { status: ConsultationStatus }) {
-  return (
-    <span className="px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap" style={CONSULTATION_BADGE_STYLE[status]}>
-      {status}
-    </span>
-  );
+function formatDate(value?: string) {
+  if (!value) return "-";
+  return new Date(value).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 }
 
-function ActionButton({ status }: { status: ConsultationStatus }) {
-  const label = ACTION_LABEL[status];
-  const isGreen = status === "Urgent" || status === "Waiting";
-  return (
-    <Link
-      href="/doctor-dashboard/consultations/new"
-      className="px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors"
-      style={
-        isGreen
-          ? { background: "#046C3F", color: "#fff" }
-          : { border: "1px solid #D1D5DB", color: "#374151", background: "#fff" }
+function ConsultationActionMenu({ row }: { row: ConsultationRow }) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [coords, setCoords] = useState({ top: 0, left: 0 });
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(event.target as Node) &&
+        buttonRef.current &&
+        !buttonRef.current.contains(event.target as Node)
+      ) {
+        setOpen(false);
       }
-    >
-      {label}
-    </Link>
+    }
+
+    if (open) document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [open]);
+
+  const toggleMenu = () => {
+    if (!open && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setCoords({
+        top: rect.bottom + window.scrollY + 4,
+        left: Math.max(12, rect.right + window.scrollX - 220),
+      });
+    }
+    setOpen((current) => !current);
+  };
+
+  return (
+    <>
+      <button
+        ref={buttonRef}
+        type="button"
+        onClick={toggleMenu}
+        className="inline-flex h-8 w-8 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-gray-100"
+      >
+        <MoreHorizontal size={18} />
+      </button>
+      {open &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            ref={menuRef}
+            style={{ top: coords.top, left: coords.left }}
+            className="absolute z-[999] w-56 rounded-xl border border-gray-100 bg-white py-2 shadow-[0_8px_30px_rgb(0,0,0,0.12)]"
+          >
+            <button
+              type="button"
+              onClick={() => {
+                router.push(`/doctor-dashboard/consultations/${row.id}`);
+                setOpen(false);
+              }}
+              className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              <Eye size={16} className="text-gray-500" />
+              View Detail
+            </button>
+            {row.appointment && (
+              <button
+                type="button"
+                onClick={() => {
+                  router.push(
+                    `/doctor-dashboard/consultations/new?appointment=${row.appointment}`,
+                  );
+                  setOpen(false);
+                }}
+                className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                <FileText size={16} className="text-gray-500" />
+                Add Note
+              </button>
+            )}
+          </div>,
+          document.body,
+        )}
+    </>
   );
 }
 
 export default function ConsultationQueue() {
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("All Status");
-  const [page, setPage] = useState(1);
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
-  const breadcrumbs = [{ label: "Consultations", active: true }];
+  const page = Number(searchParams.get("page")) || 1;
+  const pageSize = Number(searchParams.get("page_size")) || 10;
+  const statusFilter = searchParams.get("status") || "All Status";
+  const startDate = searchParams.get("start_date") || "";
+  const endDate = searchParams.get("end_date") || "";
+  const initialSearch = searchParams.get("search") || "";
+  const [localSearch, setLocalSearch] = useState(initialSearch);
+
+  useEffect(() => {
+    const currentSearch = searchParams.get("search") || "";
+    if (localSearch === currentSearch) return;
+
+    const handler = setTimeout(() => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (localSearch) params.set("search", localSearch);
+      else params.delete("search");
+      params.set("page", "1");
+      router.push(`${pathname}?${params.toString()}`, { scroll: false });
+    }, 500);
+
+    return () => clearTimeout(handler);
+  }, [localSearch, pathname, router, searchParams]);
+
+  const { data, isLoading } = useConsultations({
+    page,
+    page_size: pageSize,
+    search: searchParams.get("search") || undefined,
+    start_date: startDate,
+    end_date: endDate,
+  });
+
+  const consultationsData = data as PaginatedResponse<ConsultationRow> | undefined;
+
+  const updateUrlParams = useCallback(
+    (key: string, value: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (value && value !== "All Status") params.set(key, value);
+      else params.delete(key);
+      if (key !== "page") params.set("page", "1");
+      router.push(`${pathname}?${params.toString()}`, { scroll: false });
+    },
+    [pathname, router, searchParams],
+  );
+
+  const rows = useMemo(() => {
+    const results = consultationsData?.results || [];
+    if (statusFilter === "All Status") return results;
+    return results.filter((row) => row.status === statusFilter);
+  }, [consultationsData?.results, statusFilter]);
+
+  const columns = useMemo<ColumnDef<ConsultationRow>[]>(
+    () => [
+      { header: "Patient ID", accessorKey: "patient_display_id", sortable: true },
+      { header: "Patient Name", accessorKey: "patient_name", sortable: true },
+      {
+        header: "Chief Complaint",
+        render: (row) => row.chief_complaint || row.presenting_complaint || "-",
+        sortable: true,
+      },
+      {
+        header: "Diagnosis",
+        render: (row) => row.primary_diagnosis || "-",
+        sortable: true,
+      },
+      {
+        header: "Date",
+        render: (row) => formatDate(row.created_at),
+        sortable: true,
+      },
+      {
+        header: "Status",
+        render: (row) => {
+          const status = row.status || "UNKNOWN";
+          const color = statusColors[status] || statusColors.UNKNOWN;
+          return (
+            <StatusBadge
+              label={status.replaceAll("_", " ")}
+              bgColorHex={color.bg}
+              textColorHex={color.text}
+            />
+          );
+        },
+      },
+      {
+        header: "Action",
+        render: (row) => <ConsultationActionMenu row={row} />,
+      },
+    ],
+    [],
+  );
 
   return (
-    <div className="flex-1 flex flex-col bg-[#F9FAFB] min-w-0">
-      <DoctorHeader title="Consultations" breadcrumbs={breadcrumbs} />
-
-      <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 pt-6 pb-10">
-        <div className="flex items-start justify-between mb-6">
+    <div className="min-h-screen bg-[#F6F7FC]">
+      <DoctorHeader
+        title="Consultations"
+        breadcrumbs={[{ label: "Consultations", active: true }]}
+      />
+      <div className="px-4 py-6 sm:px-6 lg:py-8">
+        <div className="mb-7 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Today&apos;s Consultation Queue</h1>
-            <p className="text-sm text-gray-500 mt-1">Select a patient to begin consultation</p>
+            <h2 className="mb-1 text-2xl font-semibold text-black sm:text-3xl">
+              Consultation Queue
+            </h2>
+            <p className="text-base text-[#3F3F46]">
+              Review consultation records and continue patient notes.
+            </p>
           </div>
           <Link
-            href="/doctor-dashboard/consultations/new"
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white whitespace-nowrap"
-            style={{ background: "#046C3F" }}
+            href="/doctor-dashboard/appointments"
+            className="inline-flex h-11 items-center justify-center gap-3 rounded-xl bg-[#046C3F] px-7 text-base font-medium text-white transition-colors hover:bg-[#035a34]"
           >
-            <Plus size={16} /> New Consultation
+            <Plus size={20} />
+            Add Consultation Note
           </Link>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 sm:p-5 border-b border-gray-100">
-            <h2 className="text-sm font-bold text-gray-800">Today&apos;s Consultation Queue</h2>
-            <div className="flex items-center gap-2 flex-wrap">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
-                <input
-                  type="text"
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
-                  placeholder="Search patient by Clinician or F..."
-                  className="pl-8 pr-3 py-2 border border-gray-200 rounded-lg text-xs text-gray-600 w-56 focus:outline-none focus:ring-1 focus:ring-[#1AC073] bg-white"
-                />
-              </div>
-              <FilterDropdown
-                label="All Status"
+        <DataTable
+          title="Consultations"
+          data={rows}
+          columns={columns}
+          showSearch
+          searchPlaceholder="Search by patient name, ID, or complaint"
+          onSearch={setLocalSearch}
+          totalPages={consultationsData?.total_pages}
+          emptyMessage={
+            isLoading ? "Loading consultations..." : "No consultations found."
+          }
+          toolbarActions={
+            <>
+              <NurseDateRangeFilter
+                startDate={startDate}
+                endDate={endDate}
+                onApply={(start, end) => {
+                  const params = new URLSearchParams(searchParams.toString());
+                  if (start) params.set("start_date", start);
+                  else params.delete("start_date");
+                  if (end) params.set("end_date", end);
+                  else params.delete("end_date");
+                  params.set("page", "1");
+                  router.push(`${pathname}?${params.toString()}`, {
+                    scroll: false,
+                  });
+                }}
+                onClear={() => {
+                  const params = new URLSearchParams(searchParams.toString());
+                  params.delete("start_date");
+                  params.delete("end_date");
+                  params.set("page", "1");
+                  router.push(`${pathname}?${params.toString()}`, {
+                    scroll: false,
+                  });
+                }}
+              />
+              <CustomDropdown
                 options={STATUS_OPTIONS}
                 selected={statusFilter}
-                onChange={setStatusFilter}
+                onSelect={(value) => updateUrlParams("status", value)}
               />
-            </div>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[680px]">
-              <thead>
-                <tr className="border-b border-gray-100">
-                  {TABLE_HEADERS.map(h => (
-                    <th key={h} className="px-5 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">
-                      <span className="flex items-center gap-1">{h} <ChevronDown size={12} /></span>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {QUEUE.map((row, i) => (
-                  <tr key={i} className="hover:bg-gray-50/60 transition-colors">
-                    <td className="px-5 py-4 text-sm text-gray-600 font-medium">{row.patientId}</td>
-                    <td className="px-5 py-4 text-sm text-gray-800 font-semibold">{row.patientName}</td>
-                    <td className="px-5 py-4 text-sm text-gray-500 max-w-[260px] truncate">{row.chiefComplaint}</td>
-                    <td className="px-5 py-4"><ConsultationBadge status={row.status} /></td>
-                    <td className="px-5 py-4"><ActionButton status={row.status} /></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <Pagination currentPage={page} totalPages={68} onPageChange={setPage} />
-        </div>
+              <CustomDropdown
+                options={PAGE_SIZES}
+                selected={pageSize.toString()}
+                onSelect={(value) => updateUrlParams("page_size", value)}
+                placeholder="Rows per page"
+              />
+            </>
+          }
+        />
       </div>
     </div>
   );
