@@ -1,9 +1,12 @@
+"use client";
+
+import { Suspense } from "react";
 import FacilityDetail from "@/src/components/stateDashboard/facility-management/FacilityDetail";
 
-export default function FacilityDetailPage({
-  params,
-}: {
-  params: { id: string };
-}) {
-  return <FacilityDetail facilityId={params.id} />;
+export default function FacilityDetailPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <FacilityDetail />
+    </Suspense>
+  );
 }
