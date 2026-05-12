@@ -66,6 +66,23 @@ export interface UpdateFacilityPayload {
   it_admin_phone?: string;
 }
 
+export interface CreateFacilityPayload {
+  name: string;
+  facility_type: string;
+  lga: string;
+  ward?: string;
+  address: string;
+  level: string;
+  manager_first_name: string;
+  manager_last_name: string;
+  manager_email: string;
+  manager_phone: string;
+  it_admin_first_name: string;
+  it_admin_last_name: string;
+  it_admin_email: string;
+  it_admin_phone: string;
+}
+
 export interface SingleFacilityResponse {
   status: string;
   message: string;
@@ -154,6 +171,20 @@ export function useFacility(id: string | null) {
     },
     enabled: api.isAuthenticated && !api.isLoading && !!id,
     staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useCreateFacility() {
+  const api = useApi();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: CreateFacilityPayload) => {
+      return await api.post(`/facilities/`, payload);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["facilities"] });
+      queryClient.invalidateQueries({ queryKey: ["facilityStats"] });
+    },
   });
 }
 
