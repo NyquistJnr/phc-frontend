@@ -19,6 +19,47 @@ export {
   useUpdateProfile as useUpdateDoctorProfile,
 } from "../useProfile";
 
+export type LabTestItem = {
+  id: string;
+  test_name: string;
+  linked_item?: string;
+  linked_item_name?: string;
+  sample_type?: string;
+  test_status: string;
+  result_value?: string | null;
+  result_unit?: string | null;
+  test_method?: string | null;
+  result_interpretation?: string | null;
+  result_notes?: string | null;
+  result_date?: string | null;
+};
+
+export type LabRequestRecord = {
+  id: string;
+  request_id: string;
+  patient: string;
+  patient_name: string;
+  patient_display_id: string;
+  appointment: string;
+  recorded_by: string;
+  requested_by: string;
+  requested_by_name: string;
+  priority: "NORMAL" | "URGENT" | "STAT";
+  clinical_notes?: string;
+  status: "PENDING" | "PARTIAL" | "COMPLETED" | "CANCELLED";
+  created_at: string;
+  tests: LabTestItem[];
+};
+
+export type PaginatedResponse<T> = {
+  count: number;
+  total_pages: number;
+  current_page: number;
+  next: string | null;
+  previous: string | null;
+  results: T[];
+};
+
 function unwrapApiResponse<T = unknown>(response: ApiEnvelope<T> | T): T {
   const envelope = response as ApiEnvelope<T>;
   const data = envelope?.data;
@@ -42,12 +83,13 @@ export function useDoctorAlerts() {
 }
 
 export function useDoctorLabRequests(filters: {
-  start_date?: string;
-  end_date?: string;
   page?: number;
   page_size?: number;
   search?: string;
-  status?: "PENDING" | "PARTIAL" | "COMPLETED" | "CANCELLED" | string;
+  start_date?: string;
+  end_date?: string;
+  status?: string;
+  priority?: string;
 }) {
   const api = useApi();
 
@@ -56,17 +98,23 @@ export function useDoctorLabRequests(filters: {
     queryFn: async () => {
       const params = new URLSearchParams();
 
-      if (filters.start_date) params.append("start_date", filters.start_date);
-      if (filters.end_date) params.append("end_date", filters.end_date);
       if (filters.page) params.append("page", String(filters.page));
       if (filters.page_size)
         params.append("page_size", String(filters.page_size));
       if (filters.search) params.append("search", filters.search);
-      if (filters.status) params.append("status", filters.status);
+      if (filters.start_date) params.append("start_date", filters.start_date);
+      if (filters.end_date) params.append("end_date", filters.end_date);
+
+      if (filters.status && filters.status !== "All Status") {
+        params.append("status", filters.status);
+      }
+
+      if (filters.priority) params.append("priority", filters.priority);
+
       const queryString = params.toString() ? `?${params.toString()}` : "";
 
       const res = await api.get<ApiEnvelope>(
-        `/doctor/lab-requests/${queryString}`,
+        `/laboratory/requests/${queryString}`,
       );
       return unwrapApiResponse(res);
     },
@@ -158,5 +206,18 @@ export function useRequestDoctorLabRepeat() {
       queryClient.invalidateQueries({ queryKey: ["doctorLabRequests"] });
       queryClient.invalidateQueries({ queryKey: ["doctorPendingLabs"] });
     },
+  });
+}
+
+export function useLabRequestById(id: string) {
+  const api = useApi();
+
+  return useQuery({
+    queryKey: ["labRequest", id],
+    queryFn: async () => {
+      const res = await api.get<ApiEnvelope>(`/laboratory/requests/${id}/`);
+      return unwrapApiResponse(res);
+    },
+    enabled: api.isAuthenticated && !api.isLoading && !!id,
   });
 }

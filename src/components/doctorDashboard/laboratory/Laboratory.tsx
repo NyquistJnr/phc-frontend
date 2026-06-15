@@ -1,120 +1,131 @@
 "use client";
 
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useMemo, useState, useRef, useEffect } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import {
-  ChevronDown,
-  Search,
-  Eye,
-  Upload,
-  MoreHorizontal,
-  Calendar as CalendarIcon,
-  ClipboardList,
-  RefreshCcw,
-} from "lucide-react";
+import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Eye, MoreHorizontal, Plus, RefreshCcw, Upload } from "lucide-react";
+
 import DoctorHeader from "@/src/components/doctorDashboard/generics/Header";
-import { PeriodFilterButton } from "@/src/components/doctorDashboard/generics/PeriodFilterButton";
-import FilterDropdown from "@/src/components/adminDashboard/generics/FilterDropdown";
+import NurseDateRangeFilter from "@/src/components/nurse-dashboard/generics/NurseDateRangeFilter";
+import { ColumnDef, DataTable } from "@/src/components/generic/ui/DataTable";
+import { CustomDropdown } from "@/src/components/generic/ui/CustomDropdown";
+import { StatusBadge } from "@/src/components/generic/ui/TableHelpers";
+
 import {
-  useCreateDoctorLabRequest,
   useDoctorLabRequests,
   useRequestDoctorLabRepeat,
 } from "@/src/hooks/doctors/use-doctors";
-import { ColumnDef, DataTable } from "@/src/components/generic/ui/DataTable";
 import type {
-  DoctorLabApiPayload,
-  DoctorLabRow,
-  DoctorLabStatus,
-} from "@/src/components/doctorDashboard/type";
+  PaginatedResponse,
+  LabRequestRecord,
+} from "@/src/hooks/doctors/use-doctors";
 
-const STATUS_BADGE: Record<DoctorLabStatus, React.CSSProperties> = {
-  Ready: { background: "#E8F7F0", color: "#046C3F" },
-  Processing: { background: "#FFFBEB", color: "#B45309" },
+const STATUS_OPTIONS = [
+  "All Status",
+  "PENDING",
+  "PARTIAL",
+  "COMPLETED",
+  "CANCELLED",
+];
+const PAGE_SIZES = ["10", "50", "100"];
+
+const statusColors: Record<string, { bg: string; text: string }> = {
+  PENDING: { bg: "#FFF4E5", text: "#1F2937" },
+  PARTIAL: { bg: "#E2E7FF", text: "#046C3F" },
+  COMPLETED: { bg: "#DFF3EA", text: "#039855" },
+  CANCELLED: { bg: "#FDE8E8", text: "#F33131" },
 };
 
-// ── Action menu (... dots) ────────────────────────────────────────────────────
-
-function ActionMenu({ row }: { row: DoctorLabRow }) {
+function LabActionMenu({ row }: { row: LabRequestRecord }) {
+  const router = useRouter();
+  const repeatRequest = useRequestDoctorLabRepeat();
   const [open, setOpen] = useState(false);
   const [coords, setCoords] = useState({ top: 0, left: 0 });
-  const [mounted] = useState(() => typeof document !== "undefined");
-  const btnRef = useRef<HTMLButtonElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
-  const repeatRequest = useRequestDoctorLabRepeat();
 
   useEffect(() => {
-    function handler(e: MouseEvent) {
+    function handleClickOutside(event: MouseEvent) {
       if (
         menuRef.current &&
-        !menuRef.current.contains(e.target as Node) &&
-        btnRef.current &&
-        !btnRef.current.contains(e.target as Node)
-      )
+        !menuRef.current.contains(event.target as Node) &&
+        buttonRef.current &&
+        !buttonRef.current.contains(event.target as Node)
+      ) {
         setOpen(false);
+      }
     }
-    if (open) document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    if (open) document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [open]);
 
-  const toggle = () => {
-    if (!open && btnRef.current) {
-      const rect = btnRef.current.getBoundingClientRect();
-      setCoords({ top: rect.bottom + 4, left: rect.right - 160 });
+  const toggleMenu = () => {
+    if (!open && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setCoords({
+        top: rect.bottom + window.scrollY + 4,
+        left: Math.max(12, rect.right + window.scrollX - 190),
+      });
     }
-    setOpen((o) => !o);
+    setOpen((current) => !current);
+  };
+
+  const handleRepeat = () => {
+    const testNames = row.tests
+      ?.map((t) => t.test_name)
+      .filter(Boolean)
+      .join(", ");
+    repeatRequest.mutate(
+      {
+        labRequestId: row.id,
+        notes: `Repeat ${testNames || "tests"} for ${row.patient_name}`,
+      },
+      { onSettled: () => setOpen(false) },
+    );
   };
 
   return (
     <>
       <button
-        ref={btnRef}
-        onClick={toggle}
-        className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors text-gray-400"
+        ref={buttonRef}
+        type="button"
+        onClick={toggleMenu}
+        className="inline-flex h-8 w-8 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-gray-100"
       >
-        <MoreHorizontal size={16} />
+        <MoreHorizontal size={18} />
       </button>
-
-      {mounted &&
-        open &&
+      {open &&
+        typeof document !== "undefined" &&
         createPortal(
           <div
             ref={menuRef}
-            style={{
-              position: "fixed",
-              top: coords.top,
-              left: coords.left,
-              width: 160,
-              zIndex: 9999,
-            }}
-            className="bg-white border border-gray-100 rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] py-1"
+            style={{ top: coords.top, left: coords.left }}
+            className="absolute z-[999] w-48 rounded-xl border border-gray-100 bg-white py-2 shadow-[0_8px_30px_rgb(0,0,0,0.12)]"
           >
             <button
-              onClick={() => setOpen(false)}
-              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-            >
-              <Eye size={15} className="text-gray-400" /> View result
-            </button>
-            <button
               onClick={() => {
-                repeatRequest.mutate(
-                  {
-                    labRequestId: row.requestId,
-                    notes: `Repeat ${row.labTest} for ${row.patientName}`,
-                  },
-                  { onSettled: () => setOpen(false) },
-                );
+                router.push(`/doctor-dashboard/laboratory/${row.id}`);
+                setOpen(false);
               }}
-              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+              className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
-              <RefreshCcw size={15} className="text-gray-400" /> Request repeat
+              <Eye size={16} className="text-gray-500" />
+              View Detail
+            </button>
+            <button
+              onClick={handleRepeat}
+              className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              <RefreshCcw size={16} className="text-gray-500" />
+              Request repeat
             </button>
             <button
               onClick={() => setOpen(false)}
-              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+              className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
-              <Upload size={15} className="text-gray-400" /> Export result
+              <Upload size={16} className="text-gray-500" />
+              Export result
             </button>
           </div>,
           document.body,
@@ -123,641 +134,189 @@ function ActionMenu({ row }: { row: DoctorLabRow }) {
   );
 }
 
-// ── Lab Results tab ───────────────────────────────────────────────────────────
+function formatDate(value?: string) {
+  if (!value) return "-";
+  return new Date(value).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
 
-function LabResults() {
-  const [search, setSearch] = useState("");
-  const [status, setStatus] = useState("All Status");
-  const { data: labRequestsData, isLoading } = useDoctorLabRequests({
-    page: 1,
-    page_size: 10,
-    search,
-    status,
+function getTestNames(row: LabRequestRecord) {
+  const names = row.tests?.map((test) => test.test_name).filter(Boolean);
+  return names?.length ? names.join(", ") : "-";
+}
+
+function getTestResults(row: LabRequestRecord) {
+  const results = row.tests?.map((test) => test.result_value).filter(Boolean);
+  return results?.length ? results.join(", ") : "---";
+}
+
+export default function Laboratory() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const page = Number(searchParams.get("page")) || 1;
+  const pageSize = Number(searchParams.get("page_size")) || 10;
+  const statusFilter = searchParams.get("status") || "All Status";
+  const startDate = searchParams.get("start_date") || "";
+  const endDate = searchParams.get("end_date") || "";
+  const initialSearch = searchParams.get("search") || "";
+  const [localSearch, setLocalSearch] = useState(initialSearch);
+
+  useEffect(() => {
+    const currentSearch = searchParams.get("search") || "";
+    if (localSearch === currentSearch) return;
+
+    const handler = setTimeout(() => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (localSearch) params.set("search", localSearch);
+      else params.delete("search");
+      params.set("page", "1");
+      router.push(`${pathname}?${params.toString()}`, { scroll: false });
+    }, 500);
+
+    return () => clearTimeout(handler);
+  }, [localSearch, pathname, router, searchParams]);
+
+  const { data, isLoading } = useDoctorLabRequests({
+    page,
+    page_size: pageSize,
+    status: statusFilter,
+    search: searchParams.get("search") || undefined,
+    start_date: startDate,
+    end_date: endDate,
   });
 
-  const rows = useMemo<DoctorLabRow[]>(() => {
-    const payload = labRequestsData as DoctorLabApiPayload | undefined;
-    const apiRows = payload?.results || payload?.data?.results;
-    if (!apiRows?.length) return [];
-    return apiRows.map((row) => ({
-      requestId: row.lab_request_id || row.request_id || row.id || "-",
-      patientId: row.patient_id || row.patient?.patient_id || "-",
-      patientName: row.patient_name || row.patient?.full_name || "-",
-      labTest: row.lab_test || row.test_type || row.test_name || "Lab Test",
-      result: row.result || row.result_value || "---",
-      date: row.date || row.request_date || row.created_at || "-",
-      status: (row.status || "Processing") as DoctorLabStatus,
-    }));
-  }, [labRequestsData]);
-  const totalPages =
-    (labRequestsData as DoctorLabApiPayload | undefined)?.total_pages || 1;
+  const labData = data as PaginatedResponse<LabRequestRecord> | undefined;
 
-  const columns = useMemo<ColumnDef<DoctorLabRow>[]>(
+  const updateUrlParams = useCallback(
+    (key: string, value: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (value && value !== "All Status") params.set(key, value);
+      else params.delete(key);
+      if (key !== "page") params.set("page", "1");
+      router.push(`${pathname}?${params.toString()}`, { scroll: false });
+    },
+    [pathname, router, searchParams],
+  );
+
+  const columns = useMemo<ColumnDef<LabRequestRecord>[]>(
     () => [
-      { header: "Lab request ID", accessorKey: "requestId", sortable: true },
-      { header: "Patient ID", accessorKey: "patientId", sortable: true },
-      { header: "Patient Name", accessorKey: "patientName", sortable: true },
-      { header: "Lab Tests", accessorKey: "labTest", sortable: true },
-      { header: "Result", accessorKey: "result", sortable: true },
-      { header: "Date", accessorKey: "date", sortable: true },
+      { header: "Lab Request ID", accessorKey: "request_id", sortable: true },
+      {
+        header: "Patient ID",
+        accessorKey: "patient_display_id",
+        sortable: true,
+      },
+      { header: "Patient Name", accessorKey: "patient_name", sortable: true },
+      { header: "Lab Tests", render: getTestNames, sortable: true },
+      { header: "Result", render: getTestResults, sortable: true },
+      {
+        header: "Date",
+        render: (row) => formatDate(row.created_at),
+        sortable: true,
+      },
       {
         header: "Status",
-        accessorKey: "status",
-        sortable: true,
-        render: (row) => (
-          <span
-            className="px-2.5 py-1 rounded-lg text-xs font-semibold"
-            style={STATUS_BADGE[row.status]}
-          >
-            {row.status}
-          </span>
-        ),
+        render: (row) => {
+          const status = row.status || "PENDING";
+          const color = statusColors[status] || {
+            bg: "#F3F4F6",
+            text: "#374151",
+          };
+          return (
+            <StatusBadge
+              label={status.charAt(0) + status.slice(1).toLowerCase()}
+              bgColorHex={color.bg}
+              textColorHex={color.text}
+            />
+          );
+        },
       },
-      {
-        header: "Action",
-        render: (row) => <ActionMenu row={row} />,
-      },
+      { header: "Action", render: (row) => <LabActionMenu row={row} /> },
     ],
     [],
   );
 
   return (
-    <DataTable
-      title="Lab Results"
-      data={rows}
-      columns={columns}
-      showSearch
-      searchPlaceholder="Search by patient name or ID"
-      onSearch={setSearch}
-      totalPages={totalPages}
-      emptyMessage={
-        isLoading ? "Loading lab requests..." : "No lab requests found."
-      }
-      toolbarActions={
-        <>
-          <PeriodFilterButton label="Date Range" />
-          <FilterDropdown
-            label="All Status"
-            options={["All Status", "Ready", "Processing"]}
-            selected={status}
-            onChange={setStatus}
-          />
-        </>
-      }
-    />
-  );
-}
-
-// ── Lab Request form dropdowns ────────────────────────────────────────────────
-
-const REQUESTED_BY_OPTIONS = [
-  "Dr. Suleiman",
-  "Dr. Adamu",
-  "Dr. Ada",
-  "Dr. Musa",
-  "Dr. Fatima",
-  "Dr. Chukwu",
-];
-const TEST_TYPE_OPTIONS = [
-  "Malaria RDT",
-  "Malaria smear",
-  "Full blood count",
-  "Widal test",
-  "HIV rapid test",
-  "Urinalysis",
-  "Blood glucose (RBS)",
-  "Liver function tests",
-  "Renal function tests",
-  "Pregnancy test (UPT)",
-];
-const SAMPLE_TYPE_OPTIONS = ["Blood", "Urine", "Stool", "Swab"];
-const PRIORITY_OPTIONS = ["Routine", "Urgent"];
-
-function SearchableSelect({
-  label,
-  placeholder,
-  options,
-}: {
-  label: string;
-  placeholder: string;
-  options: string[];
-}) {
-  const [open, setOpen] = useState(false);
-  const [selected, setSelected] = useState("");
-  const [search, setSearch] = useState("");
-  const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 });
-  const [mounted] = useState(() => typeof document !== "undefined");
-  const triggerRef = useRef<HTMLDivElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (open) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [open]);
-
-  const openDropdown = () => {
-    if (!open && triggerRef.current) {
-      const rect = triggerRef.current.getBoundingClientRect();
-      const dropH = Math.min(options.length * 44 + 60, 300);
-      const top =
-        rect.bottom + dropH > window.innerHeight
-          ? rect.top - dropH - 4
-          : rect.bottom + 4;
-      setCoords({ top, left: rect.left, width: rect.width });
-    }
-    setOpen((o) => !o);
-  };
-
-  useEffect(() => {
-    function handler(e: MouseEvent) {
-      if (
-        menuRef.current &&
-        !menuRef.current.contains(e.target as Node) &&
-        triggerRef.current &&
-        !triggerRef.current.contains(e.target as Node)
-      )
-        setOpen(false);
-    }
-    if (open) document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [open]);
-
-  const filtered = options.filter((o) =>
-    o.toLowerCase().includes(search.toLowerCase()),
-  );
-
-  return (
-    <>
-      <div
-        ref={triggerRef}
-        onClick={openDropdown}
-        className="border border-gray-200 rounded-xl px-4 pt-3 pb-3 bg-white flex items-center justify-between cursor-pointer"
-      >
-        <div className="flex-1 min-w-0">
-          <p className="text-xs text-gray-400 mb-1">{label}</p>
-          <p
-            className={`text-sm truncate ${selected ? "text-gray-700" : "text-gray-400"}`}
-          >
-            {selected || placeholder}
-          </p>
-        </div>
-        <ChevronDown
-          size={16}
-          className={`text-gray-400 shrink-0 ml-2 transition-transform ${open ? "rotate-180" : ""}`}
-        />
-      </div>
-      {mounted &&
-        open &&
-        createPortal(
-          <div
-            ref={menuRef}
-            style={{
-              position: "fixed",
-              top: coords.top,
-              left: coords.left,
-              width: coords.width,
-              zIndex: 9999,
-            }}
-            className="bg-white border border-gray-200 rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)]"
-          >
-            <div className="p-3 border-b border-gray-100">
-              <div className="relative">
-                <Search
-                  size={13}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                />
-                <input
-                  autoFocus
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search"
-                  className="w-full pl-8 pr-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 outline-none focus:ring-1 focus:ring-[#1AC073]"
-                />
-              </div>
-            </div>
-            <div
-              style={{ maxHeight: "220px", overflowY: "auto" }}
-              className="py-1"
-            >
-              {filtered.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-4">
-                  No results
-                </p>
-              ) : (
-                filtered.map((opt) => (
-                  <button
-                    key={opt}
-                    onClick={() => {
-                      setSelected(opt);
-                      setOpen(false);
-                      setSearch("");
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-sm text-left transition-colors"
-                  >
-                    <div
-                      className="w-4 h-4 rounded border shrink-0 flex items-center justify-center transition-colors"
-                      style={
-                        selected === opt
-                          ? { background: "#046C3F", borderColor: "#046C3F" }
-                          : { borderColor: "#D1D5DB" }
-                      }
-                    >
-                      {selected === opt && (
-                        <svg width="10" height="10" viewBox="0 0 10 10">
-                          <polyline
-                            points="1.5,5 4,7.5 8.5,2.5"
-                            stroke="#fff"
-                            strokeWidth="1.5"
-                            fill="none"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </svg>
-                      )}
-                    </div>
-                    <span
-                      className={
-                        selected === opt
-                          ? "text-[#046C3F] font-medium"
-                          : "text-gray-700"
-                      }
-                    >
-                      {opt}
-                    </span>
-                  </button>
-                ))
-              )}
-            </div>
-          </div>,
-          document.body,
-        )}
-    </>
-  );
-}
-
-function SimpleSelect({
-  label,
-  placeholder,
-  options,
-}: {
-  label: string;
-  placeholder: string;
-  options: string[];
-}) {
-  const [open, setOpen] = useState(false);
-  const [selected, setSelected] = useState("");
-  const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 });
-  const [mounted] = useState(() => typeof document !== "undefined");
-  const triggerRef = useRef<HTMLDivElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (open) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [open]);
-
-  const openDropdown = () => {
-    if (!open && triggerRef.current) {
-      const rect = triggerRef.current.getBoundingClientRect();
-      const dropH = options.length * 44 + 16;
-      const top =
-        rect.bottom + dropH > window.innerHeight
-          ? rect.top - dropH - 4
-          : rect.bottom + 4;
-      setCoords({ top, left: rect.left, width: rect.width });
-    }
-    setOpen((o) => !o);
-  };
-
-  useEffect(() => {
-    function handler(e: MouseEvent) {
-      if (
-        menuRef.current &&
-        !menuRef.current.contains(e.target as Node) &&
-        triggerRef.current &&
-        !triggerRef.current.contains(e.target as Node)
-      )
-        setOpen(false);
-    }
-    if (open) document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [open]);
-
-  return (
-    <>
-      <div
-        ref={triggerRef}
-        onClick={openDropdown}
-        className="border border-gray-200 rounded-xl px-4 pt-3 pb-3 bg-white flex items-center justify-between cursor-pointer"
-      >
-        <div className="flex-1 min-w-0">
-          <p className="text-xs text-gray-400 mb-1">{label}</p>
-          <p
-            className={`text-sm truncate ${selected ? "text-gray-700" : "text-gray-400"}`}
-          >
-            {selected || placeholder}
-          </p>
-        </div>
-        <ChevronDown
-          size={16}
-          className={`text-gray-400 shrink-0 ml-2 transition-transform ${open ? "rotate-180" : ""}`}
-        />
-      </div>
-      {mounted &&
-        open &&
-        createPortal(
-          <div
-            ref={menuRef}
-            style={{
-              position: "fixed",
-              top: coords.top,
-              left: coords.left,
-              width: coords.width,
-              zIndex: 9999,
-            }}
-            className="bg-white border border-gray-200 rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] py-1"
-          >
-            {options.map((opt) => (
-              <button
-                key={opt}
-                onClick={() => {
-                  setSelected(opt);
-                  setOpen(false);
-                }}
-                className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-sm text-left transition-colors"
-              >
-                <div
-                  className="w-4 h-4 rounded border shrink-0 flex items-center justify-center transition-colors"
-                  style={
-                    selected === opt
-                      ? { background: "#046C3F", borderColor: "#046C3F" }
-                      : { borderColor: "#D1D5DB" }
-                  }
-                >
-                  {selected === opt && (
-                    <svg width="10" height="10" viewBox="0 0 10 10">
-                      <polyline
-                        points="1.5,5 4,7.5 8.5,2.5"
-                        stroke="#fff"
-                        strokeWidth="1.5"
-                        fill="none"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  )}
-                </div>
-                <span
-                  className={
-                    selected === opt
-                      ? "text-[#046C3F] font-medium"
-                      : "text-gray-700"
-                  }
-                >
-                  {opt}
-                </span>
-              </button>
-            ))}
-          </div>,
-          document.body,
-        )}
-    </>
-  );
-}
-
-// ── Lab Request form ──────────────────────────────────────────────────────────
-
-function FormField({
-  label,
-  value,
-  placeholder,
-  icon,
-}: {
-  label: string;
-  value?: string;
-  placeholder?: string;
-  icon?: React.ReactNode;
-}) {
-  return (
-    <div className="border border-gray-200 rounded-xl px-4 pt-3 pb-3 bg-white flex items-center gap-3">
-      {icon && <span className="text-gray-400 shrink-0">{icon}</span>}
-      <div className="flex-1 min-w-0">
-        <p className="text-xs text-gray-400 mb-1">{label}</p>
-        <input
-          className="w-full text-sm text-gray-700 outline-none bg-transparent placeholder:text-gray-400"
-          placeholder={placeholder}
-          defaultValue={value}
-        />
-      </div>
-    </div>
-  );
-}
-
-export function LabRequestForm() {
-  const router = useRouter();
-  const [submitted, setSubmitted] = useState(false);
-  const createLabRequest = useCreateDoctorLabRequest();
-
-  return (
-    <>
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 sm:p-6">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-9 h-9 rounded-full bg-[#E8F7F0] flex items-center justify-center shrink-0">
-            <ClipboardList size={18} className="text-[#046C3F]" />
-          </div>
-          <h3 className="text-base font-bold text-gray-800">Lab Request</h3>
-        </div>
-
-        <div className="space-y-4">
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(3, 1fr)",
-              gap: "1rem",
-            }}
-          >
-            <FormField
-              label="Search patient"
-              placeholder="Search patient by name or ID"
-              icon={<Search size={15} />}
-            />
-            <FormField label="Encounter ID" value="ENC-PLT-000234" />
-            <FormField label="Lab Request ID" value="LAB-PLT-000234" />
-          </div>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(3, 1fr)",
-              gap: "1rem",
-            }}
-          >
-            <SearchableSelect
-              label="Requested By"
-              placeholder="Doctor/User ID"
-              options={REQUESTED_BY_OPTIONS}
-            />
-            <SearchableSelect
-              label="Sample Type (Optional)"
-              placeholder="Select"
-              options={SAMPLE_TYPE_OPTIONS}
-            />
-            <SearchableSelect
-              label="Test type"
-              placeholder="Select test"
-              options={TEST_TYPE_OPTIONS}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <SimpleSelect
-              label="Priority"
-              placeholder="Select priority"
-              options={PRIORITY_OPTIONS}
-            />
-            <div className="border border-gray-200 rounded-xl px-4 pt-3 pb-3 bg-white flex items-center justify-between">
-              <div>
-                <p className="text-xs text-gray-400 mb-1">Request Date</p>
-                <p className="text-sm text-gray-700">12/12/2020</p>
-              </div>
-              <CalendarIcon size={16} className="text-gray-400 shrink-0" />
-            </div>
-          </div>
-
-          <div className="border border-gray-200 rounded-xl px-4 pt-3 pb-4 bg-white">
-            <p className="text-xs text-gray-400 mb-2">Clinical notes for lab</p>
-            <textarea
-              rows={5}
-              className="w-full text-sm text-gray-500 outline-none bg-transparent resize-none placeholder:text-gray-400"
-              placeholder="Reason for test, suspected diagnosis..."
-            />
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3 mt-10">
-          <button
-            onClick={() => router.push("/doctor-dashboard/laboratory")}
-            className="px-6 py-2.5 rounded-xl text-sm font-semibold text-gray-600 bg-gray-200 hover:bg-gray-300 transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={() => {
-              createLabRequest.mutate(
-                {
-                  patient: "PAT-PLT-000234",
-                  requested_by: "Doctor",
-                  sample_type: "Blood",
-                  test_type: "Malaria RDT",
-                  priority: "Routine",
-                  clinical_notes: "Static doctor lab request entry",
-                },
-                {
-                  onSuccess: () => {
-                    setSubmitted(true);
-                    router.push("/doctor-dashboard/laboratory");
-                  },
-                  onError: () => setSubmitted(true),
-                },
-              );
-            }}
-            className="px-6 py-2.5 rounded-xl text-sm font-semibold text-white"
-            style={{ background: "#046C3F" }}
-          >
-            {createLabRequest.isPending ? "Sending..." : "Send to lab"}
-          </button>
-        </div>
-      </div>
-
-      {submitted && (
-        <div
-          style={{ position: "fixed", bottom: 24, right: 24, zIndex: 9999 }}
-          className="flex items-center gap-3 bg-white border-l-4 border-[#046C3F] rounded-lg shadow-[0_8px_30px_rgb(0,0,0,0.14)] px-4 py-3 min-w-70"
-        >
-          <div className="w-5 h-5 rounded-full bg-[#046C3F] flex items-center justify-center shrink-0">
-            <svg width="10" height="10" viewBox="0 0 10 10">
-              <polyline
-                points="1.5,5 4,7.5 8.5,2.5"
-                stroke="#fff"
-                strokeWidth="1.8"
-                fill="none"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </div>
-          <p className="text-sm font-semibold text-gray-800 flex-1">
-            Lab test request submitted
-          </p>
-          <button
-            onClick={() => setSubmitted(false)}
-            className="text-gray-400 hover:text-gray-600 shrink-0"
-          >
-            <svg width="14" height="14" viewBox="0 0 14 14">
-              <line
-                x1="1"
-                y1="1"
-                x2="13"
-                y2="13"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-              />
-              <line
-                x1="13"
-                y1="1"
-                x2="1"
-                y2="13"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-              />
-            </svg>
-          </button>
-        </div>
-      )}
-    </>
-  );
-}
-
-export default function Laboratory() {
-  const breadcrumbs = [{ label: "Laboratory", active: true }];
-
-  return (
-    <div className="flex-1 flex flex-col bg-[#F9FAFB] min-w-0">
-      <DoctorHeader title="Laboratory" breadcrumbs={breadcrumbs} />
-
-      <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 pt-6 pb-10">
-        <div className="flex items-start justify-between gap-4 mb-6">
+    <div className="min-h-screen bg-[#F6F7FC]">
+      <DoctorHeader
+        title="Laboratory"
+        breadcrumbs={[{ label: "Laboratory", active: true }]}
+      />
+      <div className="px-4 py-6 sm:px-6 lg:py-8">
+        <div className="mb-7 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Laboratory</h1>
-            <p className="text-sm text-gray-500 mt-1">
+            <h2 className="mb-1 text-2xl font-semibold text-black sm:text-3xl">
+              Laboratory
+            </h2>
+            <p className="text-base text-[#3F3F46]">
               Review results and request repeat diagnostics
             </p>
           </div>
-
           <Link
             href="/doctor-dashboard/laboratory/new"
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white shrink-0"
-            style={{ background: "#046C3F" }}
+            className="inline-flex h-11 items-center justify-center gap-3 rounded-xl bg-[#046C3F] px-7 text-base font-medium text-white transition-colors hover:bg-[#035a34]"
           >
-            <span className="text-lg leading-none">+</span> Lab Request
+            <Plus size={20} />
+            Lab Request
           </Link>
         </div>
 
-        <LabResults />
+        <DataTable
+          title="Lab Results"
+          data={labData?.results || []}
+          columns={columns}
+          showSearch
+          searchPlaceholder="Search by patient name or ID"
+          onSearch={setLocalSearch}
+          totalPages={labData?.total_pages}
+          emptyMessage={
+            isLoading ? "Loading lab requests..." : "No lab requests found."
+          }
+          toolbarActions={
+            <>
+              <NurseDateRangeFilter
+                startDate={startDate}
+                endDate={endDate}
+                onApply={(start, end) => {
+                  const params = new URLSearchParams(searchParams.toString());
+                  if (start) params.set("start_date", start);
+                  else params.delete("start_date");
+                  if (end) params.set("end_date", end);
+                  else params.delete("end_date");
+                  params.set("page", "1");
+                  router.push(`${pathname}?${params.toString()}`, {
+                    scroll: false,
+                  });
+                }}
+                onClear={() => {
+                  const params = new URLSearchParams(searchParams.toString());
+                  params.delete("start_date");
+                  params.delete("end_date");
+                  params.set("page", "1");
+                  router.push(`${pathname}?${params.toString()}`, {
+                    scroll: false,
+                  });
+                }}
+              />
+              <CustomDropdown
+                options={STATUS_OPTIONS}
+                selected={statusFilter}
+                onSelect={(value) => updateUrlParams("status", value)}
+              />
+              <CustomDropdown
+                options={PAGE_SIZES}
+                selected={pageSize.toString()}
+                onSelect={(value) => updateUrlParams("page_size", value)}
+                placeholder="Rows per page"
+              />
+            </>
+          }
+        />
       </div>
     </div>
   );
