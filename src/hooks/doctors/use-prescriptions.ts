@@ -151,3 +151,22 @@ export function useDeletePrescription() {
     },
   });
 }
+
+export function useInventoryDrugs(searchTerm: string = "") {
+  const api = useApi();
+  return useQuery({
+    queryKey: ["inventory-drugs", searchTerm],
+    queryFn: async () => {
+      const searchParam = searchTerm
+        ? `&search=${encodeURIComponent(searchTerm)}`
+        : "";
+      const res = await api.get<any>(
+        `/inventory/items/?page=1&page_size=20&inventory_category=DRUG${searchParam}`,
+      );
+      return (
+        res?.data?.data?.results || res?.data?.results || res?.results || []
+      );
+    },
+    enabled: api.isAuthenticated && !api.isLoading,
+  });
+}

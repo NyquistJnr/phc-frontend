@@ -686,7 +686,7 @@ export default function AppointmentDetails() {
               {!isLoadingVitals && (
                 <button
                   onClick={() =>
-                    router.push(`/nurse-dashboard/vitals/new/${id}`)
+                    router.push(`/doctor-dashboard/appointments/vitals/${id}`)
                   }
                   className="flex items-center gap-2 rounded-lg bg-[#046C3F] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#035a34]"
                 >

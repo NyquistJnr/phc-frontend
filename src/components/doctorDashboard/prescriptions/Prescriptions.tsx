@@ -109,7 +109,13 @@ function formatDate(value?: string) {
 
 function getMedicationNames(row: PrescriptionRecord) {
   const names = row.items
-    ?.map((item) => item.drug_name || item.medication_name || item.custom_drug_name || item.drug)
+    ?.map(
+      (item) =>
+        item.drug_name ||
+        item.medication_name ||
+        item.custom_drug_name ||
+        item.drug,
+    )
     .filter(Boolean);
   return names?.length ? names.join(", ") : "-";
 }
@@ -151,7 +157,9 @@ export default function Prescriptions() {
     end_date: endDate,
   });
 
-  const prescriptionsData = data as PaginatedResponse<PrescriptionRecord> | undefined;
+  const prescriptionsData = data as
+    | PaginatedResponse<PrescriptionRecord>
+    | undefined;
 
   const updateUrlParams = useCallback(
     (key: string, value: string) => {
@@ -166,8 +174,16 @@ export default function Prescriptions() {
 
   const columns = useMemo<ColumnDef<PrescriptionRecord>[]>(
     () => [
-      { header: "Prescription ID", accessorKey: "prescription_id", sortable: true },
-      { header: "Patient ID", accessorKey: "patient_display_id", sortable: true },
+      {
+        header: "Prescription ID",
+        accessorKey: "prescription_id",
+        sortable: true,
+      },
+      {
+        header: "Patient ID",
+        accessorKey: "patient_display_id",
+        sortable: true,
+      },
       { header: "Patient Name", accessorKey: "patient_name", sortable: true },
       { header: "Drug Name", render: getMedicationNames, sortable: true },
       {
@@ -185,12 +201,19 @@ export default function Prescriptions() {
         render: (row) => row.items?.[0]?.duration || "-",
         sortable: true,
       },
-      { header: "Date", render: (row) => formatDate(row.created_at), sortable: true },
+      {
+        header: "Date",
+        render: (row) => formatDate(row.created_at),
+        sortable: true,
+      },
       {
         header: "Status",
         render: (row) => {
           const status = row.status || "PENDING";
-          const color = statusColors[status] || { bg: "#F3F4F6", text: "#374151" };
+          const color = statusColors[status] || {
+            bg: "#F3F4F6",
+            text: "#374151",
+          };
           return (
             <StatusBadge
               label={status.charAt(0) + status.slice(1).toLowerCase()}
@@ -200,7 +223,10 @@ export default function Prescriptions() {
           );
         },
       },
-      { header: "Action", render: (row) => <PrescriptionActionMenu row={row} /> },
+      {
+        header: "Action",
+        render: (row) => <PrescriptionActionMenu row={row} />,
+      },
     ],
     [],
   );
@@ -238,7 +264,9 @@ export default function Prescriptions() {
           searchPlaceholder="Search by patient, ID, or drug"
           onSearch={setLocalSearch}
           totalPages={prescriptionsData?.total_pages}
-          emptyMessage={isLoading ? "Loading prescriptions..." : "No prescriptions found."}
+          emptyMessage={
+            isLoading ? "Loading prescriptions..." : "No prescriptions found."
+          }
           toolbarActions={
             <>
               <NurseDateRangeFilter
@@ -251,14 +279,18 @@ export default function Prescriptions() {
                   if (end) params.set("end_date", end);
                   else params.delete("end_date");
                   params.set("page", "1");
-                  router.push(`${pathname}?${params.toString()}`, { scroll: false });
+                  router.push(`${pathname}?${params.toString()}`, {
+                    scroll: false,
+                  });
                 }}
                 onClear={() => {
                   const params = new URLSearchParams(searchParams.toString());
                   params.delete("start_date");
                   params.delete("end_date");
                   params.set("page", "1");
-                  router.push(`${pathname}?${params.toString()}`, { scroll: false });
+                  router.push(`${pathname}?${params.toString()}`, {
+                    scroll: false,
+                  });
                 }}
               />
               <CustomDropdown

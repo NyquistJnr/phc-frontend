@@ -200,3 +200,31 @@ export function useDeleteConsultation() {
     },
   });
 }
+
+export function useAppointmentById(id: string) {
+  const api = useApi();
+
+  return useQuery({
+    queryKey: ["appointment", id],
+    queryFn: async () => {
+      const res = await api.get<any>(`/appointments/appointments/${id}/`);
+      return res?.data?.data || res?.data || res;
+    },
+    enabled: !!id && api.isAuthenticated && !api.isLoading,
+  });
+}
+
+export function useAppointmentVitals(appointmentId: string) {
+  const api = useApi();
+
+  return useQuery({
+    queryKey: ["appointment-vitals", appointmentId],
+    queryFn: async () => {
+      const res = await api.get<any>(
+        `/appointments/vitals/?page=1&page_size=1&appointment_id=${appointmentId}`,
+      );
+      return res?.data?.data || res?.data || res;
+    },
+    enabled: !!appointmentId && api.isAuthenticated && !api.isLoading,
+  });
+}
