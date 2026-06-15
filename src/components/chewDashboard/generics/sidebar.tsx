@@ -12,6 +12,7 @@ import {
   Heart,
   CalendarDays,
   BarChart2,
+  Share2,
   LogOut,
   X,
   Shapes,
@@ -48,6 +49,11 @@ const navItems = [
     path: "/chew-dashboard/appointments",
   },
   {
+    name: "Referrals",
+    icon: Share2,
+    path: "/chew-dashboard/referrals",
+  },
+  {
     name: "Activity Reports",
     icon: BarChart2,
     path: "/chew-dashboard/activity-reports",
@@ -57,12 +63,8 @@ const navItems = [
 export const ChewSidebar = () => {
   const pathname = usePathname();
   const [logoutModalOpen, setLogoutModalOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
   const { mobileOpen, setMobileOpen } = useSidebar();
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
   useEffect(() => {
     setMobileOpen(false);
   }, [pathname, setMobileOpen]);
@@ -145,8 +147,8 @@ export const ChewSidebar = () => {
         </div>
       </aside>
 
-      {mounted &&
-        logoutModalOpen &&
+      {logoutModalOpen &&
+        typeof document !== "undefined" &&
         createPortal(
           <div
             onClick={() => setLogoutModalOpen(false)}
