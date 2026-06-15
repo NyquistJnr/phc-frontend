@@ -15,17 +15,19 @@ import {
   X,
   Baby,
   CalendarDays,
+  Shapes,
+  Blocks,
 } from "lucide-react";
 import { useSidebar } from "@/src/components/adminDashboard/generics/sidebar";
 
 const navItems = [
   { name: "Dashboard", icon: LayoutDashboard, path: "/nurse-dashboard" },
   { name: "Patients", icon: Users, path: "/nurse-dashboard/patients" },
-  /*   {
+  {
     name: "Vitals",
     icon: Stethoscope,
     path: "/nurse-dashboard/vitals",
-  }, */
+  },
   {
     name: "Appointments",
     icon: CalendarDays,
@@ -35,6 +37,16 @@ const navItems = [
     name: "Maternal Care",
     icon: Baby,
     path: "/nurse-dashboard/maternal-care",
+  },
+  {
+    name: "ANC",
+    icon: Shapes,
+    path: "/nurse-dashboard/maternal-care/anc",
+  },
+  {
+    name: "PNC",
+    icon: Blocks,
+    path: "/nurse-dashboard/maternal-care/pnc",
   },
   {
     name: "Immunization",
