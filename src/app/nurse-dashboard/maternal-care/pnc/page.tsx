@@ -1,5 +1,10 @@
 import PncVisits from "@/src/components/nurse-dashboard/maternal-care/PncVisitsPage";
+import { Suspense } from "react";
 
 export default function PncVisitsPage() {
-  return <PncVisits />;
+  return (
+    <Suspense fallback={null}>
+      <PncVisits />
+    </Suspense>
+  );
 }
