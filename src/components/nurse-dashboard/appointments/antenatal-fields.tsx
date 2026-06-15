@@ -1,12 +1,29 @@
 "use client";
 
-import React from "react";
 import { FieldShell, SelectField } from "./form-helpers";
 import { AppointmentFormState } from "./CreateAppointment";
 
 const YES_NO_OPTIONS = [
   { label: "Yes", value: "true" },
   { label: "No", value: "false" },
+];
+
+const HIV_STATUS_OPTIONS = [
+  { label: "Positive", value: "Positive" },
+  { label: "Negative", value: "Negative" },
+  { label: "Unknown / Not Tested", value: "Unknown" },
+];
+
+const VDRL_OPTIONS = [
+  { label: "Reactive", value: "Reactive" },
+  { label: "Non-Reactive", value: "Non-Reactive" },
+  { label: "Unknown / Not Tested", value: "Unknown" },
+];
+
+const HEPATITIS_B_OPTIONS = [
+  { label: "Positive", value: "Positive" },
+  { label: "Negative", value: "Negative" },
+  { label: "Unknown / Not Tested", value: "Unknown" },
 ];
 
 interface Props {
@@ -100,33 +117,28 @@ export default function AntenatalFields({
         </h4>
       </div>
 
-      <FieldShell label="HIV Status">
-        <input
-          type="text"
-          value={form.hivStatus}
-          onChange={(e) => onChange("hivStatus", e.target.value)}
-          placeholder="e.g., Negative"
-          className="w-full bg-transparent text-base text-gray-700 outline-none"
-        />
-      </FieldShell>
-      <FieldShell label="VDRL/Syphilis">
-        <input
-          type="text"
-          value={form.vdrlSyphilis}
-          onChange={(e) => onChange("vdrlSyphilis", e.target.value)}
-          placeholder="e.g., Non-Reactive"
-          className="w-full bg-transparent text-base text-gray-700 outline-none"
-        />
-      </FieldShell>
-      <FieldShell label="Hepatitis B">
-        <input
-          type="text"
-          value={form.hepatitisB}
-          onChange={(e) => onChange("hepatitisB", e.target.value)}
-          placeholder="e.g., Negative"
-          className="w-full bg-transparent text-base text-gray-700 outline-none"
-        />
-      </FieldShell>
+      <SelectField
+        label="HIV Status"
+        placeholder="Select HIV Status"
+        options={HIV_STATUS_OPTIONS}
+        value={form.hivStatus}
+        onChange={(val) => onChange("hivStatus", val)}
+      />
+      <SelectField
+        label="VDRL/Syphilis"
+        placeholder="Select VDRL Status"
+        options={VDRL_OPTIONS}
+        value={form.vdrlSyphilis}
+        onChange={(val) => onChange("vdrlSyphilis", val)}
+      />
+      <SelectField
+        label="Hepatitis B"
+        placeholder="Select Hepatitis B Status"
+        options={HEPATITIS_B_OPTIONS}
+        value={form.hepatitisB}
+        onChange={(val) => onChange("hepatitisB", val)}
+      />
+
       <FieldShell label="Hemoglobin (ANC)">
         <input
           type="number"

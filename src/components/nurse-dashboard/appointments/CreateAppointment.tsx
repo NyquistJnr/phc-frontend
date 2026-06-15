@@ -52,7 +52,7 @@ export type AppointmentFormState = {
   vaginalExaminationConducted: string;
   hemoglobinPcv: string;
   urinalysis: string;
-  counsellingTopics: string[]; // Changed to array for multi-select
+  counsellingTopics: string[];
   outcome: string;
   babyId: string;
   babyTemperature: string;
@@ -101,7 +101,7 @@ const INITIAL_FORM: AppointmentFormState = {
   vaginalExaminationConducted: "",
   hemoglobinPcv: "",
   urinalysis: "",
-  counsellingTopics: [], // Initialized as empty array
+  counsellingTopics: [],
   outcome: "",
   babyId: "",
   babyTemperature: "",
@@ -202,7 +202,6 @@ export default function NewAppointments() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Filter Visit Types based on the patient's current_maternal_episode
   const availableVisitTypes = BASE_VISIT_TYPES.filter((type) => {
     if (!selectedPatientData) return true;
     const maternalStatus = selectedPatientData.current_maternal_episode?.status;
@@ -232,6 +231,21 @@ export default function NewAppointments() {
         "Please complete all required appointment fields, ensuring a patient is selected from the list.",
       );
       return;
+    }
+
+    if (form.visitType === "POSTNATAL") {
+      if (
+        !form.babyId ||
+        !form.babyTemperature ||
+        !form.babyExclusiveBreastfeeding ||
+        !form.babyNeonatalJaundice ||
+        !form.babyOutcome
+      ) {
+        setFormError(
+          "Please complete all mandatory baby assessment fields for a postnatal visit.",
+        );
+        return;
+      }
     }
 
     const formattedTime = `${form.time}:00.000Z`;
@@ -291,12 +305,12 @@ export default function NewAppointments() {
           form.vaginalExaminationConducted === "true",
         hemoglobin_pcv: parseFloat(form.hemoglobinPcv) || 0,
         urinalysis: form.urinalysis,
-        counselling_topics: form.counsellingTopics, // directly pass array
+        counselling_topics: form.counsellingTopics,
         outcome: form.outcome,
         clinical_notes: form.notes || form.reason,
         baby_assessments: [
           {
-            baby_id: form.babyId || "00000000-0000-0000-0000-000000000000",
+            baby_id: form.babyId,
             cord_care_assessed: true,
             temperature: parseFloat(form.babyTemperature) || 36.6,
             exclusive_breastfeeding: form.babyExclusiveBreastfeeding || "Yes",
@@ -510,7 +524,11 @@ export default function NewAppointments() {
               )}
 
               {form.visitType === "POSTNATAL" && (
-                <PostnatalFields form={form} onChange={handleChange} />
+                <PostnatalFields
+                  form={form}
+                  onChange={handleChange}
+                  patientId={form.patientId}
+                />
               )}
             </div>
 

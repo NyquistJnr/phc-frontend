@@ -1,8 +1,8 @@
 "use client";
 
-import React from "react";
 import { FieldShell, SelectField, MultiSelectField } from "./form-helpers";
 import { AppointmentFormState } from "./CreateAppointment";
+import { usePatientChildren } from "@/src/hooks/nurses/use-appointments";
 
 const YES_NO_OPTIONS = [
   { label: "Yes", value: "Yes" },
@@ -38,13 +38,22 @@ const COUNSELLING_TOPICS_OPTIONS = [
 
 interface Props {
   form: AppointmentFormState;
+  patientId: string;
   onChange: <K extends keyof AppointmentFormState>(
     field: K,
     value: AppointmentFormState[K],
   ) => void;
 }
 
-export default function PostnatalFields({ form, onChange }: Props) {
+export default function PostnatalFields({ form, patientId, onChange }: Props) {
+  const { data: childrenList = [], isFetching: isLoadingChildren } =
+    usePatientChildren(patientId);
+
+  const childOptions = childrenList.map((child: any) => ({
+    label: `${child.first_name} ${child.last_name} (${child.profile?.patient_id || "Unknown ID"})`,
+    value: child.id,
+  }));
+
   return (
     <>
       <div className="col-span-1 md:col-span-2 pt-4 border-t border-gray-100">
@@ -107,18 +116,19 @@ export default function PostnatalFields({ form, onChange }: Props) {
 
       <div className="col-span-1 md:col-span-2 pt-2">
         <h4 className="text-sm font-medium text-gray-700 mb-2">
-          Baby Assessment
+          Baby Assessment (Required)
         </h4>
       </div>
-      <FieldShell label="Baby ID (Optional)">
-        <input
-          type="text"
-          value={form.babyId}
-          onChange={(e) => onChange("babyId", e.target.value)}
-          placeholder="UUID or leave blank"
-          className="w-full bg-transparent text-base text-gray-700 outline-none"
-        />
-      </FieldShell>
+
+      <SelectField
+        label="Select Baby"
+        placeholder={isLoadingChildren ? "Loading babies..." : "Select Baby"}
+        options={childOptions}
+        value={form.babyId}
+        isLoading={isLoadingChildren}
+        onChange={(val) => onChange("babyId", val)}
+      />
+
       <FieldShell label="Baby Temperature (°C)">
         <input
           type="number"
@@ -141,7 +151,7 @@ export default function PostnatalFields({ form, onChange }: Props) {
       <SelectField
         label="Neonatal Jaundice?"
         placeholder="Select"
-        options={VAGINAL_EXAM_OPTIONS} // Reusing true/false options
+        options={VAGINAL_EXAM_OPTIONS}
         value={form.babyNeonatalJaundice}
         onChange={(val) => onChange("babyNeonatalJaundice", val)}
       />

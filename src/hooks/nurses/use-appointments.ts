@@ -270,3 +270,18 @@ export function useDeleteVital() {
     },
   });
 }
+
+export function usePatientChildren(patientId: string) {
+  const api = useApi();
+
+  return useQuery({
+    queryKey: ["patient-children", patientId],
+    queryFn: async () => {
+      const res = await api.get<PaginatedResponse<any>>(
+        `/patients/${patientId}/children/?page=1&page_size=50`,
+      );
+      return res.results || [];
+    },
+    enabled: !!patientId && api.isAuthenticated && !api.isLoading,
+  });
+}
