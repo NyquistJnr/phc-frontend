@@ -2,19 +2,18 @@
 
 import React, { useRef, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import {
-  CalendarDays,
-  ChevronDown,
-  Clock,
-  Search,
-  X,
-  Loader2,
-} from "lucide-react";
+import { CalendarDays, Clock, Search, X, Loader2 } from "lucide-react";
 
 import NurseDashboardHeader from "@/src/components/nurse-dashboard/generics/NurseDashboardHeader";
 import NurseBackButton from "@/src/components/nurse-dashboard/generics/NurseBackButton";
+import { FieldShell, SelectField } from "./form-helpers";
+import AntenatalFields from "./antenatal-fields";
+import PostnatalFields from "./postnatal-fields";
+
 import {
   useCreateAppointment,
+  useCreateAncAppointment,
+  useCreatePncAppointment,
   useSearchPatients,
   useFacilityStaff,
 } from "@/src/hooks/nurses/use-appointments";
@@ -31,9 +30,38 @@ export type AppointmentFormState = {
   assignedTo: string;
   reason: string;
   notes: string;
+
+  // Antenatal specific
+  lastMenstrualPeriod: string;
+  gravida: string;
+  parity: string;
+  livingChildren: string;
+  partnerName: string;
+  partnerPhone: string;
+  hivStatus: string;
+  vdrlSyphilis: string;
+  hepatitisB: string;
+  hemoglobinAnc: string;
+  ttDoseGiven: string;
+  iptpDoseGiven: string;
+  ironFolateGiven: string;
+  riskFactors: string;
+
+  // Postnatal & Shared specific
+  timingOfVisit: string;
+  vaginalExaminationConducted: string;
+  hemoglobinPcv: string;
+  urinalysis: string;
+  counsellingTopics: string[]; // Changed to array for multi-select
+  outcome: string;
+  babyId: string;
+  babyTemperature: string;
+  babyExclusiveBreastfeeding: string;
+  babyNeonatalJaundice: string;
+  babyOutcome: string;
 };
 
-const VISIT_TYPES = [
+const BASE_VISIT_TYPES = [
   { label: "General", value: "GENERAL" },
   { label: "Follow Up", value: "FOLLOW_UP" },
   { label: "Antenatal", value: "ANTENATAL" },
@@ -55,158 +83,32 @@ const INITIAL_FORM: AppointmentFormState = {
   assignedTo: "",
   reason: "",
   notes: "",
+  lastMenstrualPeriod: "",
+  gravida: "",
+  parity: "",
+  livingChildren: "",
+  partnerName: "",
+  partnerPhone: "",
+  hivStatus: "",
+  vdrlSyphilis: "",
+  hepatitisB: "",
+  hemoglobinAnc: "",
+  ttDoseGiven: "",
+  iptpDoseGiven: "",
+  ironFolateGiven: "",
+  riskFactors: "",
+  timingOfVisit: "",
+  vaginalExaminationConducted: "",
+  hemoglobinPcv: "",
+  urinalysis: "",
+  counsellingTopics: [], // Initialized as empty array
+  outcome: "",
+  babyId: "",
+  babyTemperature: "",
+  babyExclusiveBreastfeeding: "",
+  babyNeonatalJaundice: "",
+  babyOutcome: "",
 };
-
-function FieldShell({
-  label,
-  children,
-  className = "",
-}: {
-  label: string;
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <div
-      className={`relative flex flex-col justify-center rounded-lg border border-gray-300 bg-white px-4 py-2.5 focus-within:border-[#046C3F] focus-within:ring-1 focus-within:ring-[#046C3F] ${className}`}
-    >
-      <label className="mb-1 block text-xs text-[#62636C]">{label}</label>
-      {children}
-    </div>
-  );
-}
-
-function SelectField({
-  label,
-  placeholder,
-  options,
-  value,
-  searchable = false,
-  isLoading = false,
-  onChange,
-  onSearchChange,
-}: {
-  label: string;
-  placeholder: string;
-  options: { label: string; value: string }[];
-  value: string;
-  searchable?: boolean;
-  isLoading?: boolean;
-  onChange: (value: string) => void;
-  onSearchChange?: (term: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState("");
-  const ref = useRef<HTMLDivElement>(null);
-
-  const displayOptions = onSearchChange
-    ? options
-    : options.filter((option) =>
-        option.label.toLowerCase().includes(search.toLowerCase()),
-      );
-
-  const selectedLabel = options.find((opt) => opt.value === value)?.label;
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (ref.current && !ref.current.contains(event.target as Node)) {
-        setOpen(false);
-      }
-    }
-    if (open) {
-      document.addEventListener("mousedown", handleClickOutside);
-      return () =>
-        document.removeEventListener("mousedown", handleClickOutside);
-    }
-  }, [open]);
-
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const term = e.target.value;
-    setSearch(term);
-    if (onSearchChange) {
-      onSearchChange(term);
-    }
-  };
-
-  return (
-    <div className="relative" ref={ref}>
-      <button
-        type="button"
-        onClick={() => setOpen((current) => !current)}
-        className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-left focus:border-[#046C3F] focus:outline-none focus:ring-1 focus:ring-[#046C3F]"
-      >
-        <span className="mb-1 block text-xs text-[#62636C]">{label}</span>
-        <span className="flex items-center justify-between gap-3 text-base">
-          <span className={selectedLabel ? "text-gray-700" : "text-gray-400"}>
-            {selectedLabel || placeholder}
-          </span>
-          <ChevronDown
-            size={20}
-            className={`text-gray-800 transition-transform ${open ? "rotate-180" : ""}`}
-          />
-        </span>
-      </button>
-
-      {open && (
-        <div className="absolute left-0 right-0 top-full z-50 mt-2 rounded-lg border border-gray-300 bg-white p-4 shadow-sm">
-          {searchable && (
-            <div className="relative mb-3 flex items-center">
-              <Search
-                size={20}
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-900"
-              />
-              <input
-                value={search}
-                onChange={handleSearch}
-                placeholder="Search..."
-                className="h-11 w-full rounded-lg border border-gray-300 pl-12 pr-10 text-sm outline-none focus:border-[#046C3F] focus:ring-1 focus:ring-[#046C3F]"
-              />
-              {isLoading && (
-                <Loader2
-                  size={16}
-                  className="absolute right-4 animate-spin text-gray-400"
-                />
-              )}
-            </div>
-          )}
-          <div className="max-h-72 overflow-y-auto pr-1">
-            {displayOptions.length > 0 ? (
-              displayOptions.map((option, index) => {
-                const selected = value === option.value;
-                return (
-                  <button
-                    key={`${option.value}-${index}`}
-                    type="button"
-                    onClick={() => {
-                      onChange(option.value);
-                      setSearch("");
-                      if (onSearchChange) onSearchChange("");
-                      setOpen(false);
-                    }}
-                    className="flex w-full items-center gap-4 rounded-md px-2 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50"
-                  >
-                    <span
-                      className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border transition-colors ${selected ? "border-[#046C3F] bg-[#046C3F]" : "border-gray-300 bg-white"}`}
-                    >
-                      {selected && (
-                        <span className="h-2.5 w-2.5 rounded-sm bg-white" />
-                      )}
-                    </span>
-                    {option.label}
-                  </button>
-                );
-              })
-            ) : (
-              <div className="px-2 py-2 text-sm text-gray-500">
-                {isLoading ? "Searching..." : "No results found"}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
 
 function SuccessToast({ onClose }: { onClose: () => void }) {
   return (
@@ -241,6 +143,8 @@ export default function NewAppointments() {
   const [staffSearchInput, setStaffSearchInput] = useState("");
   const [staffSearchTerm, setStaffSearchTerm] = useState("");
 
+  const [selectedPatientData, setSelectedPatientData] = useState<any>(null);
+
   const [showPatientDropdown, setShowPatientDropdown] = useState(false);
   const patientRef = useRef<HTMLDivElement>(null);
 
@@ -248,8 +152,15 @@ export default function NewAppointments() {
     useSearchPatients(patientSearchTerm);
   const { data: staffList = [], isFetching: isLoadingStaff } =
     useFacilityStaff(staffSearchTerm);
+
   const { mutate: createAppointment, isPending: isCreating } =
     useCreateAppointment();
+  const { mutate: createAncAppointment, isPending: isCreatingAnc } =
+    useCreateAncAppointment();
+  const { mutate: createPncAppointment, isPending: isCreatingPnc } =
+    useCreatePncAppointment();
+
+  const isAnySubmitting = isCreating || isCreatingAnc || isCreatingPnc;
 
   const assigneeOptions = staffList.map((staff: any) => ({
     label: `${staff.first_name} ${staff.last_name} - ${staff.role}`,
@@ -291,6 +202,19 @@ export default function NewAppointments() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Filter Visit Types based on the patient's current_maternal_episode
+  const availableVisitTypes = BASE_VISIT_TYPES.filter((type) => {
+    if (!selectedPatientData) return true;
+    const maternalStatus = selectedPatientData.current_maternal_episode?.status;
+    if (maternalStatus === "ACTIVE" && type.value === "POSTNATAL") return false;
+    if (maternalStatus === "DELIVERED" && type.value === "ANTENATAL")
+      return false;
+    return true;
+  });
+
+  const maternalEpisode = selectedPatientData?.current_maternal_episode;
+  const showHistoryFields = form.visitType === "ANTENATAL" && !maternalEpisode;
+
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -300,7 +224,9 @@ export default function NewAppointments() {
       !form.assignedTo ||
       !form.date ||
       !form.time ||
-      !form.reason.trim()
+      (!form.reason.trim() &&
+        form.visitType !== "POSTNATAL" &&
+        form.visitType !== "ANTENATAL")
     ) {
       setFormError(
         "Please complete all required appointment fields, ensuring a patient is selected from the list.",
@@ -310,31 +236,98 @@ export default function NewAppointments() {
 
     const formattedTime = `${form.time}:00.000Z`;
 
-    createAppointment(
-      {
-        patient: form.patientId,
-        assigned_to: form.assignedTo,
+    const handleSuccess = () => {
+      setToastVisible(true);
+      setTimeout(() => {
+        router.push("/nurse-dashboard/appointments");
+      }, 2000);
+    };
+
+    const handleError = (error: any) => {
+      setFormError(
+        error?.response?.data?.message ||
+          "Failed to create appointment. Please try again.",
+      );
+    };
+
+    if (form.visitType === "ANTENATAL") {
+      const ancPayload: any = {
+        patient_id: form.patientId,
+        assigned_to_id: form.assignedTo,
         appointment_date: form.date,
         appointment_time: formattedTime,
-        visit_type: form.visitType,
-        reason_for_visit: form.reason,
-        notes: form.notes,
-      },
-      {
-        onSuccess: () => {
-          setToastVisible(true);
-          setTimeout(() => {
-            router.push("/nurse-dashboard/appointments");
-          }, 2000);
+        clinical_notes: form.notes || form.reason,
+        hiv_status: form.hivStatus,
+        vdrl_syphilis: form.vdrlSyphilis,
+        hepatitis_b: form.hepatitisB,
+        hemoglobin: form.hemoglobinAnc,
+        urinalysis: form.urinalysis,
+        tt_dose_given: form.ttDoseGiven,
+        iptp_dose_given: form.iptpDoseGiven,
+        iron_folate_given: form.ironFolateGiven === "true",
+        risk_factors: form.riskFactors,
+      };
+
+      if (showHistoryFields) {
+        ancPayload.last_menstrual_period = form.lastMenstrualPeriod;
+        ancPayload.gravida = Number(form.gravida) || 0;
+        ancPayload.parity = Number(form.parity) || 0;
+        ancPayload.living_children = Number(form.livingChildren) || 0;
+        ancPayload.partner_name = form.partnerName;
+        ancPayload.partner_phone = form.partnerPhone;
+      }
+
+      createAncAppointment(ancPayload, {
+        onSuccess: handleSuccess,
+        onError: handleError,
+      });
+    } else if (form.visitType === "POSTNATAL") {
+      const pncPayload = {
+        patient_id: form.patientId,
+        appointment_date: form.date,
+        appointment_time: `${form.time}:00`,
+        timing_of_visit: form.timingOfVisit,
+        vaginal_examination_conducted:
+          form.vaginalExaminationConducted === "true",
+        hemoglobin_pcv: parseFloat(form.hemoglobinPcv) || 0,
+        urinalysis: form.urinalysis,
+        counselling_topics: form.counsellingTopics, // directly pass array
+        outcome: form.outcome,
+        clinical_notes: form.notes || form.reason,
+        baby_assessments: [
+          {
+            baby_id: form.babyId || "00000000-0000-0000-0000-000000000000",
+            cord_care_assessed: true,
+            temperature: parseFloat(form.babyTemperature) || 36.6,
+            exclusive_breastfeeding: form.babyExclusiveBreastfeeding || "Yes",
+            newborn_danger_signs: [],
+            neonatal_jaundice: form.babyNeonatalJaundice === "true",
+            outcome: form.babyOutcome || "HEALTHY",
+          },
+        ],
+      };
+
+      createPncAppointment(pncPayload, {
+        onSuccess: handleSuccess,
+        onError: handleError,
+      });
+    } else {
+      createAppointment(
+        {
+          patient: form.patientId,
+          assigned_to: form.assignedTo,
+          appointment_date: form.date,
+          appointment_time: formattedTime,
+          visit_type: form.visitType,
+          reason_for_visit: form.reason,
+          notes: form.notes,
         },
-        onError: (error: any) => {
-          setFormError(
-            error?.response?.data?.message ||
-              "Failed to create appointment. Please try again.",
-          );
+        {
+          onSuccess: handleSuccess,
+          onError: handleError,
         },
-      },
-    );
+      );
+    }
   };
 
   const handleCancel = () => {
@@ -348,9 +341,7 @@ export default function NewAppointments() {
         title="Appointments"
         breadcrumbs={[
           { label: "Appointments", href: "/nurse-dashboard/appointments" },
-          {
-            label: "New Appointment",
-          },
+          { label: "New Appointment" },
         ]}
       />
 
@@ -395,6 +386,8 @@ export default function NewAppointments() {
                         if (form.patientId) {
                           handleChange("patientId", "");
                           handleChange("patientDisplayId", "");
+                          handleChange("visitType", "");
+                          setSelectedPatientData(null);
                         }
                         setShowPatientDropdown(true);
                       }}
@@ -428,6 +421,8 @@ export default function NewAppointments() {
                               "patientName",
                               `${patient.first_name} ${patient.last_name}`,
                             );
+                            handleChange("visitType", "");
+                            setSelectedPatientData(patient);
                             setShowPatientDropdown(false);
                           }}
                           className="w-full rounded-md px-3 py-2 text-left text-sm hover:bg-gray-50"
@@ -487,7 +482,7 @@ export default function NewAppointments() {
               <SelectField
                 label="Visit Type"
                 placeholder="Select"
-                options={VISIT_TYPES}
+                options={availableVisitTypes}
                 value={form.visitType}
                 onChange={(value) => handleChange("visitType", value)}
               />
@@ -505,19 +500,42 @@ export default function NewAppointments() {
                 onChange={(value) => handleChange("assignedTo", value)}
                 onSearchChange={(term) => setStaffSearchInput(term)}
               />
+
+              {form.visitType === "ANTENATAL" && (
+                <AntenatalFields
+                  form={form}
+                  onChange={handleChange}
+                  showHistoryFields={showHistoryFields}
+                />
+              )}
+
+              {form.visitType === "POSTNATAL" && (
+                <PostnatalFields form={form} onChange={handleChange} />
+              )}
             </div>
 
-            <FieldShell label="Reason for Visit">
+            <FieldShell
+              label={
+                form.visitType === "POSTNATAL" || form.visitType === "ANTENATAL"
+                  ? "Clinical Notes / Reason"
+                  : "Reason for Visit"
+              }
+            >
               <textarea
                 value={form.reason}
                 onChange={(e) => handleChange("reason", e.target.value)}
-                placeholder="Enter reason here"
+                placeholder={
+                  form.visitType === "POSTNATAL" ||
+                  form.visitType === "ANTENATAL"
+                    ? "Patient doing well..."
+                    : "Enter reason here"
+                }
                 rows={4}
                 className="w-full resize-none bg-transparent text-base text-gray-700 outline-none placeholder:text-gray-400"
               />
             </FieldShell>
 
-            <FieldShell label="Notes (Optional)">
+            <FieldShell label="Additional Notes (Optional)">
               <textarea
                 value={form.notes}
                 onChange={(e) => handleChange("notes", e.target.value)}
@@ -531,22 +549,22 @@ export default function NewAppointments() {
               <button
                 type="button"
                 onClick={handleCancel}
-                disabled={isCreating}
+                disabled={isAnySubmitting}
                 className="h-14 rounded-xl bg-[#B9BDC9] px-12 text-lg font-medium text-white transition-colors hover:bg-[#A9AEBC] disabled:opacity-70"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                disabled={isCreating}
+                disabled={isAnySubmitting}
                 className="flex h-14 items-center justify-center gap-3 rounded-xl bg-[#046C3F] px-10 text-lg font-medium text-white transition-colors hover:bg-[#035a34] disabled:opacity-70"
               >
-                {isCreating ? (
+                {isAnySubmitting ? (
                   <Loader2 size={20} className="animate-spin" />
                 ) : (
                   <CalendarDays size={20} />
                 )}
-                {isCreating ? "Scheduling..." : "Schedule"}
+                {isAnySubmitting ? "Scheduling..." : "Schedule"}
               </button>
             </div>
           </div>

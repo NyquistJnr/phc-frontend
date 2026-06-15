@@ -3,7 +3,14 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { createPortal } from "react-dom";
-import { MoreHorizontal, Eye, Edit } from "lucide-react";
+import {
+  MoreHorizontal,
+  Eye,
+  Edit,
+  ArrowDownLeft,
+  ArrowUpRight,
+  Globe,
+} from "lucide-react";
 
 import { CustomDropdown } from "@/src/components/generic/ui/CustomDropdown";
 import { DataTable, ColumnDef } from "@/src/components/generic/ui/DataTable";
@@ -25,6 +32,25 @@ const statusColors: Record<string, { bg: string; text: string }> = {
   PENDING: { bg: "#FFF4E5", text: "#1F2937" },
   REJECTED: { bg: "#FDE8E8", text: "#F33131" },
 };
+
+function FacilityCell({
+  name,
+  isDestination,
+}: {
+  name: string | null;
+  isDestination?: boolean;
+}) {
+  if (name) {
+    return <span className="font-medium text-gray-700">{name}</span>;
+  }
+
+  return (
+    <div className="inline-flex items-center gap-1.5 rounded-md border border-dashed border-gray-300 bg-gray-50 px-2 py-1 text-xs font-medium text-gray-500">
+      <Globe size={12} className="text-gray-400" />
+      <span>{isDestination ? "External Destination" : "External Origin"}</span>
+    </div>
+  );
+}
 
 function ReferralActionMenu({ row }: { row: ReferralResult }) {
   const router = useRouter();
@@ -267,19 +293,66 @@ export default function ReferralHistory() {
 
   const columns: ColumnDef<ReferralResult>[] = [
     { header: "Referral ID", accessorKey: "referral_id", sortable: true },
-    { header: "Patient ID", accessorKey: "patient_display_id", sortable: true },
-    { header: "Patient Name", accessorKey: "patient_name", sortable: true },
+    {
+      header: "Direction",
+      accessorKey: "direction",
+      sortable: true,
+      render: (row) => {
+        const isInbound = row.direction?.toLowerCase() === "inbound";
+        return (
+          <div
+            className={`flex w-fit items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${
+              isInbound
+                ? "bg-blue-50 text-blue-700"
+                : "bg-purple-50 text-purple-700"
+            }`}
+          >
+            {isInbound ? (
+              <ArrowDownLeft size={14} />
+            ) : (
+              <ArrowUpRight size={14} />
+            )}
+            <span className="capitalize">{row.direction || "Unknown"}</span>
+          </div>
+        );
+      },
+    },
+    {
+      header: "Patient",
+      sortable: true,
+      render: (row) => (
+        <div className="flex flex-col">
+          <span className="font-medium text-gray-900">{row.patient_name}</span>
+          <span className="text-xs text-gray-500">
+            {row.patient_display_id}
+          </span>
+        </div>
+      ),
+    },
+    {
+      header: "Type",
+      accessorKey: "referral_type",
+      sortable: true,
+      render: (row) => (
+        <span className="capitalize">
+          {row.referral_type?.toLowerCase() || "-"}
+        </span>
+      ),
+    },
     {
       header: "Referring Facility",
       accessorKey: "referring_facility_name",
       sortable: true,
+      render: (row) => <FacilityCell name={row.referring_facility_name} />,
     },
     {
       header: "Receiving Facility",
       accessorKey: "receiving_facility_name",
       sortable: true,
+      render: (row) => (
+        <FacilityCell name={row.receiving_facility_name} isDestination />
+      ),
     },
-    { header: "Reason", accessorKey: "reason_for_referral", sortable: true },
     {
       header: "Date",
       sortable: true,

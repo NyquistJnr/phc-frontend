@@ -4,6 +4,7 @@ import {
   ReferralFilters,
   ReferralResult,
   ReferralsResponse,
+  CreateReferralPayload,
 } from "@/src/components/nurse-dashboard/referrals/type";
 
 export function useReferrals(filters: ReferralFilters) {
@@ -41,13 +42,7 @@ export function useCreateReferral() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (payload: {
-      appointment: string;
-      receiving_facility: string;
-      referral_type: string;
-      reason_for_referral: string;
-      clinical_summary: string;
-    }) => {
+    mutationFn: async (payload: CreateReferralPayload) => {
       return await api.post("/referrals/records/", payload);
     },
     onSuccess: () => {
@@ -85,5 +80,20 @@ export function useUpdateReferralStatus() {
         queryKey: ["referral", variables.id],
       });
     },
+  });
+}
+
+export function useDepartments(facilityId: string) {
+  const api = useApi();
+
+  return useQuery({
+    queryKey: ["departments", facilityId],
+    queryFn: async () => {
+      const res = await api.get<any>(
+        `/departments/?facility=${facilityId}&is_active=true&page=1&page_size=100`,
+      );
+      return res?.data?.data || res?.data || res;
+    },
+    enabled: !!facilityId && api.isAuthenticated && !api.isLoading,
   });
 }

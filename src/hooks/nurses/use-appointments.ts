@@ -118,6 +118,34 @@ export function useCreateAppointment() {
   });
 }
 
+export function useCreateAncAppointment() {
+  const api = useApi();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload: any) => {
+      return await api.post("/maternal-care/appointment-for-anc/", payload);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["appointments"] });
+    },
+  });
+}
+
+export function useCreatePncAppointment() {
+  const api = useApi();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload: any) => {
+      return await api.post("/maternal-care/appointment-for-pnc/", payload);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["appointments"] });
+    },
+  });
+}
+
 export function useSearchPatients(searchTerm: string) {
   const api = useApi();
 

@@ -10,16 +10,24 @@ export interface ReferralResult {
   patient_display_id: string;
   referring_facility: string;
   referring_facility_name: string;
-  receiving_facility: string;
-  receiving_facility_name: string;
+  receiving_facility: string | null;
+  receiving_facility_name: string | null;
   referred_by: string;
   referred_by_name: string;
   referral_type: string;
+  destination_level?: string;
+  mode_of_transportation?: string;
+  mode_of_referral?: string | null;
   reason_for_referral: string;
   clinical_summary: string;
   status: ReferralStatus;
   direction: string;
   created_at: string;
+
+  target_doctor_email?: string | null;
+  target_department_email?: string | null;
+  email_subject?: string;
+  email_body?: string;
 }
 
 export interface ReferralsResponse {
@@ -40,4 +48,20 @@ export interface ReferralFilters {
   status?: string;
   direction?: string;
   appointment_id?: string;
+}
+
+export interface CreateReferralPayload {
+  appointment: string;
+  destination_level: string;
+  referral_type: string;
+  mode_of_transportation: string | null;
+  reason_for_referral: string;
+  clinical_summary: string;
+  receiving_facility: string | null;
+  receiving_department: string | null;
+  mode_of_referral: string | null;
+  target_doctor_email: string | null;
+  target_department_email: string | null;
+  email_subject: string;
+  email_body: string;
 }

@@ -59,7 +59,7 @@ export function useUpdateEpisodeStatus() {
 
   return useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      return await api.patch(`/maternal-care/episodes/${id}/update-status/`, {
+      return await api.patch(`/maternal-care/episodes/${id}/`, {
         status,
       });
     },

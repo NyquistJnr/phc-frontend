@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useApi } from "../use-api";
 import {
-  DrugInventoryResponse,
+  InventoryItemResponse,
   ImmunizationFilters,
   ImmunizationRecordApi,
   ImmunizationRegistrationPayload,
@@ -60,10 +60,12 @@ export function useVaccines() {
   const api = useApi();
 
   return useQuery({
-    queryKey: ["inventory-drugs"],
+    queryKey: ["inventory-items", "immunization"],
     queryFn: async () => {
-      const res = await api.get<any>(`/inventory/drugs/?page=1&page_size=100`);
-      return (res?.data?.data || res?.data || res) as DrugInventoryResponse;
+      const res = await api.get<any>(
+        `/inventory/items/?drug_classification=IMMUNIZATION&page=1&page_size=100`,
+      );
+      return (res?.data?.data || res?.data || res) as InventoryItemResponse;
     },
     enabled: api.isAuthenticated && !api.isLoading,
   });

@@ -43,3 +43,49 @@ export function useDashboardVitalsQueue(filters: {
     enabled: api.isAuthenticated && !api.isLoading,
   });
 }
+
+export function useDashboardMaternalAlerts(filters: {
+  page?: number;
+  page_size?: number;
+}) {
+  const api = useApi();
+
+  return useQuery({
+    queryKey: ["dashboardMaternalAlerts", filters],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (filters.page) params.append("page", String(filters.page));
+      if (filters.page_size)
+        params.append("page_size", String(filters.page_size));
+
+      const res = await api.get<any>(
+        `/nurse/alerts/maternal/?${params.toString()}`,
+      );
+      return res?.data?.data || res?.data || res;
+    },
+    enabled: api.isAuthenticated && !api.isLoading,
+  });
+}
+
+export function useDashboardImmunizationsDue(filters: {
+  page?: number;
+  page_size?: number;
+}) {
+  const api = useApi();
+
+  return useQuery({
+    queryKey: ["dashboardImmunizationsDue", filters],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (filters.page) params.append("page", String(filters.page));
+      if (filters.page_size)
+        params.append("page_size", String(filters.page_size));
+
+      const res = await api.get<any>(
+        `/nurse/alerts/immunizations/?${params.toString()}`,
+      );
+      return res?.data?.data || res?.data || res;
+    },
+    enabled: api.isAuthenticated && !api.isLoading,
+  });
+}

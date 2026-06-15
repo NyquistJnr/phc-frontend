@@ -52,7 +52,7 @@ export type ImmunizationRegistrationPayload = {
   state: string;
   lga: string;
   ward: string;
-  vaccine_given_id: string;
+  vaccines_given_ids: string[];
   date_of_visit: string;
   notes: string;
   patient_id?: string;
@@ -63,27 +63,33 @@ export type ImmunizationRegistrationPayload = {
     sex: string;
     next_of_kin_name: string;
     next_of_kin_phone: string;
+    next_of_kin_relationship: string;
   };
 };
 
-export type Drug = {
+export type InventoryItem = {
   id: string;
   name: string;
-  category: string;
-  unit: string;
+  inventory_category: string;
+  drug_classification: string;
+  item_type: string;
+  threshold_type: string;
   global_threshold: number;
+  schedule_rules: {
+    type: string;
+    intervals_in_days: number[];
+  } | null;
   total_stock: number;
   status: string;
-  active_batches_count: number;
 };
 
-export type DrugInventoryResponse = {
+export type InventoryItemResponse = {
   count: number;
   total_pages: number;
   current_page: number;
   next: string | null;
   previous: string | null;
-  results: Drug[];
+  results: InventoryItem[];
 };
 
 export type RegistrationFormState = {
@@ -91,8 +97,8 @@ export type RegistrationFormState = {
   state: string;
   lga: string;
   ward: string;
-  siteName: string;
-  vaccineGivenId: string;
+  routeOfAdministration: string;
+  vaccinesGivenIds: string[];
   dateOfVisit: string;
   notes: string;
   patientSearchInput: string;
@@ -104,4 +110,5 @@ export type RegistrationFormState = {
   sex: string;
   nextOfKinName: string;
   nextOfKinPhone: string;
+  nextOfKinRelationship: string;
 };

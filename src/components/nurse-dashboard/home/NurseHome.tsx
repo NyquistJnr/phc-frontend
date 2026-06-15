@@ -11,58 +11,10 @@ import NurseDateRangeFilter from "@/src/components/nurse-dashboard/generics/Nurs
 import {
   useNurseStats,
   useDashboardVitalsQueue,
+  useDashboardMaternalAlerts,
+  useDashboardImmunizationsDue,
 } from "@/src/hooks/nurses/use-dashboard";
 import { useSession } from "next-auth/react";
-
-const maternalAlerts = [
-  {
-    name: "Blessing Nwachukwu - ANC visit due today",
-    description: "28 weeks · 4th antenatal visit",
-    status: "ANC Due",
-    color: "green",
-  },
-  {
-    name: "Maryam Lawal",
-    description: "High-risk pregnancy, BP elevated",
-    status: "High risk",
-    color: "red",
-  },
-  {
-    name: "Blessing Uche",
-    description: "Day 6 review",
-    status: "Postnatal",
-    color: "blue",
-  },
-  {
-    name: "Blessing Uche",
-    description: "High-risk pregnancy, BP elevated",
-    status: "Urgent",
-    color: "red",
-  },
-];
-
-const immunizationDue = [
-  {
-    name: "Ibrahim Musa",
-    description: "Measles 2nd dose · 6 yrs",
-    status: "Today",
-  },
-  {
-    name: "Baby Eze",
-    description: "Penta-3 + OPV-3 · 14 wks",
-    status: "Today",
-  },
-  {
-    name: "Baby Bello",
-    description: "Penta-2 + Rota · 10 wks",
-    status: "Tomorrow",
-  },
-  {
-    name: "Baby Emeka",
-    description: "Penta-2 + Rota · 10 wks",
-    status: "Tomorrow",
-  },
-];
 
 const badgeColors = {
   green: { bg: "#DFF3EA", text: "#039855" },
@@ -109,11 +61,15 @@ function StatCard({
       </p>
       {isLoading ? (
         <div
-          className={`h-8 w-16 animate-pulse rounded ${active ? "bg-[#0B7F4D]" : "bg-gray-200"}`}
+          className={`h-8 w-16 animate-pulse rounded ${
+            active ? "bg-[#0B7F4D]" : "bg-gray-200"
+          }`}
         ></div>
       ) : (
         <p
-          className={`text-3xl font-semibold ${active ? "text-white" : "text-gray-800"}`}
+          className={`text-3xl font-semibold ${
+            active ? "text-white" : "text-gray-800"
+          }`}
         >
           {value}
         </p>
@@ -134,7 +90,7 @@ function SummaryPanel({
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
+    <section className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm flex flex-col">
       <div className="mb-6 flex items-center justify-between border-b border-gray-100 pb-5">
         <div className="flex items-center gap-3">
           <span className="text-gray-700">{icon}</span>
@@ -147,7 +103,7 @@ function SummaryPanel({
           View all <ArrowRight size={16} />
         </Link>
       </div>
-      <div className="space-y-0">{children}</div>
+      <div className="space-y-0 flex-grow">{children}</div>
     </section>
   );
 }
@@ -195,6 +151,18 @@ export default function NurseHome() {
     useDashboardVitalsQueue({
       page: 1,
       page_size: 10,
+    });
+
+  const { data: maternalData, isLoading: isLoadingMaternal } =
+    useDashboardMaternalAlerts({
+      page: 1,
+      page_size: 4,
+    });
+
+  const { data: immunizationsData, isLoading: isLoadingImmunizations } =
+    useDashboardImmunizationsDue({
+      page: 1,
+      page_size: 4,
     });
 
   const dashboardStats = [
@@ -301,6 +269,19 @@ export default function NurseHome() {
     },
   ];
 
+  const getMaternalAlertColor = (priority: string) => {
+    if (priority === "CRITICAL" || priority === "URGENT") return "red";
+    if (priority === "NORMAL") return "amber";
+    return "blue";
+  };
+
+  const getImmunizationColor = (nextDueDate: string) => {
+    const todayStr = new Date().toISOString().split("T")[0];
+    if (nextDueDate < todayStr) return "red";
+    if (nextDueDate === todayStr) return "blue";
+    return "amber";
+  };
+
   return (
     <div className="min-h-screen bg-[#F6F7FC]">
       <NurseDashboardHeader title="Dashboard" breadcrumbs={[]} />
@@ -341,15 +322,25 @@ export default function NurseHome() {
             icon={<Baby size={23} />}
             href="/nurse-dashboard/maternal-care"
           >
-            {maternalAlerts.map((alert) => (
-              <ListRow
-                key={`${alert.name}-${alert.status}`}
-                name={alert.name}
-                description={alert.description}
-                status={alert.status}
-                color={alert.color as "green" | "red" | "blue" | "amber"}
-              />
-            ))}
+            {isLoadingMaternal ? (
+              <div className="py-8 text-center text-sm text-gray-500">
+                Loading maternal alerts...
+              </div>
+            ) : maternalData?.results?.length > 0 ? (
+              maternalData.results.map((alert: any, i: number) => (
+                <ListRow
+                  key={`${alert.patient_id}-${i}`}
+                  name={alert.patient_name}
+                  description={alert.details}
+                  status={alert.priority}
+                  color={getMaternalAlertColor(alert.priority)}
+                />
+              ))
+            ) : (
+              <div className="py-8 text-center text-sm text-gray-500">
+                No active maternal alerts.
+              </div>
+            )}
           </SummaryPanel>
 
           <SummaryPanel
@@ -357,15 +348,25 @@ export default function NurseHome() {
             icon={<Syringe size={23} />}
             href="/nurse-dashboard/immunization"
           >
-            {immunizationDue.map((item) => (
-              <ListRow
-                key={`${item.name}-${item.status}`}
-                name={item.name}
-                description={item.description}
-                status={item.status}
-                color={item.status === "Today" ? "blue" : "amber"}
-              />
-            ))}
+            {isLoadingImmunizations ? (
+              <div className="py-8 text-center text-sm text-gray-500">
+                Loading immunizations...
+              </div>
+            ) : immunizationsData?.results?.length > 0 ? (
+              immunizationsData.results.map((item: any) => (
+                <ListRow
+                  key={item.id}
+                  name={item.patient_name}
+                  description={`${item.vaccine_name} · ${item.next_dose_target}`}
+                  status={item.user_friendly_date}
+                  color={getImmunizationColor(item.next_due_date)}
+                />
+              ))
+            ) : (
+              <div className="py-8 text-center text-sm text-gray-500">
+                No immunizations due.
+              </div>
+            )}
           </SummaryPanel>
         </div>
         <DataTable
