@@ -18,12 +18,29 @@ const inputStyles =
   "block w-full border border-gray-200 rounded-xl pl-11 pr-12 py-3.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-[#1AC073] focus:ring-[#1AC073] transition-colors bg-white";
 const labelStyles = "block text-sm font-bold text-gray-700 mb-1.5";
 
+function getActivationErrorMessage(error: unknown) {
+  const maybeError = error as {
+    message?: string;
+    response?: {
+      errors?: {
+        confirm_password?: string[];
+      };
+    };
+  };
+
+  return (
+    maybeError.response?.errors?.confirm_password?.[0] ||
+    maybeError.message ||
+    "An error occurred while activating your account."
+  );
+}
+
 function SetUpForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const setupAccountMutation = useResetPassword();
 
-  const uid = searchParams.get("id");
+  const uid = searchParams.get("uid");
   const token = searchParams.get("token");
 
   const [newPassword, setNewPassword] = useState("");
@@ -36,9 +53,9 @@ function SetUpForm() {
   useEffect(() => {
     if (!uid || !token) {
       toast.warning(
-        "Warning: The setup link appears to be invalid or missing parameters.",
+        "Warning: The activation link appears to be invalid or missing parameters.",
         {
-          toastId: "missing-setup-token",
+          toastId: "missing-activation-token",
         },
       );
     }
@@ -49,7 +66,7 @@ function SetUpForm() {
 
     if (!uid || !token) {
       toast.error(
-        "Invalid or missing setup link. Please contact your administrator.",
+        "Invalid or missing activation link. Please contact your administrator.",
       );
       return;
     }
@@ -74,15 +91,11 @@ function SetUpForm() {
       {
         onSuccess: () => {
           setIsSuccess(true);
-          toast.success("Account set up successfully!");
+          toast.success("Account activated successfully!");
           setTimeout(() => router.push("/login"), 3000);
         },
-        onError: (error: any) => {
-          const errorMsg =
-            error.response?.errors?.confirm_password?.[0] ||
-            error.message ||
-            "An error occurred while setting up your account.";
-          toast.error(errorMsg);
+        onError: (error: unknown) => {
+          toast.error(getActivationErrorMessage(error));
         },
       },
     );
@@ -95,10 +108,10 @@ function SetUpForm() {
           <CheckCircle2 size={40} className="text-[#046C3F]" />
         </div>
         <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3">
-          Account Ready!
+          Account Activated!
         </h2>
         <p className="text-gray-500 mb-8 text-base">
-          Your account has been successfully set up. You can now log in to
+          Your account has been successfully activated. You can now log in to
           access the dashboard.
         </p>
         <button
@@ -118,10 +131,10 @@ function SetUpForm() {
           <UserCheck size={28} className="text-[#046C3F]" />
         </div>
         <h2 className="text-3xl font-bold text-gray-900 mb-2 tracking-tight">
-          Set up your account
+          Activate your account
         </h2>
         <p className="text-base text-gray-500">
-          Welcome! Please create a secure password to activate your new account.
+          Create a secure password to activate your account.
         </p>
       </div>
 
@@ -187,7 +200,7 @@ function SetUpForm() {
         {setupAccountMutation.isPending && (
           <Loader2 size={20} className="animate-spin" />
         )}
-        {setupAccountMutation.isPending ? "Setting up..." : "Complete Setup"}
+        {setupAccountMutation.isPending ? "Activating..." : "Activate Account"}
       </button>
     </form>
   );
@@ -202,7 +215,7 @@ export default function SetUpAccount() {
             <div className="flex flex-col items-center justify-center py-16">
               <Loader2 className="animate-spin text-[#046C3F] mb-4" size={32} />
               <p className="text-gray-500 font-medium">
-                Verifying setup link...
+                Verifying activation link...
               </p>
             </div>
           }

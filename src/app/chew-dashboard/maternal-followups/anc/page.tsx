@@ -1,5 +1,5 @@
-import AncVisits from "@/src/components/chewDashboard/maternal-care/AncVisitsPage";
 import { Suspense } from "react";
+import AncVisits from "@/src/components/chewDashboard/maternal-care/AncVisitsPage";
 
 export default function AncVisitsPage() {
   return (
