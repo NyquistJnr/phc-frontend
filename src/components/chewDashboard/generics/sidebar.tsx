@@ -6,17 +6,52 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import {
-  LayoutDashboard, Users, Megaphone, Heart, CalendarDays, BarChart2, LogOut, X,
+  LayoutDashboard,
+  Users,
+  Megaphone,
+  Heart,
+  CalendarDays,
+  BarChart2,
+  LogOut,
+  X,
+  Shapes,
+  Blocks,
 } from "lucide-react";
 import { useSidebar } from "@/src/components/adminDashboard/generics/sidebar";
 
 const navItems = [
-  { name: "Dashboard",          icon: LayoutDashboard, path: "/chew-dashboard" },
-  { name: "Patients",           icon: Users,           path: "/chew-dashboard/patients" },
-  { name: "Health Promotion",   icon: Megaphone,       path: "/chew-dashboard/health-promotion" },
-  { name: "Maternal Follow-Ups",icon: Heart,           path: "/chew-dashboard/maternal-followups" },
-  { name: "Appointments",       icon: CalendarDays,    path: "/chew-dashboard/appointments" },
-  { name: "Activity Reports",   icon: BarChart2,       path: "/chew-dashboard/activity-reports" },
+  { name: "Dashboard", icon: LayoutDashboard, path: "/chew-dashboard" },
+  { name: "Patients", icon: Users, path: "/chew-dashboard/patients" },
+  {
+    name: "Health Promotion",
+    icon: Megaphone,
+    path: "/chew-dashboard/health-promotion",
+  },
+  {
+    name: "Maternal Follow-Ups",
+    icon: Heart,
+    path: "/chew-dashboard/maternal-followups",
+  },
+  {
+    name: "ANC",
+    icon: Shapes,
+    path: "/chew-dashboard/maternal-followups/anc",
+  },
+  {
+    name: "PNC",
+    icon: Blocks,
+    path: "/chew-dashboard/maternal-followups/pnc",
+  },
+  {
+    name: "Appointments",
+    icon: CalendarDays,
+    path: "/chew-dashboard/appointments",
+  },
+  {
+    name: "Activity Reports",
+    icon: BarChart2,
+    path: "/chew-dashboard/activity-reports",
+  },
 ];
 
 export const ChewSidebar = () => {
@@ -25,8 +60,12 @@ export const ChewSidebar = () => {
   const [mounted, setMounted] = useState(false);
   const { mobileOpen, setMobileOpen } = useSidebar();
 
-  useEffect(() => { setMounted(true); }, []);
-  useEffect(() => { setMobileOpen(false); }, [pathname, setMobileOpen]);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname, setMobileOpen]);
 
   const handleLogout = async () => {
     await signOut({ callbackUrl: "/login", redirect: true });
@@ -53,7 +92,9 @@ export const ChewSidebar = () => {
               <div className="absolute inset-0 bg-[#FFD66B] rounded-full opacity-50 translate-x-1" />
               <div className="absolute inset-0 bg-emerald-400 rounded-full scale-75 border-2 border-white" />
             </div>
-            <span className="text-xl font-bold text-gray-800 tracking-tight">LOGO</span>
+            <span className="text-xl font-bold text-gray-800 tracking-tight">
+              LOGO
+            </span>
           </div>
           <button
             onClick={() => setMobileOpen(false)}
@@ -66,7 +107,10 @@ export const ChewSidebar = () => {
         <nav className="grow px-4 space-y-1.5 overflow-y-auto">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = pathname === item.path || (item.path !== "/chew-dashboard" && pathname.startsWith(item.path));
+            const isActive =
+              pathname === item.path ||
+              (item.path !== "/chew-dashboard" &&
+                pathname.startsWith(item.path));
             return (
               <Link
                 key={item.name}
@@ -77,7 +121,10 @@ export const ChewSidebar = () => {
                     : "text-[#53545C] hover:bg-gray-50 hover:text-gray-900"
                 }`}
               >
-                <Icon size={20} className={`${isActive ? "text-white" : "text-gray-400 group-hover:text-gray-600"} transition-colors shrink-0`} />
+                <Icon
+                  size={20}
+                  className={`${isActive ? "text-white" : "text-gray-400 group-hover:text-gray-600"} transition-colors shrink-0`}
+                />
                 <span className="text-sm font-medium">{item.name}</span>
               </Link>
             );
@@ -89,50 +136,122 @@ export const ChewSidebar = () => {
             onClick={() => setLogoutModalOpen(true)}
             className="w-full flex items-center gap-3 px-4 py-3 text-[#F33131] hover:bg-red-50 hover:text-red-700 rounded-xl transition-all duration-200 group"
           >
-            <LogOut size={20} className="text-red-400 group-hover:text-red-600 transition-colors" />
+            <LogOut
+              size={20}
+              className="text-red-400 group-hover:text-red-600 transition-colors"
+            />
             <span className="text-sm font-medium">Logout</span>
           </button>
         </div>
       </aside>
 
-      {mounted && logoutModalOpen && createPortal(
-        <div
-          onClick={() => setLogoutModalOpen(false)}
-          style={{ position: "fixed", inset: 0, zIndex: 99999, display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.45)", backdropFilter: "blur(2px)", padding: "1rem" }}
-        >
+      {mounted &&
+        logoutModalOpen &&
+        createPortal(
           <div
-            onClick={(e) => e.stopPropagation()}
-            style={{ background: "#fff", borderRadius: "1rem", boxShadow: "0 25px 50px rgba(0,0,0,0.25)", width: "100%", maxWidth: "380px", overflow: "hidden" }}
+            onClick={() => setLogoutModalOpen(false)}
+            style={{
+              position: "fixed",
+              inset: 0,
+              zIndex: 99999,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: "rgba(0,0,0,0.45)",
+              backdropFilter: "blur(2px)",
+              padding: "1rem",
+            }}
           >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "1.25rem 1.25rem 0.75rem" }}>
-              <span style={{ fontSize: "1rem", fontWeight: 700, color: "#111827" }}>Log out</span>
-              <button onClick={() => setLogoutModalOpen(false)} style={{ color: "#9CA3AF", background: "none", border: "none", cursor: "pointer", display: "flex" }}>
-                <X size={18} />
-              </button>
-            </div>
-            <div style={{ padding: "0 1.25rem 1.25rem" }}>
-              <p style={{ fontSize: "0.875rem", color: "#6B7280", marginBottom: "1.25rem" }}>
-                Are you sure you want to sign out of your account?
-              </p>
-              <div style={{ display: "flex", gap: "0.75rem" }}>
-                <button
-                  onClick={() => setLogoutModalOpen(false)}
-                  style={{ flex: 1, padding: "0.625rem", borderRadius: "0.75rem", fontSize: "0.875rem", fontWeight: 600, color: "#374151", background: "#F3F4F6", border: "none", cursor: "pointer" }}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleLogout}
-                  style={{ flex: 1, padding: "0.625rem", borderRadius: "0.75rem", fontSize: "0.875rem", fontWeight: 600, color: "#fff", background: "#DC2626", border: "none", cursor: "pointer" }}
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                background: "#fff",
+                borderRadius: "1rem",
+                boxShadow: "0 25px 50px rgba(0,0,0,0.25)",
+                width: "100%",
+                maxWidth: "380px",
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "1.25rem 1.25rem 0.75rem",
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: "1rem",
+                    fontWeight: 700,
+                    color: "#111827",
+                  }}
                 >
                   Log out
+                </span>
+                <button
+                  onClick={() => setLogoutModalOpen(false)}
+                  style={{
+                    color: "#9CA3AF",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    display: "flex",
+                  }}
+                >
+                  <X size={18} />
                 </button>
               </div>
+              <div style={{ padding: "0 1.25rem 1.25rem" }}>
+                <p
+                  style={{
+                    fontSize: "0.875rem",
+                    color: "#6B7280",
+                    marginBottom: "1.25rem",
+                  }}
+                >
+                  Are you sure you want to sign out of your account?
+                </p>
+                <div style={{ display: "flex", gap: "0.75rem" }}>
+                  <button
+                    onClick={() => setLogoutModalOpen(false)}
+                    style={{
+                      flex: 1,
+                      padding: "0.625rem",
+                      borderRadius: "0.75rem",
+                      fontSize: "0.875rem",
+                      fontWeight: 600,
+                      color: "#374151",
+                      background: "#F3F4F6",
+                      border: "none",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleLogout}
+                    style={{
+                      flex: 1,
+                      padding: "0.625rem",
+                      borderRadius: "0.75rem",
+                      fontSize: "0.875rem",
+                      fontWeight: 600,
+                      color: "#fff",
+                      background: "#DC2626",
+                      border: "none",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Log out
+                  </button>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>,
-        document.body,
-      )}
+          </div>,
+          document.body,
+        )}
     </>
   );
 };

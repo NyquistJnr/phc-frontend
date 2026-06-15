@@ -58,6 +58,13 @@ const REFERRAL_TYPE_OPTIONS = [
   { label: "Emergency", value: "EMERGENCY" },
 ];
 
+function getApiErrorMessage(error: unknown, fallback: string) {
+  const maybeError = error as {
+    response?: { data?: { message?: string } };
+  };
+  return maybeError.response?.data?.message || fallback;
+}
+
 function FieldShell({
   label,
   children,
@@ -436,6 +443,18 @@ export default function AppointmentDetails() {
         referral_type: referralForm.referral_type,
         reason_for_referral: referralForm.reason_for_referral,
         clinical_summary: referralForm.clinical_summary,
+
+        // --- NEW REQUIRED API FIELDS ---
+        destination_level: "SECONDARY", // Update this with your actual default or add to referralForm
+        mode_of_transportation: null,
+        receiving_department: null,
+        mode_of_referral: null,
+        target_doctor_email: null,
+        target_department_email: null,
+        email_subject: "New Patient Referral", // Or generate dynamically
+        email_body:
+          referralForm.reason_for_referral ||
+          "Please review the attached clinical summary for details.",
       },
       {
         onSuccess: () => {
@@ -447,10 +466,12 @@ export default function AppointmentDetails() {
             clinical_summary: "",
           });
         },
-        onError: (error: any) => {
+        onError: (error: unknown) => {
           setReferralError(
-            error?.response?.data?.message ||
+            getApiErrorMessage(
+              error,
               "Failed to create referral. Please try again.",
+            ),
           );
         },
       },

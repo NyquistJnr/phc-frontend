@@ -3,7 +3,14 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { createPortal } from "react-dom";
-import { MoreHorizontal, Eye, Edit, Plus } from "lucide-react";
+import {
+  MoreHorizontal,
+  Eye,
+  Edit,
+  ArrowDownLeft,
+  ArrowUpRight,
+  Globe,
+} from "lucide-react";
 
 import { CustomDropdown } from "@/src/components/generic/ui/CustomDropdown";
 import { DataTable, ColumnDef } from "@/src/components/generic/ui/DataTable";
@@ -14,10 +21,10 @@ import {
   useReferrals,
   useUpdateReferralStatus,
 } from "@/src/hooks/nurses/use-referrals";
-import type {
+import {
   ReferralResult,
   ReferralStatus,
-} from "@/src/components/nurse-dashboard/referrals/type";
+} from "../../nurse-dashboard/referrals/type";
 
 const STATUS_OPTIONS = ["All Status", "PENDING", "ACCEPTED", "REJECTED"];
 const DIRECTION_OPTIONS = ["All Directions", "inbound", "outbound"];
@@ -29,14 +36,22 @@ const statusColors: Record<string, { bg: string; text: string }> = {
   REJECTED: { bg: "#FDE8E8", text: "#F33131" },
 };
 
-function getApiErrorMessage(error: unknown, fallback: string) {
-  const maybeError = error as {
-    response?: { data?: { errors?: { detail?: string }; message?: string } };
-  };
+function FacilityCell({
+  name,
+  isDestination,
+}: {
+  name: string | null;
+  isDestination?: boolean;
+}) {
+  if (name) {
+    return <span className="font-medium text-gray-700">{name}</span>;
+  }
+
   return (
-    maybeError.response?.data?.errors?.detail ||
-    maybeError.response?.data?.message ||
-    fallback
+    <div className="inline-flex items-center gap-1.5 rounded-md border border-dashed border-gray-300 bg-gray-50 px-2 py-1 text-xs font-medium text-gray-500">
+      <Globe size={12} className="text-gray-400" />
+      <span>{isDestination ? "External Destination" : "External Origin"}</span>
+    </div>
   );
 }
 
@@ -95,13 +110,12 @@ function ReferralActionMenu({ row }: { row: ReferralResult }) {
         onSuccess: () => {
           setShowStatusModal(false);
         },
-        onError: (error: unknown) => {
-          setErrorMsg(
-            getApiErrorMessage(
-              error,
-              "Failed to update status. Please try again.",
-            ),
-          );
+        onError: (error: any) => {
+          const msg =
+            error?.response?.data?.errors?.detail ||
+            error?.response?.data?.message ||
+            "Failed to update status. Please try again.";
+          setErrorMsg(msg);
         },
       },
     );
@@ -282,19 +296,66 @@ export default function ReferralHistory() {
 
   const columns: ColumnDef<ReferralResult>[] = [
     { header: "Referral ID", accessorKey: "referral_id", sortable: true },
-    { header: "Patient ID", accessorKey: "patient_display_id", sortable: true },
-    { header: "Patient Name", accessorKey: "patient_name", sortable: true },
+    {
+      header: "Direction",
+      accessorKey: "direction",
+      sortable: true,
+      render: (row) => {
+        const isInbound = row.direction?.toLowerCase() === "inbound";
+        return (
+          <div
+            className={`flex w-fit items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${
+              isInbound
+                ? "bg-blue-50 text-blue-700"
+                : "bg-purple-50 text-purple-700"
+            }`}
+          >
+            {isInbound ? (
+              <ArrowDownLeft size={14} />
+            ) : (
+              <ArrowUpRight size={14} />
+            )}
+            <span className="capitalize">{row.direction || "Unknown"}</span>
+          </div>
+        );
+      },
+    },
+    {
+      header: "Patient",
+      sortable: true,
+      render: (row) => (
+        <div className="flex flex-col">
+          <span className="font-medium text-gray-900">{row.patient_name}</span>
+          <span className="text-xs text-gray-500">
+            {row.patient_display_id}
+          </span>
+        </div>
+      ),
+    },
+    {
+      header: "Type",
+      accessorKey: "referral_type",
+      sortable: true,
+      render: (row) => (
+        <span className="capitalize">
+          {row.referral_type?.toLowerCase() || "-"}
+        </span>
+      ),
+    },
     {
       header: "Referring Facility",
       accessorKey: "referring_facility_name",
       sortable: true,
+      render: (row) => <FacilityCell name={row.referring_facility_name} />,
     },
     {
       header: "Receiving Facility",
       accessorKey: "receiving_facility_name",
       sortable: true,
+      render: (row) => (
+        <FacilityCell name={row.receiving_facility_name} isDestination />
+      ),
     },
-    { header: "Reason", accessorKey: "reason_for_referral", sortable: true },
     {
       header: "Date",
       sortable: true,
@@ -336,21 +397,27 @@ export default function ReferralHistory() {
       />
 
       <div className="px-4 py-6 sm:px-6 lg:py-8">
-        <div className="mb-7 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-          <div>
-            <h2 className="mb-1 text-2xl font-semibold text-black sm:text-3xl">
-              Referrals
-            </h2>
-            <p className="text-base text-[#3F3F46]">
-              Create and track patient referrals
-            </p>
-          </div>
+        <div className="mb-7">
+          <h2 className="mb-1 text-2xl font-semibold text-black sm:text-3xl">
+            Referrals
+          </h2>
+          <p className="text-base text-[#3F3F46]">
+            Create and track patient referrals
+          </p>
+        </div>
+
+        <div className="mb-6 grid w-full max-w-[400px] grid-cols-2 overflow-hidden rounded-lg bg-[#EEF5F3]">
+          <button
+            type="button"
+            className="h-10 bg-[#046C3F] px-4 text-sm font-medium text-white transition-colors sm:text-base"
+          >
+            Referral History
+          </button>
           <button
             type="button"
             onClick={() => router.push("/doctor-dashboard/referrals/new")}
-            className="inline-flex h-11 items-center justify-center gap-3 rounded-xl bg-[#046C3F] px-7 text-base font-medium text-white transition-colors hover:bg-[#035a34]"
+            className="h-10 px-4 text-sm font-medium text-gray-400 transition-colors hover:text-[#046C3F] sm:text-base"
           >
-            <Plus size={20} />
             Create Referral
           </button>
         </div>

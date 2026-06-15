@@ -186,6 +186,7 @@ export default function ImmunizationList({
   records,
   totalPages,
   isLoading,
+  localSearch,
   setLocalSearch,
   statusFilter,
   sessionTypeFilter,
@@ -197,6 +198,7 @@ export default function ImmunizationList({
   records: ImmunizationRecordApi[];
   totalPages?: number;
   isLoading: boolean;
+  localSearch: string;
   setLocalSearch: (val: string) => void;
   statusFilter: string;
   sessionTypeFilter: string;

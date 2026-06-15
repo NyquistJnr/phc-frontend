@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import DoctorHeader from "@/src/components/doctorDashboard/generics/Header";
+import DoctorHeader from "../generics/Header";
 import ImmunizationList from "./ImmunizationList";
 import { useImmunizationRecords } from "@/src/hooks/nurses/use-immunization";
 
@@ -77,6 +77,7 @@ export default function Immunization() {
           records={data?.results || []}
           totalPages={data?.total_pages}
           isLoading={isLoading}
+          localSearch={localSearch}
           setLocalSearch={setLocalSearch}
           statusFilter={statusFilter}
           sessionTypeFilter={sessionTypeFilter}

@@ -19,18 +19,55 @@ import {
   Share2,
   LogOut,
   X,
+  Shapes,
+  Blocks,
 } from "lucide-react";
 import { useSidebar } from "@/src/components/adminDashboard/generics/sidebar";
 
 const navItems = [
   { name: "Dashboard", icon: LayoutDashboard, path: "/doctor-dashboard" },
   { name: "Patients", icon: Users, path: "/doctor-dashboard/patients" },
-  { name: "Appointments", icon: CalendarClock, path: "/doctor-dashboard/appointments" },
-  { name: "Consultations", icon: Stethoscope, path: "/doctor-dashboard/consultations" },
-  { name: "Laboratory", icon: FlaskConical, path: "/doctor-dashboard/laboratory" },
-  { name: "Prescriptions", icon: Pill, path: "/doctor-dashboard/prescriptions" },
-  { name: "Maternal Care", icon: Heart, path: "/doctor-dashboard/maternal-care" },
-  { name: "Immunization", icon: Syringe, path: "/doctor-dashboard/immunization" },
+  {
+    name: "Appointments",
+    icon: CalendarClock,
+    path: "/doctor-dashboard/appointments",
+  },
+  {
+    name: "Consultations",
+    icon: Stethoscope,
+    path: "/doctor-dashboard/consultations",
+  },
+  {
+    name: "Laboratory",
+    icon: FlaskConical,
+    path: "/doctor-dashboard/laboratory",
+  },
+  {
+    name: "Prescriptions",
+    icon: Pill,
+    path: "/doctor-dashboard/prescriptions",
+  },
+  {
+    name: "Maternal Care",
+    icon: Heart,
+    path: "/doctor-dashboard/maternal-care",
+  },
+  {
+    name: "ANC",
+    icon: Shapes,
+    path: "/doctor-dashboard/maternal-care/anc",
+  },
+  {
+    name: "PNC",
+    icon: Blocks,
+    path: "/doctor-dashboard/maternal-care/pnc",
+  },
+
+  {
+    name: "Immunization",
+    icon: Syringe,
+    path: "/doctor-dashboard/immunization",
+  },
   { name: "Referrals", icon: Share2, path: "/doctor-dashboard/referrals" },
 ];
 
@@ -40,7 +77,9 @@ export const DoctorSidebar = () => {
   const [mounted, setMounted] = useState(false);
   const { mobileOpen, setMobileOpen } = useSidebar();
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     setMobileOpen(false);
@@ -71,7 +110,9 @@ export const DoctorSidebar = () => {
               <div className="absolute inset-0 bg-[#FFD66B] rounded-full opacity-50 translate-x-1"></div>
               <div className="absolute inset-0 bg-emerald-400 rounded-full scale-75 border-2 border-white"></div>
             </div>
-            <span className="text-xl font-bold text-gray-800 tracking-tight">LOGO</span>
+            <span className="text-xl font-bold text-gray-800 tracking-tight">
+              LOGO
+            </span>
           </div>
           <button
             onClick={() => setMobileOpen(false)}
@@ -111,70 +152,122 @@ export const DoctorSidebar = () => {
             onClick={() => setLogoutModalOpen(true)}
             className="w-full flex items-center gap-3 px-4 py-3 text-[#F33131] hover:bg-red-50 hover:text-red-700 rounded-xl transition-all duration-200 group"
           >
-            <LogOut size={20} className="text-red-400 group-hover:text-red-600 transition-colors" />
+            <LogOut
+              size={20}
+              className="text-red-400 group-hover:text-red-600 transition-colors"
+            />
             <span className="text-sm font-medium">Logout</span>
           </button>
         </div>
       </aside>
 
-      {mounted && logoutModalOpen && createPortal(
-        <div
-          onClick={() => setLogoutModalOpen(false)}
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 99999,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            backgroundColor: "rgba(0,0,0,0.45)",
-            backdropFilter: "blur(2px)",
-            padding: "1rem",
-          }}
-        >
+      {mounted &&
+        logoutModalOpen &&
+        createPortal(
           <div
-            onClick={(e) => e.stopPropagation()}
+            onClick={() => setLogoutModalOpen(false)}
             style={{
-              background: "#fff",
-              borderRadius: "1rem",
-              boxShadow: "0 25px 50px rgba(0,0,0,0.25)",
-              width: "100%",
-              maxWidth: "380px",
-              overflow: "hidden",
+              position: "fixed",
+              inset: 0,
+              zIndex: 99999,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: "rgba(0,0,0,0.45)",
+              backdropFilter: "blur(2px)",
+              padding: "1rem",
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "1.25rem 1.25rem 0.75rem" }}>
-              <span style={{ fontSize: "1rem", fontWeight: 700, color: "#111827" }}>Log out</span>
-              <button
-                onClick={() => setLogoutModalOpen(false)}
-                style={{ color: "#9CA3AF", background: "none", border: "none", cursor: "pointer", display: "flex" }}
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                background: "#fff",
+                borderRadius: "1rem",
+                boxShadow: "0 25px 50px rgba(0,0,0,0.25)",
+                width: "100%",
+                maxWidth: "380px",
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "1.25rem 1.25rem 0.75rem",
+                }}
               >
-                <X size={18} />
-              </button>
-            </div>
-            <div style={{ padding: "0 1.25rem 1.25rem" }}>
-              <p style={{ fontSize: "0.875rem", color: "#6B7280", marginBottom: "1.25rem" }}>
-                Are you sure you want to sign out of your account?
-              </p>
-              <div style={{ display: "flex", gap: "0.75rem" }}>
-                <button
-                  onClick={() => setLogoutModalOpen(false)}
-                  style={{ flex: 1, padding: "0.625rem", borderRadius: "0.75rem", fontSize: "0.875rem", fontWeight: 600, color: "#374151", background: "#F3F4F6", border: "none", cursor: "pointer" }}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleLogout}
-                  style={{ flex: 1, padding: "0.625rem", borderRadius: "0.75rem", fontSize: "0.875rem", fontWeight: 600, color: "#fff", background: "#DC2626", border: "none", cursor: "pointer" }}
+                <span
+                  style={{
+                    fontSize: "1rem",
+                    fontWeight: 700,
+                    color: "#111827",
+                  }}
                 >
                   Log out
+                </span>
+                <button
+                  onClick={() => setLogoutModalOpen(false)}
+                  style={{
+                    color: "#9CA3AF",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    display: "flex",
+                  }}
+                >
+                  <X size={18} />
                 </button>
               </div>
+              <div style={{ padding: "0 1.25rem 1.25rem" }}>
+                <p
+                  style={{
+                    fontSize: "0.875rem",
+                    color: "#6B7280",
+                    marginBottom: "1.25rem",
+                  }}
+                >
+                  Are you sure you want to sign out of your account?
+                </p>
+                <div style={{ display: "flex", gap: "0.75rem" }}>
+                  <button
+                    onClick={() => setLogoutModalOpen(false)}
+                    style={{
+                      flex: 1,
+                      padding: "0.625rem",
+                      borderRadius: "0.75rem",
+                      fontSize: "0.875rem",
+                      fontWeight: 600,
+                      color: "#374151",
+                      background: "#F3F4F6",
+                      border: "none",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleLogout}
+                    style={{
+                      flex: 1,
+                      padding: "0.625rem",
+                      borderRadius: "0.75rem",
+                      fontSize: "0.875rem",
+                      fontWeight: 600,
+                      color: "#fff",
+                      background: "#DC2626",
+                      border: "none",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Log out
+                  </button>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>,
-        document.body,
-      )}
+          </div>,
+          document.body,
+        )}
     </>
   );
 };

@@ -4,7 +4,7 @@ import React from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Baby, CalendarDays, Loader2, MapPin, Syringe } from "lucide-react";
 
-import DoctorHeader from "@/src/components/doctorDashboard/generics/Header";
+import DoctorHeader from "../generics/Header";
 import NurseBackButton from "@/src/components/nurse-dashboard/generics/NurseBackButton";
 import { StatusBadge } from "@/src/components/generic/ui/TableHelpers";
 import { useImmunizationRecord } from "@/src/hooks/nurses/use-immunization";
@@ -66,7 +66,7 @@ export default function ImmunizationDetails() {
           <div className="mt-6 rounded-xl border border-red-100 bg-red-50 p-6 text-center text-red-600">
             <p>
               Failed to load immunization record. It may have been deleted or
-              does not exist.
+              doesn't exist.
             </p>
           </div>
         </div>

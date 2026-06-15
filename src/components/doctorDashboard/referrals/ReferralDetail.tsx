@@ -2,9 +2,10 @@
 
 import React from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, FileText, User, Activity, ArrowRightLeft } from "lucide-react";
+import { FileText, User, Activity, ArrowRightLeft, Mail } from "lucide-react";
 
 import DoctorHeader from "@/src/components/doctorDashboard/generics/Header";
+import NurseBackButton from "@/src/components/nurse-dashboard/generics/NurseBackButton";
 import { StatusBadge } from "@/src/components/generic/ui/TableHelpers";
 import { useReferralById } from "@/src/hooks/nurses/use-referrals";
 
@@ -12,6 +13,25 @@ const statusColors: Record<string, { bg: string; text: string }> = {
   ACCEPTED: { bg: "#DFF3EA", text: "#039855" },
   PENDING: { bg: "#FFF4E5", text: "#1F2937" },
   REJECTED: { bg: "#FDE8E8", text: "#F33131" },
+};
+
+const destinationMap: Record<string, string> = {
+  PRIMARY: "Primary Health Care",
+  SECONDARY: "Secondary Health Care",
+  HIGHER: "Higher Health Care",
+  OTHER: "Other",
+};
+
+const transportMap: Record<string, string> = {
+  PRIVATE: "Private Vehicle",
+  AMBULANCE: "Ambulance",
+  PUBLIC: "Public Transportation",
+  OTHER: "Other",
+};
+
+const referralModeMap: Record<string, string> = {
+  SOFTCOPY: "Softcopy (Email/Digital)",
+  HARDCOPY: "Hardcopy (Physical Document)",
 };
 
 function DetailItem({
@@ -62,14 +82,9 @@ export default function ReferralDetailPage() {
           breadcrumbs={[{ label: "Referrals" }, { label: "Detail" }]}
         />
         <div className="px-4 py-6 sm:px-6">
-          <button
-            type="button"
+          <NurseBackButton
             onClick={() => router.push("/doctor-dashboard/referrals")}
-            className="mb-8 inline-flex items-center gap-2 rounded border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-[#046C3F] transition-colors hover:bg-[#F8FAF9]"
-          >
-            <ArrowLeft size={15} />
-            Back
-          </button>
+          />
           <div className="mt-8 rounded-xl bg-white p-8 text-center text-red-500 shadow-sm">
             Failed to load referral data. Please try again.
           </div>
@@ -83,6 +98,12 @@ export default function ReferralDetailPage() {
     text: "#374151",
   };
 
+  const hasCommunicationData =
+    referral.target_doctor_email ||
+    referral.target_department_email ||
+    referral.email_subject ||
+    referral.email_body;
+
   return (
     <div className="min-h-screen bg-[#F6F7FC]">
       <DoctorHeader
@@ -91,14 +112,9 @@ export default function ReferralDetailPage() {
       />
 
       <div className="px-4 py-6 sm:px-6 lg:py-8">
-        <button
-          type="button"
+        <NurseBackButton
           onClick={() => router.push("/doctor-dashboard/referrals")}
-          className="mb-8 inline-flex items-center gap-2 rounded border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-[#046C3F] transition-colors hover:bg-[#F8FAF9]"
-        >
-          <ArrowLeft size={15} />
-          Back
-        </button>
+        />
 
         <div className="mb-7 mt-4 flex flex-col sm:flex-row sm:items-end sm:justify-between">
           <div>
@@ -154,13 +170,31 @@ export default function ReferralDetailPage() {
               <ArrowRightLeft size={20} className="text-[#046C3F]" /> Facility &
               Routing
             </div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <DetailItem
                 label="Direction"
                 value={
                   referral.direction
                     ? referral.direction.charAt(0).toUpperCase() +
                       referral.direction.slice(1).toLowerCase()
+                    : "N/A"
+                }
+              />
+              <DetailItem
+                label="Destination Level"
+                value={
+                  referral.destination_level
+                    ? destinationMap[referral.destination_level] ||
+                      referral.destination_level
+                    : "N/A"
+                }
+              />
+              <DetailItem
+                label="Mode of Transportation"
+                value={
+                  referral.mode_of_transportation
+                    ? transportMap[referral.mode_of_transportation] ||
+                      referral.mode_of_transportation
                     : "N/A"
                 }
               />
@@ -176,8 +210,52 @@ export default function ReferralDetailPage() {
                 label="Referred By"
                 value={referral.referred_by_name}
               />
+              {referral.mode_of_referral && (
+                <DetailItem
+                  label="Referral Mode"
+                  value={
+                    referralModeMap[referral.mode_of_referral] ||
+                    referral.mode_of_referral
+                  }
+                />
+              )}
             </div>
           </div>
+
+          {hasCommunicationData && (
+            <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
+              <div className="mb-5 flex items-center gap-2 border-b border-gray-100 pb-3 text-lg font-semibold text-gray-800">
+                <Mail size={20} className="text-[#046C3F]" /> Communication
+                Details
+              </div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 mb-4">
+                <DetailItem
+                  label="Target Doctor Email"
+                  value={referral.target_doctor_email}
+                />
+                <DetailItem
+                  label="Target Department Email"
+                  value={referral.target_department_email}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 gap-4">
+                <DetailItem
+                  label="Email Subject"
+                  value={referral.email_subject}
+                />
+                <div className="rounded-lg border border-gray-200 bg-gray-50 px-5 py-4">
+                  <p className="mb-2 flex items-center gap-2 font-medium text-gray-700">
+                    <FileText size={16} className="text-gray-500" /> Email Body
+                  </p>
+                  <p className="whitespace-pre-wrap text-sm text-gray-600">
+                    {referral.email_body || "No email body provided."}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
             <div className="mb-5 flex items-center gap-2 border-b border-gray-100 pb-3 text-lg font-semibold text-gray-800">
               <Activity size={20} className="text-[#046C3F]" /> Clinical
@@ -188,8 +266,10 @@ export default function ReferralDetailPage() {
               <DetailItem
                 label="Referral Type"
                 value={
-                  referral.referral_type.charAt(0) +
-                  referral.referral_type.slice(1).toLowerCase()
+                  referral.referral_type
+                    ? referral.referral_type.charAt(0) +
+                      referral.referral_type.slice(1).toLowerCase()
+                    : "N/A"
                 }
               />
             </div>

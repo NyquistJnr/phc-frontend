@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import React, { useRef, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -14,22 +12,30 @@ import {
   X,
 } from "lucide-react";
 
-import DoctorHeader from "@/src/components/doctorDashboard/generics/Header";
+import DoctorHeader from "../generics/Header";
 import NurseBackButton from "@/src/components/nurse-dashboard/generics/NurseBackButton";
 import { usePatients } from "@/src/hooks/nurses/use-patients";
 import {
   useCreateImmunization,
   useVaccines,
 } from "@/src/hooks/nurses/use-immunization";
-import { RegistrationFormState } from "./types";
+import {
+  useStates,
+  useLgas,
+  useWards,
+} from "@/src/hooks/general/use-locations";
+import {
+  RegistrationFormState,
+  ImmunizationRegistrationPayload,
+} from "../../nurse-dashboard/immunization/type";
 
 const INITIAL_FORM: RegistrationFormState = {
   sessionType: "",
   state: "",
   lga: "",
   ward: "",
-  siteName: "",
-  vaccineGivenId: "",
+  routeOfAdministration: "",
+  vaccinesGivenIds: [],
   dateOfVisit: new Date().toISOString().split("T")[0],
   notes: "",
   patientSearchInput: "",
@@ -41,6 +47,7 @@ const INITIAL_FORM: RegistrationFormState = {
   sex: "",
   nextOfKinName: "",
   nextOfKinPhone: "",
+  nextOfKinRelationship: "",
 };
 
 const SESSION_TYPES = [
@@ -73,6 +80,7 @@ function FieldShell({
   );
 }
 
+// Single Select Field
 function SelectField({
   label,
   placeholder,
@@ -82,6 +90,7 @@ function SelectField({
   isLoading = false,
   onChange,
   onSearchChange,
+  disabled = false,
 }: {
   label: string;
   placeholder: string;
@@ -91,6 +100,7 @@ function SelectField({
   isLoading?: boolean;
   onChange: (value: string) => void;
   onSearchChange?: (term: string) => void;
+  disabled?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -126,8 +136,9 @@ function SelectField({
     <div className="relative" ref={ref}>
       <button
         type="button"
+        disabled={disabled}
         onClick={() => setOpen((current) => !current)}
-        className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-left focus:border-[#046C3F] focus:outline-none focus:ring-1 focus:ring-[#046C3F]"
+        className={`w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-left focus:border-[#046C3F] focus:outline-none focus:ring-1 focus:ring-[#046C3F] ${disabled ? "opacity-60 cursor-not-allowed bg-gray-50" : ""}`}
       >
         <span className="mb-1 block text-xs text-[#62636C]">{label}</span>
         <span className="flex items-center justify-between gap-3 text-base">
@@ -141,7 +152,7 @@ function SelectField({
         </span>
       </button>
 
-      {open && (
+      {open && !disabled && (
         <div className="absolute left-0 right-0 top-full z-50 mt-2 rounded-lg border border-gray-300 bg-white p-4 shadow-sm">
           {searchable && (
             <div className="relative mb-3 flex items-center">
@@ -202,6 +213,177 @@ function SelectField({
   );
 }
 
+// Multi Select Field for Vaccines
+function MultiSelectField({
+  label,
+  placeholder,
+  options,
+  values,
+  searchable = false,
+  isLoading = false,
+  onChange,
+  onSearchChange,
+  disabled = false,
+}: {
+  label: string;
+  placeholder: string;
+  options: { label: string; value: string }[];
+  values: string[];
+  searchable?: boolean;
+  isLoading?: boolean;
+  onChange: (values: string[]) => void;
+  onSearchChange?: (term: string) => void;
+  disabled?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const ref = useRef<HTMLDivElement>(null);
+
+  const displayOptions = onSearchChange
+    ? options
+    : options.filter((option) =>
+        option.label.toLowerCase().includes(search.toLowerCase()),
+      );
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (ref.current && !ref.current.contains(event.target as Node))
+        setOpen(false);
+    }
+    if (open) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [open]);
+
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const term = e.target.value;
+    setSearch(term);
+    if (onSearchChange) onSearchChange(term);
+  };
+
+  const toggleOption = (optionValue: string) => {
+    if (values.includes(optionValue)) {
+      onChange(values.filter((v) => v !== optionValue));
+    } else {
+      onChange([...values, optionValue]);
+    }
+  };
+
+  const removeOption = (e: React.MouseEvent, optionValue: string) => {
+    e.stopPropagation();
+    onChange(values.filter((v) => v !== optionValue));
+  };
+
+  const selectedLabels = values.map(
+    (val) => options.find((opt) => opt.value === val)?.label || val,
+  );
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => setOpen((current) => !current)}
+        className={`w-full min-h-[66px] rounded-lg border border-gray-300 bg-white px-4 py-2 text-left focus:border-[#046C3F] focus:outline-none focus:ring-1 focus:ring-[#046C3F] ${disabled ? "opacity-60 cursor-not-allowed bg-gray-50" : ""}`}
+      >
+        <span className="mb-1.5 block text-xs text-[#62636C]">{label}</span>
+
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-wrap gap-2 flex-1">
+            {values.length > 0 ? (
+              selectedLabels.map((label, idx) => (
+                <span
+                  key={idx}
+                  className="inline-flex items-center gap-1.5 rounded bg-[#E8F7F0] px-2 py-1 text-xs font-medium text-[#046C3F]"
+                >
+                  {label}
+                  <div
+                    role="button"
+                    onClick={(e) => removeOption(e, values[idx])}
+                    className="hover:text-red-600 focus:outline-none"
+                  >
+                    <X size={14} />
+                  </div>
+                </span>
+              ))
+            ) : (
+              <span className="text-base text-gray-400">
+                {isLoading ? "Loading..." : placeholder}
+              </span>
+            )}
+          </div>
+
+          <ChevronDown
+            size={20}
+            className={`text-gray-800 shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
+          />
+        </div>
+      </button>
+
+      {open && !disabled && (
+        <div className="absolute left-0 right-0 top-full z-50 mt-2 rounded-lg border border-gray-300 bg-white p-4 shadow-sm">
+          {searchable && (
+            <div className="relative mb-3 flex items-center">
+              <Search
+                size={20}
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-900"
+              />
+              <input
+                value={search}
+                onChange={handleSearch}
+                placeholder="Search..."
+                className="h-11 w-full rounded-lg border border-gray-300 pl-12 pr-10 text-sm outline-none focus:border-[#046C3F] focus:ring-1 focus:ring-[#046C3F]"
+              />
+            </div>
+          )}
+          <div className="max-h-72 overflow-y-auto pr-1">
+            {displayOptions.length > 0 ? (
+              displayOptions.map((option, index) => {
+                const isSelected = values.includes(option.value);
+                return (
+                  <button
+                    key={`${option.value}-${index}`}
+                    type="button"
+                    onClick={() => toggleOption(option.value)}
+                    className="flex w-full items-center gap-3 rounded-md px-2 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50"
+                  >
+                    <div
+                      className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors ${isSelected ? "border-[#046C3F] bg-[#046C3F]" : "border-gray-300 bg-white"}`}
+                    >
+                      {isSelected && (
+                        <svg
+                          className="w-3 h-3 text-white"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={3}
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                      )}
+                    </div>
+                    {option.label}
+                  </button>
+                );
+              })
+            ) : (
+              <div className="px-2 py-2 text-sm text-gray-500">
+                {isLoading ? "Searching..." : "No results found"}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function SuccessToast({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed bottom-8 right-8 z-50 flex w-[min(390px,calc(100vw-2rem))] items-center gap-4 rounded border border-gray-200 bg-white px-5 py-3 shadow-sm">
@@ -239,20 +421,34 @@ export default function ImmunizationRegister() {
   const [showPatientDropdown, setShowPatientDropdown] = useState(false);
   const patientRef = useRef<HTMLDivElement>(null);
 
+  // Queries
   const { data: patientsData, isFetching: isLoadingPatients } = usePatients({
     search: patientSearchTerm,
     page: 1,
     page_size: 10,
   });
   const { data: vaccinesData, isFetching: isLoadingVaccines } = useVaccines();
+
+  // Location Queries
+  const { data: statesList = [], isLoading: isLoadingStates } = useStates();
+  const { data: lgasList = [], isLoading: isLoadingLgas } = useLgas(form.state);
+  const { data: wardsList = [], isLoading: isLoadingWards } = useWards(
+    form.state,
+    form.lga,
+  );
+
   const { mutate: createImmunization, isPending: isCreating } =
     useCreateImmunization();
 
+  // Mappings
   const patientsList = patientsData?.results || [];
-  const vaccineOptions = (vaccinesData?.results || []).map((drug) => ({
-    label: `${drug.name} (${drug.category})`,
-    value: drug.id,
+  const vaccineOptions = (vaccinesData?.results || []).map((item) => ({
+    label: `${item.name} (${item.item_type})`,
+    value: item.id,
   }));
+  const stateOptions = statesList.map((s: string) => ({ label: s, value: s }));
+  const lgaOptions = lgasList.map((l: string) => ({ label: l, value: l }));
+  const wardOptions = wardsList.map((w: string) => ({ label: w, value: w }));
 
   const handleChange = <K extends keyof RegistrationFormState>(
     field: K,
@@ -285,30 +481,37 @@ export default function ImmunizationRegister() {
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!form.sessionType || !form.vaccineGivenId || !form.dateOfVisit) {
+    if (
+      !form.sessionType ||
+      form.vaccinesGivenIds.length === 0 ||
+      !form.dateOfVisit
+    ) {
       setFormError(
-        "Please complete all required immunization fields (Session, Vaccine, Date).",
+        "Please complete all required immunization fields (Session, at least one Vaccine, Date).",
       );
       return;
     }
 
-    const payload: any = {
+    const payload: ImmunizationRegistrationPayload = {
       session_type: form.sessionType,
-      site_name: form.siteName,
+      site_name: form.routeOfAdministration,
       state: form.state,
       lga: form.lga,
       ward: form.ward,
-      vaccine_given_id: form.vaccineGivenId,
+      vaccines_given_ids: form.vaccinesGivenIds, // Now passes the selected array
       date_of_visit: form.dateOfVisit,
       notes: form.notes,
     };
 
     if (patientMode === "existing") {
-      if (!form.patientId) {
-        setFormError("Please search and select an existing patient.");
+      // Using the PT-PLA-... format stored in patientDisplayId
+      if (!form.patientDisplayId) {
+        setFormError(
+          "Please search and select an existing patient with a valid Patient ID.",
+        );
         return;
       }
-      payload.patient_id = form.patientId;
+      payload.patient_id = form.patientDisplayId;
     } else {
       if (!form.firstName || !form.lastName || !form.dateOfBirth || !form.sex) {
         setFormError(
@@ -323,6 +526,7 @@ export default function ImmunizationRegister() {
         sex: form.sex,
         next_of_kin_name: form.nextOfKinName,
         next_of_kin_phone: form.nextOfKinPhone,
+        next_of_kin_relationship: form.nextOfKinRelationship,
       };
     }
 
@@ -538,6 +742,16 @@ export default function ImmunizationRegister() {
                     placeholder="NOK Phone"
                   />
                 </FieldShell>
+                <FieldShell label="Next of Kin Relationship">
+                  <input
+                    value={form.nextOfKinRelationship}
+                    onChange={(e) =>
+                      handleChange("nextOfKinRelationship", e.target.value)
+                    }
+                    className="w-full bg-transparent text-base outline-none"
+                    placeholder="e.g. Mother, Father"
+                  />
+                </FieldShell>
               </div>
             )}
 
@@ -555,52 +769,83 @@ export default function ImmunizationRegister() {
                 value={form.sessionType}
                 onChange={(value) => handleChange("sessionType", value)}
               />
-              <FieldShell label="State">
-                <input
-                  value={form.state}
-                  onChange={(e) => handleChange("state", e.target.value)}
-                  placeholder="e.g. Lagos"
-                  className="w-full bg-transparent text-base outline-none"
-                />
-              </FieldShell>
-              <FieldShell label="LGA">
-                <input
-                  value={form.lga}
-                  onChange={(e) => handleChange("lga", e.target.value)}
-                  placeholder="e.g. Ikeja"
-                  className="w-full bg-transparent text-base outline-none"
-                />
-              </FieldShell>
-              <FieldShell label="Ward">
-                <input
-                  value={form.ward}
-                  onChange={(e) => handleChange("ward", e.target.value)}
-                  placeholder="e.g. Ward C"
-                  className="w-full bg-transparent text-base outline-none"
-                />
-              </FieldShell>
 
-              <FieldShell label="Site Name (Optional)">
+              <SelectField
+                label="State"
+                placeholder={
+                  isLoadingStates ? "Loading States..." : "Select State"
+                }
+                options={stateOptions}
+                searchable
+                isLoading={isLoadingStates}
+                value={form.state}
+                onChange={(val) => {
+                  handleChange("state", val);
+                  handleChange("lga", "");
+                  handleChange("ward", "");
+                }}
+              />
+
+              <SelectField
+                label="LGA"
+                placeholder={
+                  !form.state
+                    ? "Select State First"
+                    : isLoadingLgas
+                      ? "Loading LGAs..."
+                      : "Select LGA"
+                }
+                options={lgaOptions}
+                searchable
+                isLoading={isLoadingLgas}
+                value={form.lga}
+                disabled={!form.state}
+                onChange={(val) => {
+                  handleChange("lga", val);
+                  handleChange("ward", "");
+                }}
+              />
+
+              <SelectField
+                label="Ward"
+                placeholder={
+                  !form.lga
+                    ? "Select LGA First"
+                    : isLoadingWards
+                      ? "Loading Wards..."
+                      : "Select Ward"
+                }
+                options={wardOptions}
+                searchable
+                isLoading={isLoadingWards}
+                value={form.ward}
+                disabled={!form.lga}
+                onChange={(val) => handleChange("ward", val)}
+              />
+
+              <FieldShell label="Route of Administration (Optional)">
                 <input
-                  value={form.siteName}
-                  onChange={(e) => handleChange("siteName", e.target.value)}
-                  placeholder="Only for Outreach / Mobile"
+                  value={form.routeOfAdministration}
+                  onChange={(e) =>
+                    handleChange("routeOfAdministration", e.target.value)
+                  }
+                  placeholder="e.g. Oral, Intramuscular"
                   className="w-full bg-transparent text-base outline-none placeholder:text-gray-400"
                 />
               </FieldShell>
 
-              <SelectField
-                label="Vaccine Given"
+              <MultiSelectField
+                label="Vaccines Given"
                 placeholder={
                   isLoadingVaccines
                     ? "Loading vaccines..."
-                    : "Search & Select Vaccine"
+                    : "Search & Select Vaccines"
                 }
                 options={vaccineOptions}
                 searchable
                 isLoading={isLoadingVaccines}
-                value={form.vaccineGivenId}
-                onChange={(val) => handleChange("vaccineGivenId", val)}
+                values={form.vaccinesGivenIds}
+                onChange={(vals) => handleChange("vaccinesGivenIds", vals)}
               />
 
               <FieldShell label="Date of Visit">
