@@ -37,6 +37,7 @@ import {
 import type {
   CreateInventoryItemPayload,
   InventoryItem,
+  PaginatedInventoryItems,
   RefillItemPayload,
 } from "./types";
 
@@ -60,6 +61,21 @@ type InventoryFormValues = {
 };
 
 const LAB_INVENTORY_CATEGORY = "LAB_EQUIPMENT";
+const ITEM_TYPE_OPTIONS = [
+  "TABLET",
+  "CAPSULE",
+  "SYRUP",
+  "VIAL",
+  "AMPOULE",
+  "SACHET",
+  "INHALER",
+  "TUBE",
+  "BOTTLE",
+  "KIT",
+  "REAGENT",
+  "CONSUMABLE",
+  "EQUIPMENT",
+];
 const STATUS_OPTIONS = ["All Status", "In Stock", "Low Stock", "Out of Stock"];
 const STATUS_FILTERS: Record<string, string | undefined> = {
   "All Status": undefined,
@@ -77,7 +93,7 @@ const statusColors: Record<StatusLabel, { bg: string; text: string }> = {
 
 const initialFormValues: InventoryFormValues = {
   name: "",
-  itemType: "CONSUMABLE",
+  itemType: "TABLET",
   thresholdType: "GLOBAL",
   globalThreshold: "",
   scheduleRules: "{}",
@@ -343,6 +359,44 @@ function Field({
   );
 }
 
+function SelectField({
+  label,
+  value,
+  options,
+  readOnly,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: string[];
+  readOnly?: boolean;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label
+      className={`flex min-h-[58px] items-center gap-3 rounded-lg border border-gray-300 px-4 ${
+        readOnly ? "bg-gray-100" : "bg-white"
+      }`}
+    >
+      <span className="min-w-0 flex-1">
+        <span className="block text-xs text-gray-500">{label}</span>
+        <select
+          disabled={readOnly}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          className="mt-1 w-full bg-transparent text-base text-gray-500 outline-none disabled:opacity-100"
+        >
+          {options.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+      </span>
+    </label>
+  );
+}
+
 function Notes({
   value,
   readOnly,
@@ -419,10 +473,10 @@ function InventoryForm({
           readOnly={readOnly}
           onChange={(value) => handleChange("name", value)}
         />
-        <Field
+        <SelectField
           label="Item Type"
           value={values.itemType}
-          placeholder="e.g. CONSUMABLE"
+          options={ITEM_TYPE_OPTIONS}
           readOnly={readOnly}
           onChange={(value) => handleChange("itemType", value)}
         />
@@ -686,14 +740,6 @@ export default function Inventory() {
   const [toast, setToast] = useState<string | null>(null);
   const [formError, setFormError] = useState("");
 
-  const statsFilters = useMemo(
-    () => ({
-      inventory_category: LAB_INVENTORY_CATEGORY,
-      start_date: startDate,
-      end_date: endDate,
-    }),
-    [startDate, endDate],
-  );
   const inventoryFilters = useMemo(
     () => ({
       page,
@@ -702,12 +748,11 @@ export default function Inventory() {
       status: STATUS_FILTERS[status],
       start_date: startDate,
       end_date: endDate,
-      inventory_category: LAB_INVENTORY_CATEGORY,
     }),
     [page, pageSize, search, status, startDate, endDate],
   );
 
-  const { data: statsData } = useComprehensiveInventoryStats(statsFilters);
+  const { data: statsData } = useComprehensiveInventoryStats({});
   const { data: itemsData, isLoading: isLoadingItems } =
     useInventoryItems(inventoryFilters);
   const createItemMutation = useCreateInventoryItem();
@@ -837,6 +882,16 @@ export default function Inventory() {
       icon: Timer,
     },
   ];
+  const inventoryResult = itemsData as
+    | PaginatedInventoryItems
+    | InventoryItem[]
+    | undefined;
+  const inventoryRows = Array.isArray(inventoryResult)
+    ? inventoryResult
+    : inventoryResult?.results || [];
+  const inventoryTotalPages = Array.isArray(inventoryResult)
+    ? undefined
+    : inventoryResult?.total_pages;
 
   const columns: ColumnDef<InventoryItem>[] = [
     { header: "Item", accessorKey: "name", sortable: true },
@@ -970,7 +1025,7 @@ export default function Inventory() {
 
         <DataTable
           title="Lab Stock"
-          data={itemsData?.results || []}
+          data={inventoryRows}
           columns={columns}
           showSearch
           searchPlaceholder="Search by item name or batch no"
@@ -997,7 +1052,7 @@ export default function Inventory() {
               />
             </>
           }
-          totalPages={itemsData?.total_pages}
+          totalPages={inventoryTotalPages}
           emptyMessage={
             isLoadingItems
               ? "Loading inventory items..."
