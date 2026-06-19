@@ -553,7 +553,7 @@ function InventoryForm({
       </div>
 
       {!readOnly && (
-        <div className="mt-7 flex flex-col justify-end gap-4 sm:flex-row">
+        <div className="mt-7 flex flex-col justify-start gap-4 sm:flex-row">
           <>
             <button
               type="button"
@@ -593,7 +593,7 @@ function InventoryModal({
 }) {
   return createPortal(
     <div className="fixed inset-0 z-[9999] overflow-y-auto bg-black/20 px-4 py-16 backdrop-blur-sm">
-      <div className="mx-auto max-w-6xl rounded-xl bg-white px-6 py-8 shadow-2xl lg:px-8">
+      <div className="mx-auto max-w-4xl rounded-xl bg-white px-6 py-8 shadow-2xl lg:px-8">
         <div className="mb-7 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {mode === "view" ? (
