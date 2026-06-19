@@ -11,8 +11,12 @@ import DateRangeFilter from "@/src/components/generic/ui/DateRangeFilter";
 import { StatusBadge } from "@/src/components/generic/ui/TableHelpers";
 import PharmacistDashboardHeader from "@/src/components/pharmacist-dashboard/generics/PharmacistDashboardHeader";
 
-import { usePrescriptionOrders } from "@/src/hooks/pharmacist/use-prescriptions";
+import {
+  useDispensePrescriptionOrder,
+  usePrescriptionOrders,
+} from "@/src/hooks/pharmacist/use-prescriptions";
 import { PrescriptionOrder } from "./type";
+import DispensePrescriptionModal from "./DispensePrescriptionModal";
 
 const STATUS_OPTIONS = [
   "All Status",
@@ -143,6 +147,8 @@ export default function Prescriptions() {
   const [selectedOrder, setSelectedOrder] = useState<PrescriptionOrder | null>(
     null,
   );
+  const [toastMessage, setToastMessage] = useState("");
+  const dispenseMutation = useDispensePrescriptionOrder();
 
   useEffect(() => {
     const currentSearch = searchParams.get("search") || "";
@@ -307,25 +313,45 @@ export default function Prescriptions() {
       </div>
 
       {dispenseModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 px-4 py-10 backdrop-blur-sm">
-          <div className="mx-auto w-full max-w-md rounded-xl bg-white px-6 py-8 shadow-2xl">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold">Dispense Modal</h2>
-              <button onClick={() => setDispenseModalOpen(false)}>
-                <X className="text-gray-500" />
-              </button>
-            </div>
-            <p className="text-gray-600 mb-6">
-              Dispense flow for <strong>{selectedOrder?.patient_name}</strong>{" "}
-              will be implemented here later.
+        selectedOrder && (
+          <DispensePrescriptionModal
+            order={selectedOrder}
+            isSubmitting={dispenseMutation.isPending}
+            onClose={() => setDispenseModalOpen(false)}
+            onConfirm={() => {
+              dispenseMutation.mutate(selectedOrder.id, {
+                onSuccess: () => {
+                  setDispenseModalOpen(false);
+                  setToastMessage(
+                    `${selectedOrder.prescription_id} dispensed successfully`,
+                  );
+                  window.setTimeout(() => setToastMessage(""), 3500);
+                },
+              });
+            }}
+          />
+        )
+      )}
+
+      {toastMessage && (
+        <div className="fixed bottom-8 right-8 z-50 flex w-[min(390px,calc(100vw-2rem))] items-center gap-4 rounded border border-gray-200 bg-white px-5 py-3 shadow-sm">
+          <span className="h-12 w-1 rounded-full bg-[#039855]" />
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border border-[#A8E6C4] bg-[#E8F7F0] text-[#039855]">
+            <Pill size={14} />
+          </span>
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-gray-900">
+              Dispense Successful
             </p>
-            <button
-              onClick={() => setDispenseModalOpen(false)}
-              className="w-full rounded-lg bg-[#046C3F] h-12 text-white font-medium"
-            >
-              Close Placeholder
-            </button>
+            <p className="text-sm text-gray-600">{toastMessage}</p>
           </div>
+          <button
+            type="button"
+            onClick={() => setToastMessage("")}
+            className="border-l border-gray-100 pl-4 text-gray-900 hover:text-gray-600"
+          >
+            <X size={18} />
+          </button>
         </div>
       )}
     </div>

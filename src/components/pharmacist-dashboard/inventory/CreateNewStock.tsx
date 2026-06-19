@@ -60,10 +60,15 @@ function SuccessToast({
   );
 }
 
+function getErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error && error.message) return error.message;
+  return fallback;
+}
+
 type StockFormState = {
   drugName: string;
-  category: string;
-  unit: string;
+  itemType: string;
+  scheduleRules: string;
   globalThreshold: string;
   batchNumber: string;
   initialQuantity: string;
@@ -76,8 +81,8 @@ type StockFormState = {
 
 const INITIAL_FORM: StockFormState = {
   drugName: "",
-  category: "",
-  unit: "",
+  itemType: "",
+  scheduleRules: "",
   globalThreshold: "",
   batchNumber: "",
   initialQuantity: "",
@@ -112,8 +117,7 @@ export default function CreateNewStock() {
 
     if (
       !form.drugName ||
-      !form.category ||
-      !form.unit ||
+      !form.itemType ||
       !form.globalThreshold ||
       !form.batchNumber ||
       !form.initialQuantity ||
@@ -129,16 +133,20 @@ export default function CreateNewStock() {
     createDrug(
       {
         name: form.drugName,
-        category: form.category,
-        unit: form.unit,
+        inventory_category: "DRUG",
+        drug_classification: "NORMAL",
+        item_type: form.itemType,
+        threshold_type: "ABSOLUTE",
         global_threshold: Number(form.globalThreshold),
+        schedule_rules:
+          form.scheduleRules ||
+          `Restock when quantity falls below ${form.globalThreshold} units`,
       },
       {
-        onSuccess: (res: any) => {
-          const newDrugId = res?.data?.data?.id || res?.data?.id || res?.id;
+        onSuccess: (res) => {
+          const newDrugId = res.id;
 
           if (!newDrugId) {
-            console.error("DEBUG - Full API Response:", res);
             setFormError(
               "Failed to retrieve new drug ID. Please check inventory.",
             );
@@ -166,19 +174,23 @@ export default function CreateNewStock() {
                   router.push("/pharmacist-dashboard/inventory");
                 }, 2000);
               },
-              onError: (error: any) => {
+              onError: (error: unknown) => {
                 setFormError(
-                  error?.response?.data?.message ||
+                  getErrorMessage(
+                    error,
                     "Drug created, but failed to add batch stock.",
+                  ),
                 );
               },
             },
           );
         },
-        onError: (error: any) => {
+        onError: (error: unknown) => {
           setFormError(
-            error?.response?.data?.message ||
+            getErrorMessage(
+              error,
               "Failed to create drug item. Please try again.",
+            ),
           );
         },
       },
@@ -225,26 +237,28 @@ export default function CreateNewStock() {
                 />
               </FieldShell>
 
-              <FieldShell label="Category">
+              <FieldShell label="Schedule Rules">
                 <input
-                  value={form.category}
-                  onChange={(e) => handleChange("category", e.target.value)}
-                  placeholder="e.g. Antibiotic, Painkiller"
+                  value={form.scheduleRules}
+                  onChange={(e) =>
+                    handleChange("scheduleRules", e.target.value)
+                  }
+                  placeholder="Restock when quantity falls below threshold"
                   className="w-full bg-transparent text-base text-gray-700 outline-none placeholder:text-gray-400"
                 />
               </FieldShell>
 
               <div className="relative flex flex-col justify-center rounded-lg border border-gray-300 bg-white px-4 py-2.5 focus-within:border-[#046C3F] focus-within:ring-1 focus-within:ring-[#046C3F]">
                 <label className="mb-1 block text-xs text-[#62636C]">
-                  Unit
+                  Item Type
                 </label>
                 <select
-                  value={form.unit}
-                  onChange={(e) => handleChange("unit", e.target.value)}
+                  value={form.itemType}
+                  onChange={(e) => handleChange("itemType", e.target.value)}
                   className="w-full bg-transparent text-base text-gray-700 outline-none"
                 >
                   <option value="" disabled>
-                    Select Unit
+                    Select Item Type
                   </option>
                   {UNITS.map((u) => (
                     <option key={u} value={u}>
