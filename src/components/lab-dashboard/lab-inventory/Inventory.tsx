@@ -431,7 +431,6 @@ function InventoryForm({
   readOnly,
   isSubmitting,
   onCancel,
-  onExport,
   onSubmit,
 }: {
   title: string;
@@ -440,7 +439,6 @@ function InventoryForm({
   readOnly?: boolean;
   isSubmitting?: boolean;
   onCancel?: () => void;
-  onExport?: () => void;
   onSubmit?: (values: InventoryFormValues) => void;
 }) {
   const [values, setValues] = useState(initialValues);
@@ -554,16 +552,8 @@ function InventoryForm({
         </div>
       </div>
 
-      <div className="mt-7 flex flex-col justify-end gap-4 sm:flex-row">
-        {readOnly ? (
-          <button
-            type="button"
-            onClick={onExport}
-            className="flex h-14 items-center justify-center gap-3 rounded-xl border border-[#046C3F] px-16 text-lg font-medium text-[#046C3F]"
-          >
-            <Download size={22} /> Export File
-          </button>
-        ) : (
+      {!readOnly && (
+        <div className="mt-7 flex flex-col justify-end gap-4 sm:flex-row">
           <>
             <button
               type="button"
@@ -582,8 +572,8 @@ function InventoryForm({
               {submitLabel}
             </button>
           </>
-        )}
-      </div>
+        </div>
+      )}
     </form>
   );
 }
@@ -593,14 +583,12 @@ function InventoryModal({
   item,
   isSubmitting,
   onClose,
-  onExport,
   onSubmit,
 }: {
   mode: "view" | "update";
   item: InventoryItem;
   isSubmitting?: boolean;
   onClose: () => void;
-  onExport: (item: InventoryItem) => void;
   onSubmit: (item: InventoryItem, values: InventoryFormValues) => void;
 }) {
   return createPortal(
@@ -633,7 +621,6 @@ function InventoryModal({
           readOnly={mode === "view"}
           isSubmitting={isSubmitting}
           onCancel={onClose}
-          onExport={() => onExport(item)}
           onSubmit={(values) => onSubmit(item, values)}
         />
       </div>
@@ -1076,7 +1063,6 @@ export default function Inventory() {
               setFormError("");
               setModal(null);
             }}
-            onExport={handleExport}
             onSubmit={handleUpdate}
           />
         </>
