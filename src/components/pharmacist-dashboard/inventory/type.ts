@@ -1,19 +1,36 @@
 export interface InventoryStatsResponse {
-  total_drugs: number;
+  total_items: number;
   low_stock_items: number;
-  out_of_stock: number;
-  expiring_soon: number;
+  out_of_stock_items: number;
+  expiring_soon_items: number;
+}
+
+export interface ActiveBatch {
+  id?: string;
+  batch_number?: string;
+  initial_quantity?: number;
+  remaining_quantity?: number;
+  purchased_date?: string;
+  expiry_date?: string;
+  supplier?: string;
+  cost_price?: string;
+  note?: string | null;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface DrugStockItem {
   id: string;
   name: string;
-  category: string;
-  unit: string;
+  inventory_category: string;
+  drug_classification: string;
+  item_type: string;
+  threshold_type: string;
   global_threshold: number;
+  schedule_rules: string;
   total_stock: number;
   status: string;
-  active_batches_count: number;
+  active_batches?: ActiveBatch[];
 }
 
 export interface InventoryDrugsResponse {
@@ -32,6 +49,8 @@ export interface InventoryFilters {
   status?: string;
   start_date?: string;
   end_date?: string;
+  inventory_category?: string;
+  drug_classification?: string;
 }
 
 export interface ExpiryAnalysisStatsResponse {
@@ -43,10 +62,10 @@ export interface ExpiryAnalysisStatsResponse {
 
 export interface ExpiringDrugItem {
   id: string;
-  drug_name: string;
+  item_name: string;
   category: string;
   batch_number: string;
-  unit: string;
+  item_type: string;
   remaining_quantity: number;
   expiry_date: string;
   days_left: number;
@@ -57,35 +76,14 @@ export interface ExpiringFilters {
   page?: number;
   page_size?: number;
   search?: string;
-  unit?: string;
+  item_type?: string;
+  inventory_category?: string;
+  drug_classification?: string;
   start_date?: string;
   end_date?: string;
 }
 
-export interface ActiveBatch {
-  id: string;
-  batch_number: string;
-  initial_quantity: number;
-  remaining_quantity: number;
-  purchased_date: string;
-  expiry_date: string;
-  supplier: string;
-  cost_price: string;
-  note: string;
-  created_at: string;
-}
-
-export interface DrugDetail {
-  id: string;
-  name: string;
-  category: string;
-  unit: string;
-  global_threshold: number;
-  total_stock: number;
-  status: string;
-  active_batches_count: number;
-  active_batches: ActiveBatch[];
-}
+export type DrugDetail = DrugStockItem;
 
 export interface RefillPayload {
   batch_number: string;
@@ -94,12 +92,15 @@ export interface RefillPayload {
   expiry_date: string;
   supplier: string;
   cost_price: string;
-  note: string;
+  note?: string;
 }
 
 export interface CreateDrugPayload {
   name: string;
-  category: string;
-  unit: string;
+  inventory_category: string;
+  drug_classification: string;
+  item_type: string;
+  threshold_type: string;
   global_threshold: number;
+  schedule_rules: string;
 }

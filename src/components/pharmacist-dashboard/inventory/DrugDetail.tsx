@@ -89,6 +89,11 @@ function SuccessToast({
   );
 }
 
+function getErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error && error.message) return error.message;
+  return fallback;
+}
+
 export default function DrugDetail() {
   const router = useRouter();
   const params = useParams();
@@ -140,18 +145,15 @@ export default function DrugDetail() {
         },
       },
       {
-        onSuccess: (res: any) => {
-          setToastMessage(
-            res?.data?.message || "Successfully refilled the inventory.",
-          );
+        onSuccess: () => {
+          setToastMessage("Successfully refilled the inventory.");
           setForm(INITIAL_FORM);
 
           setTimeout(() => setToastMessage(""), 4000);
         },
-        onError: (error: any) => {
+        onError: (error: unknown) => {
           setFormError(
-            error?.response?.data?.message ||
-              "Failed to restock. Please try again.",
+            getErrorMessage(error, "Failed to restock. Please try again."),
           );
         },
       },
@@ -172,12 +174,12 @@ export default function DrugDetail() {
       render: (row) => (
         <span
           className={
-            row.remaining_quantity <= 10
+            (row.remaining_quantity || 0) <= 10
               ? "text-red-600 font-medium"
               : "text-gray-900"
           }
         >
-          {row.remaining_quantity}
+          {row.remaining_quantity || 0}
         </span>
       ),
     },
@@ -239,7 +241,7 @@ export default function DrugDetail() {
             <div>
               <p className="text-sm text-gray-500">Category & Unit</p>
               <p className="font-semibold text-gray-900">
-                {drugData?.category} • {drugData?.unit}
+                {drugData?.drug_classification} • {drugData?.item_type}
               </p>
             </div>
           </div>
@@ -250,7 +252,7 @@ export default function DrugDetail() {
             <div>
               <p className="text-sm text-gray-500">Total Stock</p>
               <p className="font-semibold text-gray-900">
-                {drugData?.total_stock} {drugData?.unit}s
+                {drugData?.total_stock} {drugData?.item_type}
               </p>
             </div>
           </div>
@@ -261,7 +263,7 @@ export default function DrugDetail() {
             <div>
               <p className="text-sm text-gray-500">Active Batches</p>
               <p className="font-semibold text-gray-900">
-                {drugData?.active_batches_count} Batches
+                {drugData?.active_batches?.length || 0} Batches
               </p>
             </div>
           </div>

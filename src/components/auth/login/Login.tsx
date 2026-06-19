@@ -8,24 +8,39 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "react-toastify";
 
+const ROLE_REDIRECTS: Record<string, string> = {
+  ADMIN: "/state-dashboard",
+  FACILITY_IT_ADMIN: "/dashboard",
+  OFFICER_IN_CHARGE: "/oic-dashboard",
+  DOCTOR: "/doctor-dashboard",
+  PHARMACIST: "/pharmacist-dashboard",
+  LAB_TECHNICIAN: "/lab-dashboard",
+  NURSE: "/nurse-dashboard",
+  CHEW: "/chew-dashboard",
+  PATIENT: "/dashboard",
+};
+
+async function getFreshSession() {
+  const delays = [0, 150, 350];
+
+  for (const delay of delays) {
+    if (delay) {
+      await new Promise((resolve) => window.setTimeout(resolve, delay));
+    }
+
+    const session = await getSession();
+    if (session?.user?.role) return session;
+  }
+
+  return null;
+}
+
 export default function Login() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-
-  const ROLE_REDIRECTS: Record<string, string> = {
-    ADMIN: "/state-dashboard",
-    FACILITY_IT_ADMIN: "/dashboard",
-    OFFICER_IN_CHARGE: "/oic-dashboard",
-    DOCTOR: "/doctor-dashboard",
-    PHARMACIST: "/pharmacist-dashboard",
-    LAB_TECHNICIAN: "/lab-dashboard",
-    NURSE: "/nurse-dashboard",
-    CHEW: "/chew-dashboard",
-    PATIENT: "/dashboard",
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,14 +62,15 @@ export default function Login() {
         toast.error(result.error);
         setLoading(false);
       } else {
-        const session = await getSession();
-        const role = session?.user?.role as string;
-        const redirectPath = ROLE_REDIRECTS[role] ?? "/dashboard";
+        const session = await getFreshSession();
+        const role = session?.user?.role?.toUpperCase();
+        const redirectPath = role ? ROLE_REDIRECTS[role] ?? "/dashboard" : "/dashboard";
 
         toast.success("Login successful! Redirecting...");
         router.push(redirectPath);
+        router.refresh();
       }
-    } catch (err: any) {
+    } catch {
       toast.error("An unexpected error occurred.");
       setLoading(false);
     }

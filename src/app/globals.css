@@ -15,7 +15,7 @@ input:-webkit-autofill:active {
   --primary-green: #006732;
   
   /* Fonts */
-  --font-inter: 'Inter', sans-serif;
+  --font-inter: Inter, Arial, Helvetica, sans-serif;
 }
 
 

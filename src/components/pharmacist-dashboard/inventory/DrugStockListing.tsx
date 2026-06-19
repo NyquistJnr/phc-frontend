@@ -17,7 +17,7 @@ import { ColumnDef, DataTable } from "@/src/components/generic/ui/DataTable";
 import { CustomDropdown } from "@/src/components/generic/ui/CustomDropdown";
 import DateRangeFilter from "@/src/components/generic/ui/DateRangeFilter";
 import PharmacistDashboardHeader from "@/src/components/pharmacist-dashboard/generics/PharmacistDashboardHeader";
-import { badge, InventoryModal } from "./Inventory";
+import { badge } from "./Inventory";
 
 import {
   useInventoryDrugs,
@@ -28,12 +28,100 @@ import { DrugStockItem } from "./type";
 const STATUS_OPTIONS = ["All Status", "IN_STOCK", "LOW_STOCK", "OUT_OF_STOCK"];
 const PAGE_SIZES = ["10", "50", "100"];
 
+function getStatusLabel(status?: string) {
+  switch (status) {
+    case "IN_STOCK":
+      return "In Stock";
+    case "LOW_STOCK":
+      return "Low Stock";
+    case "OUT_OF_STOCK":
+      return "Out of Stock";
+    default:
+      return "Unknown";
+  }
+}
+
+function formatDate(value?: string | null) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString();
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function printDrugStockItem(item: DrugStockItem) {
+  const batch = item.active_batches?.[0] ?? null;
+  const printableRows = [
+    ["Drug Name", item.name],
+    ["Status", getStatusLabel(item.status)],
+    ["Inventory Category", item.inventory_category],
+    ["Drug Classification", item.drug_classification],
+    ["Item Type", item.item_type],
+    ["Threshold Type", item.threshold_type],
+    ["Global Threshold", String(item.global_threshold)],
+    ["Total Stock", String(item.total_stock)],
+    ["Batch Number", batch?.batch_number ?? "-"],
+    ["Remaining Quantity", String(batch?.remaining_quantity ?? "-")],
+    ["Purchased Date", formatDate(batch?.purchased_date)],
+    ["Expiry Date", formatDate(batch?.expiry_date)],
+    ["Supplier", batch?.supplier ?? "-"],
+    ["Cost Price", batch?.cost_price ?? "-"],
+    ["Note", batch?.note ?? "-"],
+  ];
+  const printWindow = window.open("", "_blank", "width=900,height=700");
+
+  if (!printWindow) return false;
+
+  printWindow.document.write(`
+    <!doctype html>
+    <html>
+      <head>
+        <title>${escapeHtml(item.name)} Inventory Report</title>
+        <style>
+          body { color: #111827; font-family: Arial, sans-serif; margin: 40px; }
+          h1 { color: #046C3F; font-size: 24px; margin-bottom: 4px; }
+          p { color: #4B5563; margin-top: 0; }
+          table { border-collapse: collapse; margin-top: 24px; width: 100%; }
+          th, td { border: 1px solid #E5E7EB; padding: 12px; text-align: left; }
+          th { background: #F6F7FC; width: 32%; }
+        </style>
+      </head>
+      <body>
+        <h1>${escapeHtml(item.name)} Inventory Report</h1>
+        <p>Generated from PHC Pharmacist Dashboard</p>
+        <table>
+          <tbody>
+            ${printableRows
+              .map(
+                ([label, value]) =>
+                  `<tr><th>${escapeHtml(label)}</th><td>${escapeHtml(value)}</td></tr>`,
+              )
+              .join("")}
+          </tbody>
+        </table>
+      </body>
+    </html>
+  `);
+  printWindow.document.close();
+  printWindow.focus();
+  printWindow.print();
+  return true;
+}
+
 function InventoryActionMenu({
   row,
-  onAction,
+  onExport,
 }: {
   row: DrugStockItem;
-  onAction: (action: "update", item: DrugStockItem) => void;
+  onExport: (item: DrugStockItem) => void;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -99,7 +187,13 @@ function InventoryActionMenu({
             >
               <Eye size={18} /> View
             </button>
-            <button className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50">
+            <button
+              onClick={() => {
+                onExport(row);
+                setOpen(false);
+              }}
+              className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50"
+            >
               <Download size={18} /> Export
             </button>
           </div>,
@@ -122,9 +216,7 @@ export default function DrugStockListing() {
 
   const initialSearch = searchParams.get("search") || "";
   const [localSearch, setLocalSearch] = useState(initialSearch);
-
-  const [selectedItem, setSelectedItem] = useState<DrugStockItem | null>(null);
-  const [modal, setModal] = useState<"update" | null>(null);
+  const [toastMessage, setToastMessage] = useState("");
 
   useEffect(() => {
     const currentSearch = searchParams.get("search") || "";
@@ -170,7 +262,7 @@ export default function DrugStockListing() {
   const stockStats = [
     {
       title: "Total Drugs",
-      value: isLoadingStats ? "..." : stats?.total_drugs || 0,
+      value: isLoadingStats ? "..." : stats?.total_items || 0,
       icon: Pill,
       active: true,
     },
@@ -181,26 +273,30 @@ export default function DrugStockListing() {
     },
     {
       title: "Out of Stock",
-      value: isLoadingStats ? "..." : stats?.out_of_stock || 0,
+      value: isLoadingStats ? "..." : stats?.out_of_stock_items || 0,
       icon: PackagePlus,
     },
     {
       title: "Expiring Soon",
-      value: isLoadingStats ? "..." : stats?.expiring_soon || 0,
+      value: isLoadingStats ? "..." : stats?.expiring_soon_items || 0,
       icon: PackagePlus,
     },
   ];
 
   const columns: ColumnDef<DrugStockItem>[] = [
     { header: "Drug Name", accessorKey: "name", sortable: true },
-    { header: "Category", accessorKey: "category", sortable: true },
-    { header: "Unit", accessorKey: "unit", sortable: true },
+    {
+      header: "Classification",
+      accessorKey: "drug_classification",
+      sortable: true,
+    },
+    { header: "Item Type", accessorKey: "item_type", sortable: true },
     { header: "Total Stock", accessorKey: "total_stock", sortable: true },
     { header: "Threshold", accessorKey: "global_threshold", sortable: true },
     {
       header: "Active Batches",
-      accessorKey: "active_batches_count",
       sortable: true,
+      render: (row) => row.active_batches?.length || 0,
     },
     {
       header: "Status",
@@ -212,9 +308,14 @@ export default function DrugStockListing() {
       render: (row) => (
         <InventoryActionMenu
           row={row}
-          onAction={(action, item) => {
-            setSelectedItem(item);
-            setModal(action);
+          onExport={(item) => {
+            const didPrint = printDrugStockItem(item);
+            if (!didPrint) {
+              setToastMessage(
+                "Unable to open the print window. Please allow pop-ups.",
+              );
+              window.setTimeout(() => setToastMessage(""), 3500);
+            }
           }}
         />
       ),
@@ -310,16 +411,8 @@ export default function DrugStockListing() {
 
               <CustomDropdown
                 options={STATUS_OPTIONS}
-                selected={
-                  statusFilter === "All Status"
-                    ? "All Status"
-                    : statusFilter.replace("_", " ")
-                }
-                onSelect={(val) => {
-                  const formattedValue =
-                    val === "All Status" ? val : val.replace(" ", "_");
-                  updateUrlParams("status", formattedValue);
-                }}
+                selected={statusFilter}
+                onSelect={(val) => updateUrlParams("status", val)}
               />
 
               <CustomDropdown
@@ -333,15 +426,22 @@ export default function DrugStockListing() {
         />
       </div>
 
-      {modal && selectedItem && (
-        <InventoryModal
-          variant={modal}
-          item={selectedItem as any}
-          onClose={() => setModal(null)}
-          onSubmit={() => {
-            setModal(null);
-          }}
-        />
+      {toastMessage && (
+        <div className="fixed bottom-8 right-8 z-50 flex w-[min(390px,calc(100vw-2rem))] items-center gap-4 rounded border border-gray-200 bg-white px-5 py-3 shadow-sm">
+          <span className="h-12 w-1 rounded-full bg-[#F59E0B]" />
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border border-[#FDE68A] bg-[#FFFBEB] text-[#B45309]">
+            <Download size={14} />
+          </span>
+          <p className="flex-1 text-sm text-gray-700">{toastMessage}</p>
+          <button
+            type="button"
+            onClick={() => setToastMessage("")}
+            className="border-l border-gray-100 pl-4 text-gray-900 hover:text-gray-600"
+            aria-label="Dismiss export message"
+          >
+            ×
+          </button>
+        </div>
       )}
     </div>
   );

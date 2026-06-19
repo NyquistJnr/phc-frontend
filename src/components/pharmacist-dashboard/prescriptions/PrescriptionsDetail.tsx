@@ -1,14 +1,18 @@
 "use client";
 
-import { type ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Download, Loader2, Pill, Search } from "lucide-react";
+import { Download, Loader2, Pill, Search, X } from "lucide-react";
 
 import PharmacistBackButton from "@/src/components/pharmacist-dashboard/generics/PharmacistBackButton";
 import PharmacistDashboardHeader from "@/src/components/pharmacist-dashboard/generics/PharmacistDashboardHeader";
 import { StatusBadge } from "@/src/components/generic/ui/TableHelpers";
 
-import { usePrescriptionOrderDetail } from "@/src/hooks/pharmacist/use-prescriptions";
+import {
+  useDispensePrescriptionOrder,
+  usePrescriptionOrderDetail,
+} from "@/src/hooks/pharmacist/use-prescriptions";
+import DispensePrescriptionModal from "./DispensePrescriptionModal";
 
 function formatDate(dateString: string) {
   if (!dateString) return "-";
@@ -61,9 +65,12 @@ export default function PharmacistPrescriptionsDetail() {
   const router = useRouter();
   const params = useParams();
   const prescriptionId = params.id as string;
+  const [dispenseModalOpen, setDispenseModalOpen] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
 
   const { data: prescription, isLoading } =
     usePrescriptionOrderDetail(prescriptionId);
+  const dispenseMutation = useDispensePrescriptionOrder();
 
   if (isLoading) {
     return (
@@ -220,9 +227,7 @@ export default function PharmacistPrescriptionsDetail() {
                 prescription.status === "DISPENSED" ||
                 prescription.status === "CANCELLED"
               }
-              onClick={() => {
-                alert("Dispense flow will be implemented soon!");
-              }}
+              onClick={() => setDispenseModalOpen(true)}
               className="inline-flex h-14 items-center justify-center rounded-lg bg-[#046C3F] px-10 text-lg font-medium text-white transition-colors hover:bg-[#035a34] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Start Dispensing
@@ -230,6 +235,47 @@ export default function PharmacistPrescriptionsDetail() {
           </div>
         </section>
       </div>
+
+      {dispenseModalOpen && (
+        <DispensePrescriptionModal
+          order={prescription}
+          isSubmitting={dispenseMutation.isPending}
+          onClose={() => setDispenseModalOpen(false)}
+          onConfirm={() => {
+            dispenseMutation.mutate(prescription.id, {
+              onSuccess: () => {
+                setDispenseModalOpen(false);
+                setToastMessage(
+                  `${prescription.prescription_id} dispensed successfully`,
+                );
+                window.setTimeout(() => setToastMessage(""), 3500);
+              },
+            });
+          }}
+        />
+      )}
+
+      {toastMessage && (
+        <div className="fixed bottom-8 right-8 z-50 flex w-[min(390px,calc(100vw-2rem))] items-center gap-4 rounded border border-gray-200 bg-white px-5 py-3 shadow-sm">
+          <span className="h-12 w-1 rounded-full bg-[#039855]" />
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border border-[#A8E6C4] bg-[#E8F7F0] text-[#039855]">
+            <Pill size={14} />
+          </span>
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-gray-900">
+              Dispense Successful
+            </p>
+            <p className="text-sm text-gray-600">{toastMessage}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setToastMessage("")}
+            className="border-l border-gray-100 pl-4 text-gray-900 hover:text-gray-600"
+          >
+            <X size={18} />
+          </button>
+        </div>
+      )}
     </div>
   );
 }
