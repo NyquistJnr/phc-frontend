@@ -26,7 +26,7 @@ export default function ExpiringTracking() {
 
   const page = Number(searchParams.get("page")) || 1;
   const pageSize = Number(searchParams.get("page_size")) || 10;
-  const unitFilter = searchParams.get("unit") || "All Unit";
+  const itemTypeFilter = searchParams.get("item_type") || "All Unit";
 
   const initialSearch = searchParams.get("search") || "";
   const [localSearch, setLocalSearch] = useState(initialSearch);
@@ -61,7 +61,7 @@ export default function ExpiringTracking() {
     page,
     page_size: pageSize,
     search: searchParams.get("search") || undefined,
-    unit: unitFilter,
+    item_type: itemTypeFilter,
     start_date: startDate,
     end_date: endDate,
   });
@@ -82,9 +82,9 @@ export default function ExpiringTracking() {
   );
 
   const columns: ColumnDef<ExpiringDrugItem>[] = [
-    { header: "Drug Name", accessorKey: "drug_name", sortable: true },
+    { header: "Drug Name", accessorKey: "item_name", sortable: true },
     { header: "Batch", accessorKey: "batch_number", sortable: true },
-    { header: "Unit", accessorKey: "unit", sortable: true },
+    { header: "Item Type", accessorKey: "item_type", sortable: true },
     { header: "Qty", accessorKey: "remaining_quantity", sortable: true },
     { header: "Expiry", accessorKey: "expiry_date", sortable: true },
     {
@@ -196,8 +196,8 @@ export default function ExpiringTracking() {
             <>
               <CustomDropdown
                 options={["All Unit", ...UNITS]}
-                selected={unitFilter}
-                onSelect={(val) => updateUrlParams("unit", val)}
+                selected={itemTypeFilter}
+                onSelect={(val) => updateUrlParams("item_type", val)}
               />
               <CustomDropdown
                 options={PAGE_SIZES}

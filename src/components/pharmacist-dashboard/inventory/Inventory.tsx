@@ -6,30 +6,29 @@ import {
   CalendarDays,
   Check,
   ChevronDown,
-  Download,
   Search,
   X,
   Pill,
 } from "lucide-react";
 import { StatusBadge } from "@/src/components/generic/ui/TableHelpers";
-import { PharmacyInventoryRow } from "@/src/components/pharmacist-dashboard/prescriptions/pharmacyData";
+import { DrugStockItem } from "./type";
 
 export const UNITS = [
-  "Tablet",
-  "Capsule",
-  "Syrup",
-  "Vial",
-  "Ampoule",
-  "Sachet",
-  "Inhaler",
-  "Tube",
-  "Bottle",
+  "TABLET",
+  "CAPSULE",
+  "SYRUP",
+  "VIAL",
+  "AMPOULE",
+  "SACHET",
+  "INHALER",
+  "TUBE",
+  "BOTTLE",
 ];
 
 export const statusColors: Record<string, { bg: string; text: string }> = {
-  "In Stock": { bg: "#DDF2EA", text: "#00A556" },
-  "Low Stock": { bg: "#FFF1DE", text: "#2E2E2E" },
-  "Out of Stock": { bg: "#FFE5E5", text: "#FF1F1F" },
+  IN_STOCK: { bg: "#DDF2EA", text: "#00A556" },
+  LOW_STOCK: { bg: "#FFF1DE", text: "#2E2E2E" },
+  OUT_OF_STOCK: { bg: "#FFE5E5", text: "#FF1F1F" },
 };
 
 export function badge(label: string) {
@@ -171,11 +170,12 @@ export function InventoryModal({
   onSubmit,
 }: {
   variant: "view" | "update";
-  item: PharmacyInventoryRow;
+  item: DrugStockItem;
   onClose: () => void;
   onSubmit?: () => void;
 }) {
   const muted = variant === "view";
+  const batch = item.active_batches?.[0];
 
   return (
     <div className="fixed inset-0 z-[90] overflow-y-auto bg-black/20 px-4 py-10 backdrop-blur-sm">
@@ -185,8 +185,8 @@ export function InventoryModal({
             <Pill size={28} className="text-[#046C3F]" />
             <h2 className="text-2xl font-semibold text-black">
               {variant === "view"
-                ? `View ${item.drugName}`
-                : `Update stock for ${item.drugName}`}
+                ? `View ${item.name}`
+                : `Update stock for ${item.name}`}
             </h2>
           </div>
           <button
@@ -201,65 +201,64 @@ export function InventoryModal({
         <div className="grid max-w-[770px] grid-cols-1 gap-5 md:grid-cols-2">
           <Field
             label="Drug Name"
-            value={item.drugName}
+            value={item.name}
             icon={<Search size={24} />}
             readOnly
             muted={muted}
           />
           <Field
             label="Batch Number"
-            value={variant === "view" ? "B-2723" : "B-1726"}
+            value={batch?.batch_number || ""}
             readOnly
             muted={muted}
           />
           <Field
             label="Purchase Date"
-            value="12/12/2020"
+            value={batch?.purchased_date || ""}
             icon={<CalendarDays size={20} />}
             readOnly
             muted={muted}
           />
           <Field
             label="Expiry Date"
-            value="12/12/2020"
+            value={batch?.expiry_date || ""}
             icon={<CalendarDays size={20} />}
             readOnly
             muted={muted}
           />
           <Field
-            label="Drug Category"
-            value={variant === "view" ? "Antibiotic" : ""}
-            placeholder="e.g Antibiotic"
-            readOnly={variant === "view"}
+            label="Drug Classification"
+            value={item.drug_classification}
+            readOnly
             muted={muted}
           />
           <Field
             label="Quantity Added"
-            value={variant === "view" ? "60" : "76"}
-            readOnly={variant === "view"}
+            value={String(batch?.remaining_quantity ?? item.total_stock ?? "")}
+            readOnly
             muted={muted}
           />
           <Field
             label="Threshold"
-            value="20"
-            readOnly={variant === "view"}
+            value={String(item.global_threshold)}
+            readOnly
             muted={muted}
           />
           <Field
             label="Supplier"
-            value="Medplus"
-            readOnly={variant === "view"}
+            value={batch?.supplier || ""}
+            readOnly
             muted={muted}
           />
           <Field
             label="Cost Price"
-            value="NGN 1,500"
-            readOnly={variant === "view"}
+            value={batch?.cost_price || ""}
+            readOnly
             muted={muted}
           />
           <SelectField
-            label="Unit"
-            value={item.unit}
+            label="Item Type"
+            value={item.item_type}
             options={UNITS}
             onChange={() => undefined}
           />
@@ -268,21 +267,16 @@ export function InventoryModal({
         <div className="mt-6 max-w-[770px]">
           <Field
             label="Notes (Optional)"
-            value={variant === "view" ? "Filled" : ""}
+            value={batch?.note || ""}
             placeholder="Additional notes"
-            readOnly={variant === "view"}
+            readOnly
             muted={muted}
             className="h-40 items-start py-4"
           />
         </div>
 
         {variant === "view" ? (
-          <div className="mt-8 flex max-w-[770px] justify-end">
-            <button className="inline-flex h-14 items-center justify-center gap-3 rounded-lg border border-[#046C3F] px-16 text-lg font-medium text-[#046C3F]">
-              <Download size={22} />
-              Export File
-            </button>
-          </div>
+          null
         ) : (
           <div className="mt-8 flex max-w-[770px] flex-col gap-4 sm:flex-row sm:justify-end">
             <button

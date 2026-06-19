@@ -17,7 +17,7 @@ import { ColumnDef, DataTable } from "@/src/components/generic/ui/DataTable";
 import { CustomDropdown } from "@/src/components/generic/ui/CustomDropdown";
 import DateRangeFilter from "@/src/components/generic/ui/DateRangeFilter";
 import PharmacistDashboardHeader from "@/src/components/pharmacist-dashboard/generics/PharmacistDashboardHeader";
-import { badge, InventoryModal } from "./Inventory";
+import { badge } from "./Inventory";
 
 import {
   useInventoryDrugs,
@@ -30,10 +30,8 @@ const PAGE_SIZES = ["10", "50", "100"];
 
 function InventoryActionMenu({
   row,
-  onAction,
 }: {
   row: DrugStockItem;
-  onAction: (action: "update", item: DrugStockItem) => void;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -123,9 +121,6 @@ export default function DrugStockListing() {
   const initialSearch = searchParams.get("search") || "";
   const [localSearch, setLocalSearch] = useState(initialSearch);
 
-  const [selectedItem, setSelectedItem] = useState<DrugStockItem | null>(null);
-  const [modal, setModal] = useState<"update" | null>(null);
-
   useEffect(() => {
     const currentSearch = searchParams.get("search") || "";
     if (localSearch === currentSearch) return;
@@ -170,7 +165,7 @@ export default function DrugStockListing() {
   const stockStats = [
     {
       title: "Total Drugs",
-      value: isLoadingStats ? "..." : stats?.total_drugs || 0,
+      value: isLoadingStats ? "..." : stats?.total_items || 0,
       icon: Pill,
       active: true,
     },
@@ -181,26 +176,30 @@ export default function DrugStockListing() {
     },
     {
       title: "Out of Stock",
-      value: isLoadingStats ? "..." : stats?.out_of_stock || 0,
+      value: isLoadingStats ? "..." : stats?.out_of_stock_items || 0,
       icon: PackagePlus,
     },
     {
       title: "Expiring Soon",
-      value: isLoadingStats ? "..." : stats?.expiring_soon || 0,
+      value: isLoadingStats ? "..." : stats?.expiring_soon_items || 0,
       icon: PackagePlus,
     },
   ];
 
   const columns: ColumnDef<DrugStockItem>[] = [
     { header: "Drug Name", accessorKey: "name", sortable: true },
-    { header: "Category", accessorKey: "category", sortable: true },
-    { header: "Unit", accessorKey: "unit", sortable: true },
+    {
+      header: "Classification",
+      accessorKey: "drug_classification",
+      sortable: true,
+    },
+    { header: "Item Type", accessorKey: "item_type", sortable: true },
     { header: "Total Stock", accessorKey: "total_stock", sortable: true },
     { header: "Threshold", accessorKey: "global_threshold", sortable: true },
     {
       header: "Active Batches",
-      accessorKey: "active_batches_count",
       sortable: true,
+      render: (row) => row.active_batches?.length || 0,
     },
     {
       header: "Status",
@@ -210,13 +209,7 @@ export default function DrugStockListing() {
     {
       header: "Action",
       render: (row) => (
-        <InventoryActionMenu
-          row={row}
-          onAction={(action, item) => {
-            setSelectedItem(item);
-            setModal(action);
-          }}
-        />
+        <InventoryActionMenu row={row} />
       ),
     },
   ];
@@ -310,16 +303,8 @@ export default function DrugStockListing() {
 
               <CustomDropdown
                 options={STATUS_OPTIONS}
-                selected={
-                  statusFilter === "All Status"
-                    ? "All Status"
-                    : statusFilter.replace("_", " ")
-                }
-                onSelect={(val) => {
-                  const formattedValue =
-                    val === "All Status" ? val : val.replace(" ", "_");
-                  updateUrlParams("status", formattedValue);
-                }}
+                selected={statusFilter}
+                onSelect={(val) => updateUrlParams("status", val)}
               />
 
               <CustomDropdown
@@ -333,16 +318,6 @@ export default function DrugStockListing() {
         />
       </div>
 
-      {modal && selectedItem && (
-        <InventoryModal
-          variant={modal}
-          item={selectedItem as any}
-          onClose={() => setModal(null)}
-          onSubmit={() => {
-            setModal(null);
-          }}
-        />
-      )}
     </div>
   );
 }
