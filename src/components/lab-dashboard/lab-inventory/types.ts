@@ -66,18 +66,18 @@ export interface PaginatedInventoryItems {
 export interface CreateInventoryItemPayload {
   name: string;
   inventory_category: string;
-  drug_classification: string;
+  drug_classification?: string | null;
   item_type: string;
   threshold_type: string;
   global_threshold: number;
-  schedule_rules: string;
+  schedule_rules?: null;
 }
 
 export interface RefillItemPayload {
   batch_number: string;
   initial_quantity: number;
   purchased_date: string;
-  expiry_date: string;
+  expiry_date?: string;
   supplier: string;
   cost_price: string;
   note?: string;

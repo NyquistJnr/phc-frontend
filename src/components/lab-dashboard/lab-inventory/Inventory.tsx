@@ -21,6 +21,8 @@ import {
   X,
 } from "lucide-react";
 
+import { SelectField as SystemSelectField } from "@/src/components/nurse-dashboard/appointments/form-helpers";
+
 import { ColumnDef, DataTable } from "@/src/components/generic/ui/DataTable";
 import { StatusBadge } from "@/src/components/generic/ui/TableHelpers";
 import { CustomDropdown } from "@/src/components/generic/ui/CustomDropdown";
@@ -48,9 +50,9 @@ type StatusLabel = "In Stock" | "Low Stock" | "Out of Stock" | "Unknown";
 type InventoryFormValues = {
   name: string;
   itemType: string;
+  itemTypeCustom: string;
   thresholdType: string;
   globalThreshold: string;
-  scheduleRules: string;
   batchNumber: string;
   initialQuantity: string;
   purchasedDate: string;
@@ -61,21 +63,29 @@ type InventoryFormValues = {
 };
 
 const LAB_INVENTORY_CATEGORY = "LAB_EQUIPMENT";
+
 const ITEM_TYPE_OPTIONS = [
-  "TABLET",
-  "CAPSULE",
-  "SYRUP",
-  "VIAL",
-  "AMPOULE",
-  "SACHET",
-  "INHALER",
-  "TUBE",
-  "BOTTLE",
-  "KIT",
-  "REAGENT",
-  "CONSUMABLE",
-  "EQUIPMENT",
+  { label: "Kits", value: "Kits" },
+  { label: "Reagents", value: "Reagents" },
+  { label: "Test Strips / Sticks", value: "Test Strips" },
+  { label: "Slides", value: "Slides" },
+  { label: "Specimen Containers", value: "Containers" },
+  { label: "Tubes", value: "Tubes" },
+  { label: "Pipettes", value: "Pipettes" },
+  { label: "Culture Plates", value: "Plates" },
+  { label: "Swabs", value: "Swabs" },
+  { label: "Gloves (Pairs)", value: "Pairs" },
+  { label: "Syringes", value: "Syringes" },
+  { label: "Needles", value: "Needles" },
+  { label: "Equipment / Instruments", value: "Equipment" },
+  { label: "Other (custom)…", value: "OTHER" },
 ];
+
+const THRESHOLD_TYPE_OPTIONS = [
+  { label: "Absolute — alert when stock falls below N units", value: "ABSOLUTE" },
+  { label: "Percentage — alert when stock falls below N%", value: "PERCENTAGE" },
+];
+
 const STATUS_OPTIONS = ["All Status", "In Stock", "Low Stock", "Out of Stock"];
 const STATUS_FILTERS: Record<string, string | undefined> = {
   "All Status": undefined,
@@ -93,10 +103,10 @@ const statusColors: Record<StatusLabel, { bg: string; text: string }> = {
 
 const initialFormValues: InventoryFormValues = {
   name: "",
-  itemType: "TABLET",
-  thresholdType: "GLOBAL",
+  itemType: "",
+  itemTypeCustom: "",
+  thresholdType: "ABSOLUTE",
   globalThreshold: "",
-  scheduleRules: "{}",
   batchNumber: "",
   initialQuantity: "",
   purchasedDate: "",
@@ -145,14 +155,16 @@ function escapeHtml(value: string) {
 }
 
 function buildItemPayload(values: InventoryFormValues): CreateInventoryItemPayload {
+  const effectiveItemType =
+    values.itemType === "OTHER" ? values.itemTypeCustom.trim() : values.itemType.trim();
   return {
     name: values.name.trim(),
     inventory_category: LAB_INVENTORY_CATEGORY,
-    drug_classification: "NORMAL",
-    item_type: values.itemType.trim(),
+    drug_classification: null,
+    item_type: effectiveItemType,
     threshold_type: values.thresholdType.trim(),
     global_threshold: Number(values.globalThreshold),
-    schedule_rules: values.scheduleRules.trim() || "{}",
+    schedule_rules: null,
   };
 }
 
@@ -161,7 +173,7 @@ function buildRefillPayload(values: InventoryFormValues): RefillItemPayload {
     batch_number: values.batchNumber.trim(),
     initial_quantity: Number(values.initialQuantity),
     purchased_date: values.purchasedDate,
-    expiry_date: values.expiryDate,
+    expiry_date: values.expiryDate || undefined,
     supplier: values.supplier.trim(),
     cost_price: values.costPrice.trim(),
     note: values.note.trim() || undefined,
@@ -185,7 +197,6 @@ function hasCompleteRefillValues(values: InventoryFormValues) {
     values.batchNumber &&
       values.initialQuantity &&
       values.purchasedDate &&
-      values.expiryDate &&
       values.supplier &&
       values.costPrice,
   );
@@ -193,14 +204,18 @@ function hasCompleteRefillValues(values: InventoryFormValues) {
 
 function getInitialValues(item?: InventoryItem): InventoryFormValues {
   const batch = item ? getPrimaryBatch(item) : null;
+  const storedItemType = item?.item_type ?? "";
+  const isKnownType = ITEM_TYPE_OPTIONS.some(
+    (o) => o.value !== "OTHER" && o.value === storedItemType,
+  );
 
   return {
     name: item?.name ?? "",
-    itemType: item?.item_type ?? initialFormValues.itemType,
+    itemType: isKnownType ? storedItemType : storedItemType ? "OTHER" : "",
+    itemTypeCustom: isKnownType ? "" : storedItemType,
     thresholdType: item?.threshold_type ?? initialFormValues.thresholdType,
     globalThreshold:
       item?.global_threshold === undefined ? "" : String(item.global_threshold),
-    scheduleRules: item?.schedule_rules ?? initialFormValues.scheduleRules,
     batchNumber: batch?.batch_number ?? "",
     initialQuantity:
       batch?.remaining_quantity === undefined
@@ -359,44 +374,6 @@ function Field({
   );
 }
 
-function SelectField({
-  label,
-  value,
-  options,
-  readOnly,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  options: string[];
-  readOnly?: boolean;
-  onChange: (value: string) => void;
-}) {
-  return (
-    <label
-      className={`flex min-h-[58px] items-center gap-3 rounded-lg border border-gray-300 px-4 ${
-        readOnly ? "bg-gray-100" : "bg-white"
-      }`}
-    >
-      <span className="min-w-0 flex-1">
-        <span className="block text-xs text-gray-500">{label}</span>
-        <select
-          disabled={readOnly}
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-          className="mt-1 w-full bg-transparent text-base text-gray-500 outline-none disabled:opacity-100"
-        >
-          {options.map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
-      </span>
-    </label>
-  );
-}
-
 function Notes({
   value,
   readOnly,
@@ -464,50 +441,92 @@ function InventoryForm({
 
       <div className="grid max-w-4xl grid-cols-1 gap-7 md:grid-cols-2">
         <Field
-          label="Name of Item"
+          label="Name of Item *"
           value={values.name}
-          placeholder="Search"
+          placeholder="e.g. Malaria RDT Kit"
           icon={<Search size={24} />}
           readOnly={readOnly}
           onChange={(value) => handleChange("name", value)}
         />
-        <SelectField
-          label="Item Type"
-          value={values.itemType}
-          options={ITEM_TYPE_OPTIONS}
-          readOnly={readOnly}
-          onChange={(value) => handleChange("itemType", value)}
-        />
+
+        {/* Item Type */}
+        {readOnly ? (
+          <Field
+            label="Item Type"
+            value={
+              ITEM_TYPE_OPTIONS.find((o) => o.value === values.itemType)?.label ||
+              values.itemTypeCustom ||
+              values.itemType
+            }
+            readOnly
+            onChange={() => {}}
+          />
+        ) : (
+          <div>
+            <SystemSelectField
+              label="Item Type *"
+              placeholder="Select unit type"
+              options={ITEM_TYPE_OPTIONS}
+              value={values.itemType}
+              onChange={(v) => handleChange("itemType", v)}
+            />
+            {values.itemType === "OTHER" && (
+              <div className="mt-2">
+                <Field
+                  label="Specify unit type *"
+                  value={values.itemTypeCustom}
+                  placeholder="e.g. Cuvettes"
+                  onChange={(v) => handleChange("itemTypeCustom", v)}
+                />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Threshold Type */}
+        {readOnly ? (
+          <Field
+            label="Threshold Type"
+            value={
+              THRESHOLD_TYPE_OPTIONS.find((o) => o.value === values.thresholdType)
+                ?.label || values.thresholdType
+            }
+            readOnly
+            onChange={() => {}}
+          />
+        ) : (
+          <SystemSelectField
+            label="Threshold Type *"
+            placeholder="Select threshold type"
+            options={THRESHOLD_TYPE_OPTIONS}
+            value={values.thresholdType}
+            onChange={(v) => handleChange("thresholdType", v)}
+          />
+        )}
+
         <Field
-          label="Threshold Type"
-          value={values.thresholdType}
-          placeholder="e.g. GLOBAL"
-          readOnly={readOnly}
-          onChange={(value) => handleChange("thresholdType", value)}
-        />
-        <Field
-          label="Threshold"
+          label={`Threshold${values.thresholdType === "PERCENTAGE" ? " (%)" : " (units)"} *`}
           value={values.globalThreshold}
           type="number"
           readOnly={readOnly}
           onChange={(value) => handleChange("globalThreshold", value)}
         />
         <Field
-          label="Batch Number"
+          label="Batch Number *"
           value={values.batchNumber}
-          placeholder="Enter Batch Number"
+          placeholder="e.g. LOT-2026-0041"
           readOnly={readOnly}
           onChange={(value) => handleChange("batchNumber", value)}
         />
         <Field
-          label="Quantity Added"
+          label="Quantity Added *"
           value={values.initialQuantity}
           type="number"
           readOnly={readOnly}
           onChange={(value) => handleChange("initialQuantity", value)}
         />
         <Field
-          label="Purchase Date"
+          label="Purchase Date *"
           value={values.purchasedDate}
           type="date"
           icon={<Calendar size={22} />}
@@ -515,7 +534,7 @@ function InventoryForm({
           onChange={(value) => handleChange("purchasedDate", value)}
         />
         <Field
-          label="Expiry Date"
+          label="Expiry Date (leave blank if no expiry)"
           value={values.expiryDate}
           type="date"
           icon={<Calendar size={22} />}
@@ -523,25 +542,18 @@ function InventoryForm({
           onChange={(value) => handleChange("expiryDate", value)}
         />
         <Field
-          label="Supplier(Optional)"
+          label="Supplier *"
           value={values.supplier}
-          placeholder="Enter Supplier"
+          placeholder="e.g. HealthMed Nigeria Ltd"
           readOnly={readOnly}
           onChange={(value) => handleChange("supplier", value)}
         />
         <Field
-          label="Cost Price"
+          label="Cost Price per Unit *"
           value={values.costPrice}
           placeholder="0.00"
           readOnly={readOnly}
           onChange={(value) => handleChange("costPrice", value)}
-        />
-        <Field
-          label="Schedule Rules"
-          value={values.scheduleRules}
-          placeholder="{}"
-          readOnly={readOnly}
-          onChange={(value) => handleChange("scheduleRules", value)}
         />
         <div className="md:col-span-2">
           <Notes
@@ -767,10 +779,12 @@ export default function Inventory() {
 
   const handleCreate = async (values: InventoryFormValues) => {
     setFormError("");
+    const effectiveItemType =
+      values.itemType === "OTHER" ? values.itemTypeCustom : values.itemType;
 
     if (
       !values.name ||
-      !values.itemType ||
+      !effectiveItemType ||
       !values.thresholdType ||
       !values.globalThreshold ||
       !hasCompleteRefillValues(values)
@@ -808,10 +822,12 @@ export default function Inventory() {
     values: InventoryFormValues,
   ) => {
     setFormError("");
+    const effectiveItemType =
+      values.itemType === "OTHER" ? values.itemTypeCustom : values.itemType;
 
     if (
       !values.name ||
-      !values.itemType ||
+      !effectiveItemType ||
       !values.thresholdType ||
       !values.globalThreshold
     ) {
