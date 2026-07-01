@@ -330,9 +330,7 @@ export default function LabRequestForm() {
       return;
     }
 
-    const hasEmptyTests = form.tests.some(
-      (t) => !t.testName || !t.linkedItem || !t.sampleType,
-    );
+    const hasEmptyTests = form.tests.some((t) => !t.testName || !t.sampleType);
     if (form.tests.length === 0 || hasEmptyTests) {
       setFormError("Please complete all fields for every added test.");
       return;
@@ -344,8 +342,8 @@ export default function LabRequestForm() {
       clinical_notes: form.clinicalNotes,
       tests: form.tests.map((test) => ({
         test_name: test.testName,
-        linked_item: test.linkedItem,
         sample_type: test.sampleType,
+        ...(test.linkedItem && { linked_item: test.linkedItem }),
       })),
     };
 
@@ -501,7 +499,7 @@ export default function LabRequestForm() {
                     </FieldShell>
 
                     <SelectField
-                      label="Linked Lab Equipment"
+                      label="Linked Lab Equipment (Optional)"
                       placeholder="Search Equipment"
                       options={itemOptions}
                       searchable

@@ -3,7 +3,7 @@
 import { FormEvent, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, FileText, Activity, Info, CheckCircle2, FlaskConical, Pill, GitBranch } from "lucide-react";
+import { ArrowLeft, FileText, Activity, Info, CheckCircle2, Pill } from "lucide-react";
 import DoctorHeader from "@/src/components/doctorDashboard/generics/Header";
 import { CustomDropdown } from "@/src/components/generic/ui/CustomDropdown";
 import {
@@ -14,6 +14,8 @@ import {
   useAppointmentVitals,
 } from "@/src/hooks/doctors/use-consultation";
 import type { MyAppointment, PaginatedResponse } from "./types";
+import LabRequestsSection from "./LabRequestsSection";
+import ReferralSection from "./ReferralSection";
 
 const INITIAL_FORM = {
   chief_complaint: "",
@@ -393,27 +395,13 @@ export default function CreateNote() {
                 <p className="text-xs text-gray-500 -mt-2">
                   What would you like to do next?
                 </p>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                  <Link
-                    href={`/doctor-dashboard/laboratory/new?appointment=${selectedAppointment}`}
-                    className="flex items-center gap-3 rounded-xl border border-blue-100 bg-white px-4 py-4 text-sm font-medium text-blue-700 shadow-sm hover:bg-blue-50 transition-colors"
-                  >
-                    <FlaskConical size={18} className="shrink-0 text-blue-500" />
-                    Order Tests
-                  </Link>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <Link
                     href={`/doctor-dashboard/prescriptions/new?appointment=${selectedAppointment}`}
                     className="flex items-center gap-3 rounded-xl border border-purple-100 bg-white px-4 py-4 text-sm font-medium text-purple-700 shadow-sm hover:bg-purple-50 transition-colors"
                   >
                     <Pill size={18} className="shrink-0 text-purple-500" />
                     Write Prescription
-                  </Link>
-                  <Link
-                    href={`/doctor-dashboard/referrals/new?appointment=${selectedAppointment}`}
-                    className="flex items-center gap-3 rounded-xl border border-orange-100 bg-white px-4 py-4 text-sm font-medium text-orange-700 shadow-sm hover:bg-orange-50 transition-colors"
-                  >
-                    <GitBranch size={18} className="shrink-0 text-orange-500" />
-                    Refer Patient
                   </Link>
                 </div>
                 <div className="flex items-center gap-3 pt-1">
@@ -455,6 +443,13 @@ export default function CreateNote() {
             )}
           </div>
         </form>
+
+        {selectedAppointment && (
+          <div className="mt-6 space-y-6">
+            <LabRequestsSection appointmentId={selectedAppointment} />
+            <ReferralSection appointmentId={selectedAppointment} />
+          </div>
+        )}
       </div>
     </div>
   );
