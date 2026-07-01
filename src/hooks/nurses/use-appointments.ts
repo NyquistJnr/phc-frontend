@@ -101,15 +101,7 @@ export function useCreateAppointment() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (payload: {
-      patient: string;
-      assigned_to: string;
-      appointment_date: string;
-      appointment_time: string;
-      visit_type: string;
-      reason_for_visit: string;
-      notes: string;
-    }) => {
+    mutationFn: async (payload: Record<string, any>) => {
       return await api.post("/appointments/appointments/", payload);
     },
     onSuccess: () => {
@@ -176,7 +168,7 @@ export function useFacilityStaff(searchTerm: string = "") {
         : "";
 
       const res = await api.get<PaginatedResponse<any>>(
-        `/users/facility-users/?is_active=true&page=1&page_size=10${searchParam}`,
+        `/users/facility-users/?is_active=true&role=MEDICALS&page=1&page_size=10${searchParam}`,
       );
       return res.results || [];
     },

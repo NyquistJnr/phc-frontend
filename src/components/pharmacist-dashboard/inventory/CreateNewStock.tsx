@@ -2,11 +2,11 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarDays, Loader2, Pill, PackagePlus, X } from "lucide-react";
+import { CalendarDays, Loader2, PackagePlus, X } from "lucide-react";
 
 import PharmacistBackButton from "@/src/components/pharmacist-dashboard/generics/PharmacistBackButton";
 import PharmacistDashboardHeader from "@/src/components/pharmacist-dashboard/generics/PharmacistDashboardHeader";
-import { UNITS } from "./Inventory";
+import type { ScheduleRules } from "./type";
 
 import {
   useCreateDrug,
@@ -29,6 +29,34 @@ function FieldShell({
       <label className="mb-1 block text-xs text-[#62636C]">{label}</label>
       {children}
     </div>
+  );
+}
+
+function SelectShell({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: { label: string; value: string }[];
+}) {
+  return (
+    <FieldShell label={label}>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full bg-transparent text-base text-gray-700 outline-none"
+      >
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+    </FieldShell>
   );
 }
 
@@ -61,15 +89,22 @@ function SuccessToast({
 }
 
 function getErrorMessage(error: unknown, fallback: string) {
-  if (error instanceof Error && error.message) return error.message;
-  return fallback;
+  const err = error as { response?: { data?: { detail?: string; message?: string } }; message?: string } | null;
+  return err?.response?.data?.detail || err?.response?.data?.message || err?.message || fallback;
 }
 
+type ScheduleType = "NONE" | "ONCE" | "RECURRING" | "VARIABLE_SEQUENCE";
+
 type StockFormState = {
+  inventoryCategory: string;
+  drugClassification: string;
   drugName: string;
   itemType: string;
-  scheduleRules: string;
+  thresholdType: string;
   globalThreshold: string;
+  scheduleType: ScheduleType;
+  scheduleIntervalDays: string;
+  scheduleIntervalSequence: string;
   batchNumber: string;
   initialQuantity: string;
   purchasedDate: string;
@@ -80,10 +115,15 @@ type StockFormState = {
 };
 
 const INITIAL_FORM: StockFormState = {
+  inventoryCategory: "DRUG",
+  drugClassification: "NORMAL",
   drugName: "",
   itemType: "",
-  scheduleRules: "",
+  thresholdType: "ABSOLUTE",
   globalThreshold: "",
+  scheduleType: "NONE",
+  scheduleIntervalDays: "",
+  scheduleIntervalSequence: "",
   batchNumber: "",
   initialQuantity: "",
   purchasedDate: "",
@@ -92,6 +132,55 @@ const INITIAL_FORM: StockFormState = {
   costPrice: "",
   note: "",
 };
+
+const INVENTORY_CATEGORY_OPTIONS = [
+  { label: "Drug / Medication", value: "DRUG" },
+  { label: "Lab Equipment", value: "LAB_EQUIPMENT" },
+  { label: "Consumable", value: "CONSUMABLE" },
+];
+
+const DRUG_CLASSIFICATION_OPTIONS = [
+  { label: "Normal Medication", value: "NORMAL" },
+  { label: "Immunization / Vaccine", value: "IMMUNIZATION" },
+];
+
+const THRESHOLD_TYPE_OPTIONS = [
+  { label: "Absolute (alert when stock ≤ N units)", value: "ABSOLUTE" },
+  { label: "Percentage (alert when stock ≤ N% of initial)", value: "PERCENTAGE" },
+];
+
+const SCHEDULE_TYPE_OPTIONS = [
+  { label: "No schedule", value: "NONE" },
+  { label: "Once (single dose)", value: "ONCE" },
+  { label: "Recurring (fixed interval)", value: "RECURRING" },
+  { label: "Variable sequence (e.g. 6w, 10w, 14w)", value: "VARIABLE_SEQUENCE" },
+];
+
+const ITEM_TYPE_OPTIONS = [
+  "Tablets", "Capsules", "Syrup", "Vials", "Ampoules", "Sachets",
+  "Inhalers", "Tubes", "Bottles", "Kits", "Reagents", "Pieces", "Pairs", "Packs",
+];
+
+function buildScheduleRules(form: StockFormState): ScheduleRules | null {
+  if (form.scheduleType === "NONE" || form.inventoryCategory !== "DRUG" || form.drugClassification !== "IMMUNIZATION") {
+    return null;
+  }
+  if (form.scheduleType === "ONCE") return { type: "ONCE" };
+  if (form.scheduleType === "RECURRING") {
+    const days = parseInt(form.scheduleIntervalDays);
+    if (!days || days <= 0) return null;
+    return { type: "RECURRING", interval_days: days };
+  }
+  if (form.scheduleType === "VARIABLE_SEQUENCE") {
+    const intervals = form.scheduleIntervalSequence
+      .split(",")
+      .map((s) => parseInt(s.trim()))
+      .filter((n) => !isNaN(n) && n > 0);
+    if (intervals.length === 0) return null;
+    return { type: "VARIABLE_SEQUENCE", intervals_in_days: intervals };
+  }
+  return null;
+}
 
 export default function CreateNewStock() {
   const router = useRouter();
@@ -103,12 +192,26 @@ export default function CreateNewStock() {
   const { mutate: refillDrug, isPending: isRefilling } = useRefillDrug();
 
   const isProcessing = isCreating || isRefilling;
+  const isDrug = form.inventoryCategory === "DRUG";
+  const isImmunization = isDrug && form.drugClassification === "IMMUNIZATION";
 
   const handleChange = <K extends keyof StockFormState>(
     field: K,
     value: StockFormState[K],
   ) => {
-    setForm((current) => ({ ...current, [field]: value }));
+    setForm((current) => {
+      const next = { ...current, [field]: value };
+      // Reset classification and schedule when switching category away from DRUG
+      if (field === "inventoryCategory" && value !== "DRUG") {
+        next.drugClassification = "NORMAL";
+        next.scheduleType = "NONE";
+      }
+      // Reset schedule when switching classification away from IMMUNIZATION
+      if (field === "drugClassification" && value !== "IMMUNIZATION") {
+        next.scheduleType = "NONE";
+      }
+      return next;
+    });
     setFormError("");
   };
 
@@ -122,53 +225,59 @@ export default function CreateNewStock() {
       !form.batchNumber ||
       !form.initialQuantity ||
       !form.purchasedDate ||
-      !form.expiryDate ||
       !form.supplier ||
       !form.costPrice
     ) {
-      setFormError("Please complete all required fields to add new stock.");
+      setFormError("Please complete all required fields.");
       return;
     }
+
+    if (isImmunization && form.scheduleType === "RECURRING" && !form.scheduleIntervalDays) {
+      setFormError("Please enter the interval days for the recurring schedule.");
+      return;
+    }
+
+    if (isImmunization && form.scheduleType === "VARIABLE_SEQUENCE" && !form.scheduleIntervalSequence.trim()) {
+      setFormError("Please enter the interval sequence (comma-separated days).");
+      return;
+    }
+
+    const scheduleRules = buildScheduleRules(form);
 
     createDrug(
       {
         name: form.drugName,
-        inventory_category: "DRUG",
-        drug_classification: "NORMAL",
+        inventory_category: form.inventoryCategory,
+        drug_classification: isDrug ? form.drugClassification : null,
         item_type: form.itemType,
-        threshold_type: "ABSOLUTE",
+        threshold_type: form.thresholdType,
         global_threshold: Number(form.globalThreshold),
-        schedule_rules:
-          form.scheduleRules ||
-          `Restock when quantity falls below ${form.globalThreshold} units`,
+        schedule_rules: scheduleRules,
       },
       {
         onSuccess: (res) => {
-          const newDrugId = res.id;
-
-          if (!newDrugId) {
-            setFormError(
-              "Failed to retrieve new drug ID. Please check inventory.",
-            );
+          const newId = res.id;
+          if (!newId) {
+            setFormError("Failed to retrieve the new item ID. Please check inventory.");
             return;
           }
           refillDrug(
             {
-              id: newDrugId,
+              id: newId,
               payload: {
                 batch_number: form.batchNumber,
                 initial_quantity: Number(form.initialQuantity),
                 purchased_date: form.purchasedDate,
-                expiry_date: form.expiryDate,
+                expiry_date: form.expiryDate || undefined,
                 supplier: form.supplier,
                 cost_price: form.costPrice,
-                note: form.note,
+                note: form.note || undefined,
               },
             },
             {
               onSuccess: () => {
                 setToastMessage(
-                  `Successfully added ${form.initialQuantity} units of ${form.drugName}.`,
+                  `Successfully added ${form.initialQuantity} ${form.itemType || "units"} of ${form.drugName}.`,
                 );
                 setTimeout(() => {
                   router.push("/pharmacist-dashboard/inventory");
@@ -176,22 +285,14 @@ export default function CreateNewStock() {
               },
               onError: (error: unknown) => {
                 setFormError(
-                  getErrorMessage(
-                    error,
-                    "Drug created, but failed to add batch stock.",
-                  ),
+                  getErrorMessage(error, "Item created, but failed to add initial batch stock."),
                 );
               },
             },
           );
         },
         onError: (error: unknown) => {
-          setFormError(
-            getErrorMessage(
-              error,
-              "Failed to create drug item. Please try again.",
-            ),
-          );
+          setFormError(getErrorMessage(error, "Failed to create inventory item. Please try again."));
         },
       },
     );
@@ -214,8 +315,8 @@ export default function CreateNewStock() {
           className="rounded-xl bg-white px-5 py-8 shadow-sm sm:px-6 mt-6"
         >
           <div className="mb-8 flex items-center gap-3">
-            <Pill size={28} className="text-[#046C3F]" />
-            <h1 className="text-2xl font-semibold text-black">Add New Stock</h1>
+            <PackagePlus size={26} className="text-[#046C3F]" />
+            <h1 className="text-2xl font-semibold text-black">Add New Stock Item</h1>
           </div>
 
           <div className="max-w-[800px]">
@@ -224,105 +325,156 @@ export default function CreateNewStock() {
                 {formError}
               </div>
             )}
-            <h3 className="mb-4 text-sm font-semibold uppercase text-gray-500 tracking-wider">
+
+            {/* ── Item Details ── */}
+            <h3 className="mb-4 text-xs font-semibold uppercase tracking-wider text-gray-400">
               Item Details
             </h3>
             <div className="mb-8 grid grid-cols-1 gap-5 md:grid-cols-2">
-              <FieldShell label="Drug Name">
+              <SelectShell
+                label="Category"
+                value={form.inventoryCategory}
+                onChange={(v) => handleChange("inventoryCategory", v)}
+                options={INVENTORY_CATEGORY_OPTIONS}
+              />
+
+              {isDrug && (
+                <SelectShell
+                  label="Drug Classification"
+                  value={form.drugClassification}
+                  onChange={(v) => handleChange("drugClassification", v)}
+                  options={DRUG_CLASSIFICATION_OPTIONS}
+                />
+              )}
+
+              <FieldShell label="Item Name *">
                 <input
                   value={form.drugName}
                   onChange={(e) => handleChange("drugName", e.target.value)}
-                  placeholder="e.g. Paracetamol 1000mg"
+                  placeholder={isDrug ? "e.g. Paracetamol 500mg" : "e.g. Malaria RDT Kit"}
                   className="w-full bg-transparent text-base text-gray-700 outline-none placeholder:text-gray-400"
                 />
               </FieldShell>
 
-              <FieldShell label="Schedule Rules">
-                <input
-                  value={form.scheduleRules}
-                  onChange={(e) =>
-                    handleChange("scheduleRules", e.target.value)
-                  }
-                  placeholder="Restock when quantity falls below threshold"
-                  className="w-full bg-transparent text-base text-gray-700 outline-none placeholder:text-gray-400"
-                />
-              </FieldShell>
-
-              <div className="relative flex flex-col justify-center rounded-lg border border-gray-300 bg-white px-4 py-2.5 focus-within:border-[#046C3F] focus-within:ring-1 focus-within:ring-[#046C3F]">
-                <label className="mb-1 block text-xs text-[#62636C]">
-                  Item Type
-                </label>
+              <FieldShell label="Item Type / Unit *">
                 <select
                   value={form.itemType}
                   onChange={(e) => handleChange("itemType", e.target.value)}
                   className="w-full bg-transparent text-base text-gray-700 outline-none"
                 >
-                  <option value="" disabled>
-                    Select Item Type
-                  </option>
-                  {UNITS.map((u) => (
-                    <option key={u} value={u}>
-                      {u}
-                    </option>
+                  <option value="" disabled>Select unit type</option>
+                  {ITEM_TYPE_OPTIONS.map((u) => (
+                    <option key={u} value={u}>{u}</option>
                   ))}
                 </select>
-              </div>
+              </FieldShell>
 
-              <FieldShell label="Low Stock Threshold">
+              <SelectShell
+                label="Threshold Type"
+                value={form.thresholdType}
+                onChange={(v) => handleChange("thresholdType", v)}
+                options={THRESHOLD_TYPE_OPTIONS}
+              />
+
+              <FieldShell label={`Low Stock Threshold${form.thresholdType === "PERCENTAGE" ? " (%)" : " (units)"} *`}>
                 <input
                   type="number"
+                  min="0"
                   value={form.globalThreshold}
-                  onChange={(e) =>
-                    handleChange("globalThreshold", e.target.value)
-                  }
-                  placeholder="Alert threshold e.g. 50"
+                  onChange={(e) => handleChange("globalThreshold", e.target.value)}
+                  placeholder={form.thresholdType === "PERCENTAGE" ? "e.g. 20" : "e.g. 50"}
                   className="w-full bg-transparent text-base text-gray-700 outline-none placeholder:text-gray-400"
                 />
               </FieldShell>
             </div>
+
+            {/* ── Schedule Rules (only for IMMUNIZATION drugs) ── */}
+            {isImmunization && (
+              <>
+                <h3 className="mb-4 text-xs font-semibold uppercase tracking-wider text-gray-400">
+                  Dosage Schedule (Optional)
+                </h3>
+                <div className="mb-8 grid grid-cols-1 gap-5 md:grid-cols-2">
+                  <SelectShell
+                    label="Schedule Type"
+                    value={form.scheduleType}
+                    onChange={(v) => handleChange("scheduleType", v as ScheduleType)}
+                    options={SCHEDULE_TYPE_OPTIONS}
+                  />
+
+                  {form.scheduleType === "RECURRING" && (
+                    <FieldShell label="Interval (days) *">
+                      <input
+                        type="number"
+                        min="1"
+                        value={form.scheduleIntervalDays}
+                        onChange={(e) => handleChange("scheduleIntervalDays", e.target.value)}
+                        placeholder="e.g. 30"
+                        className="w-full bg-transparent text-base text-gray-700 outline-none placeholder:text-gray-400"
+                      />
+                    </FieldShell>
+                  )}
+
+                  {form.scheduleType === "VARIABLE_SEQUENCE" && (
+                    <FieldShell label="Intervals (comma-separated days) *" className="md:col-span-2">
+                      <input
+                        type="text"
+                        value={form.scheduleIntervalSequence}
+                        onChange={(e) => handleChange("scheduleIntervalSequence", e.target.value)}
+                        placeholder="e.g. 42, 28, 28"
+                        className="w-full bg-transparent text-base text-gray-700 outline-none placeholder:text-gray-400"
+                      />
+                      <p className="mt-1 text-xs text-gray-400">
+                        Days after each dose. Example: 42, 28, 28 = doses at 6w, 10w, 14w.
+                      </p>
+                    </FieldShell>
+                  )}
+                </div>
+              </>
+            )}
+
             <hr className="mb-8 border-gray-100" />
-            <h3 className="mb-4 text-sm font-semibold uppercase text-gray-500 tracking-wider">
+
+            {/* ── Initial Batch ── */}
+            <h3 className="mb-4 text-xs font-semibold uppercase tracking-wider text-gray-400">
               Initial Batch Entry
             </h3>
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-              <FieldShell label="Batch Number">
+              <FieldShell label="Batch / Lot Number *">
                 <input
                   value={form.batchNumber}
                   onChange={(e) => handleChange("batchNumber", e.target.value)}
-                  placeholder="e.g. BATCH201"
+                  placeholder="e.g. LOT-2026-0041"
                   className="w-full bg-transparent text-base text-gray-700 outline-none placeholder:text-gray-400"
                 />
               </FieldShell>
 
-              <FieldShell label="Quantity Added">
+              <FieldShell label="Quantity Received *">
                 <input
                   type="number"
+                  min="1"
                   value={form.initialQuantity}
-                  onChange={(e) =>
-                    handleChange("initialQuantity", e.target.value)
-                  }
-                  placeholder="e.g. 100"
+                  onChange={(e) => handleChange("initialQuantity", e.target.value)}
+                  placeholder="e.g. 500"
                   className="w-full bg-transparent text-base text-gray-700 outline-none placeholder:text-gray-400"
                 />
               </FieldShell>
 
-              <FieldShell label="Purchase Date">
+              <FieldShell label="Purchase Date *">
                 <div className="flex items-center gap-2">
-                  <CalendarDays size={20} className="text-gray-400" />
+                  <CalendarDays size={18} className="text-gray-400 shrink-0" />
                   <input
                     type="date"
                     value={form.purchasedDate}
-                    onChange={(e) =>
-                      handleChange("purchasedDate", e.target.value)
-                    }
+                    onChange={(e) => handleChange("purchasedDate", e.target.value)}
                     className="w-full bg-transparent text-base text-gray-700 outline-none"
                   />
                 </div>
               </FieldShell>
 
-              <FieldShell label="Expiry Date">
+              <FieldShell label="Expiry Date (leave blank if no expiry)">
                 <div className="flex items-center gap-2">
-                  <CalendarDays size={20} className="text-gray-400" />
+                  <CalendarDays size={18} className="text-gray-400 shrink-0" />
                   <input
                     type="date"
                     value={form.expiryDate}
@@ -332,22 +484,23 @@ export default function CreateNewStock() {
                 </div>
               </FieldShell>
 
-              <FieldShell label="Supplier">
+              <FieldShell label="Supplier *">
                 <input
                   value={form.supplier}
                   onChange={(e) => handleChange("supplier", e.target.value)}
-                  placeholder="Enter Supplier Name"
+                  placeholder="e.g. HealthMed Nigeria Ltd"
                   className="w-full bg-transparent text-base text-gray-700 outline-none placeholder:text-gray-400"
                 />
               </FieldShell>
 
-              <FieldShell label="Cost Price">
+              <FieldShell label="Cost Price per Unit *">
                 <input
                   type="number"
                   step="0.01"
+                  min="0"
                   value={form.costPrice}
                   onChange={(e) => handleChange("costPrice", e.target.value)}
-                  placeholder="e.g. 1500.00"
+                  placeholder="e.g. 4500.00"
                   className="w-full bg-transparent text-base text-gray-700 outline-none placeholder:text-gray-400"
                 />
               </FieldShell>
@@ -356,8 +509,8 @@ export default function CreateNewStock() {
             <textarea
               value={form.note}
               onChange={(e) => handleChange("note", e.target.value)}
-              className="mt-6 h-32 w-full resize-none rounded-lg border border-gray-300 px-4 py-3 text-base text-gray-700 outline-none placeholder:text-[#A7ADB5] focus:border-[#046C3F] focus:ring-1 focus:ring-[#046C3F]"
-              placeholder="Additional notes"
+              className="mt-6 h-24 w-full resize-none rounded-lg border border-gray-300 px-4 py-3 text-base text-gray-700 outline-none placeholder:text-[#A7ADB5] focus:border-[#046C3F] focus:ring-1 focus:ring-[#046C3F]"
+              placeholder="Delivery note or internal remarks (optional)"
             />
 
             <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:justify-end">
@@ -376,10 +529,10 @@ export default function CreateNewStock() {
               >
                 {isProcessing && <Loader2 size={20} className="animate-spin" />}
                 {isCreating
-                  ? "Creating..."
+                  ? "Registering item..."
                   : isRefilling
-                    ? "Adding Batch..."
-                    : "Add Item"}
+                    ? "Adding batch..."
+                    : "Add to Inventory"}
               </button>
             </div>
           </div>

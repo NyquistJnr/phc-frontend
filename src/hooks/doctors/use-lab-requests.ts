@@ -58,6 +58,22 @@ export function useAppointmentsSearch(searchTerm: string = "") {
   });
 }
 
+export function useLabRequestsByAppointment(appointmentId: string) {
+  const api = useApi();
+  return useQuery({
+    queryKey: ["lab-requests-by-appointment", appointmentId],
+    queryFn: async () => {
+      const res = await api.get<any>(
+        `/laboratory/requests/?appointment_id=${appointmentId}`,
+      );
+      return (
+        res?.data?.data?.results || res?.data?.results || res?.results || []
+      );
+    },
+    enabled: !!appointmentId && api.isAuthenticated && !api.isLoading,
+  });
+}
+
 export function useCreateLabRequest() {
   const api = useApi();
   const queryClient = useQueryClient();

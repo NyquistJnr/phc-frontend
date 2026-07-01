@@ -5,6 +5,7 @@ import {
   ExpiringFilters,
   RefillPayload,
   CreateDrugPayload,
+  DispensePayload,
   DrugDetail,
   ExpiringDrugItem,
   ExpiryAnalysisStatsResponse,
@@ -176,20 +177,51 @@ export function useCreateDrug() {
 
   return useMutation({
     mutationFn: async (payload: CreateDrugPayload) => {
-      const res = await api.post<unknown>(`/inventory/items/`, {
+      const body: Record<string, unknown> = {
         ...payload,
         inventory_category:
           payload.inventory_category || PHARMACY_INVENTORY_CATEGORY,
-        drug_classification:
-          payload.drug_classification || PHARMACY_DRUG_CLASSIFICATION,
-      });
-
+      };
+      // Only include drug_classification when category is DRUG
+      if (body.inventory_category === "DRUG") {
+        body.drug_classification =
+          payload.drug_classification || PHARMACY_DRUG_CLASSIFICATION;
+      } else {
+        delete body.drug_classification;
+      }
+      // Omit schedule_rules when null/undefined (only send for IMMUNIZATION drugs)
+      if (!payload.schedule_rules) {
+        delete body.schedule_rules;
+      }
+      const res = await api.post<unknown>(`/inventory/items/`, body);
       return {
         response: res,
         id: getCreatedDrugId(res),
       };
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["inventory-drugs"] });
+      queryClient.invalidateQueries({ queryKey: ["inventory-stats"] });
+    },
+  });
+}
+
+export function useDispenseDrug() {
+  const api = useApi();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      payload,
+    }: {
+      id: string;
+      payload: DispensePayload;
+    }) => {
+      return await api.post(`/inventory/items/${id}/dispense/`, payload);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["drug-detail", variables.id] });
       queryClient.invalidateQueries({ queryKey: ["inventory-drugs"] });
       queryClient.invalidateQueries({ queryKey: ["inventory-stats"] });
     },

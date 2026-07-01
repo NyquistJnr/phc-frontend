@@ -5,16 +5,21 @@ import { createPortal } from "react-dom";
 import { useSearchParams } from "next/navigation";
 import type { ElementType, ReactNode } from "react";
 import {
+  Ban,
   Calendar,
+  CheckCircle2,
   ChevronDown,
   ClipboardList,
   Download,
   Eye,
   Heart,
+  LayoutList,
   Loader2,
   MoreHorizontal,
   PackageCheck,
+  PackagePlus,
   Plus,
+  RefreshCw,
   Search,
   ShieldAlert,
   Timer,
@@ -27,6 +32,7 @@ import { CustomDropdown } from "@/src/components/generic/ui/CustomDropdown";
 import DateRangeFilter from "@/src/components/generic/ui/DateRangeFilter";
 import LabBackButton from "@/src/components/lab-dashboard/generics/LabBackButton";
 import LabDashboardHeader from "@/src/components/lab-dashboard/generics/LabDashboardHeader";
+import { SelectField as SystemSelectField } from "@/src/components/nurse-dashboard/appointments/form-helpers";
 import {
   useComprehensiveInventoryStats,
   useCreateInventoryItem,
@@ -41,16 +47,27 @@ import type {
   RefillItemPayload,
 } from "./types";
 
-type Mode = "list" | "add";
-type ModalState = { mode: "view" | "update"; item: InventoryItem };
-type StatusLabel = "In Stock" | "Low Stock" | "Out of Stock" | "Unknown";
+// ─── Types ────────────────────────────────────────────────────────────────────
 
-type InventoryFormValues = {
+type Mode = "list" | "add";
+type ModalState =
+  | { mode: "view"; item: InventoryItem }
+  | { mode: "refill"; item: InventoryItem }
+  | { mode: "edit"; item: InventoryItem };
+type StatusLabel = "In Stock" | "Low Stock" | "Out of Stock" | "Unknown";
+type ScheduleType = "NONE" | "ONCE" | "RECURRING" | "VARIABLE_SEQUENCE";
+
+type AddItemFormValues = {
+  inventoryCategory: string;
+  drugClassification: string;
   name: string;
   itemType: string;
+  itemTypeCustom: string;
   thresholdType: string;
   globalThreshold: string;
-  scheduleRules: string;
+  scheduleType: ScheduleType;
+  scheduleIntervalDays: string;
+  scheduleIntervalSequence: string;
   batchNumber: string;
   initialQuantity: string;
   purchasedDate: string;
@@ -60,22 +77,90 @@ type InventoryFormValues = {
   note: string;
 };
 
-const LAB_INVENTORY_CATEGORY = "LAB_EQUIPMENT";
-const ITEM_TYPE_OPTIONS = [
-  "TABLET",
-  "CAPSULE",
-  "SYRUP",
-  "VIAL",
-  "AMPOULE",
-  "SACHET",
-  "INHALER",
-  "TUBE",
-  "BOTTLE",
-  "KIT",
-  "REAGENT",
-  "CONSUMABLE",
-  "EQUIPMENT",
+type EditItemFormValues = {
+  name: string;
+  itemType: string;
+  itemTypeCustom: string;
+  thresholdType: string;
+  globalThreshold: string;
+};
+
+type RefillFormValues = {
+  batchNumber: string;
+  initialQuantity: string;
+  purchasedDate: string;
+  expiryDate: string;
+  supplier: string;
+  costPrice: string;
+  note: string;
+};
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const INVENTORY_CATEGORY_OPTIONS = [
+  { label: "Drug / Medication", value: "DRUG" },
+  { label: "Lab Equipment", value: "LAB_EQUIPMENT" },
+  { label: "Consumable", value: "CONSUMABLE" },
 ];
+
+const DRUG_CLASSIFICATION_OPTIONS = [
+  { label: "Normal Medication", value: "NORMAL" },
+  { label: "Immunization / Vaccine", value: "IMMUNIZATION" },
+];
+
+const THRESHOLD_TYPE_OPTIONS = [
+  { label: "Absolute — alert when stock falls below N units", value: "ABSOLUTE" },
+  { label: "Percentage — alert when stock falls below N%", value: "PERCENTAGE" },
+];
+
+const ITEM_TYPE_OPTIONS = [
+  { label: "Tablets", value: "Tablets" },
+  { label: "Capsules", value: "Capsules" },
+  { label: "Syrup / Suspension", value: "Syrup" },
+  { label: "Vials", value: "Vials" },
+  { label: "Ampoules", value: "Ampoules" },
+  { label: "Sachets", value: "Sachets" },
+  { label: "Kits", value: "Kits" },
+  { label: "Reagents", value: "Reagents" },
+  { label: "Test Strips / Sticks", value: "Test Strips" },
+  { label: "Slides", value: "Slides" },
+  { label: "Specimen Containers", value: "Containers" },
+  { label: "Tubes", value: "Tubes" },
+  { label: "Gloves (Pairs)", value: "Pairs" },
+  { label: "Syringes", value: "Syringes" },
+  { label: "Equipment / Instruments", value: "Equipment" },
+  { label: "Packs", value: "Packs" },
+  { label: "Pieces", value: "Pieces" },
+  { label: "Other (custom)…", value: "OTHER" },
+];
+
+const SCHEDULE_CARDS = [
+  {
+    value: "NONE" as ScheduleType,
+    title: "No Schedule",
+    description: "No specific dosing timeline for this item",
+    icon: Ban,
+  },
+  {
+    value: "ONCE" as ScheduleType,
+    title: "Single Dose",
+    description: "Patient receives this medication once only",
+    icon: CheckCircle2,
+  },
+  {
+    value: "RECURRING" as ScheduleType,
+    title: "Fixed Interval",
+    description: "Consistent gap between each dose",
+    icon: RefreshCw,
+  },
+  {
+    value: "VARIABLE_SEQUENCE" as ScheduleType,
+    title: "Variable Sequence",
+    description: "Different intervals between each dose",
+    icon: LayoutList,
+  },
+];
+
 const STATUS_OPTIONS = ["All Status", "In Stock", "Low Stock", "Out of Stock"];
 const STATUS_FILTERS: Record<string, string | undefined> = {
   "All Status": undefined,
@@ -91,12 +176,17 @@ const statusColors: Record<StatusLabel, { bg: string; text: string }> = {
   Unknown: { bg: "#EEF2F7", text: "#475569" },
 };
 
-const initialFormValues: InventoryFormValues = {
+const INITIAL_ADD_FORM: AddItemFormValues = {
+  inventoryCategory: "LAB_EQUIPMENT",
+  drugClassification: "NORMAL",
   name: "",
-  itemType: "TABLET",
-  thresholdType: "GLOBAL",
+  itemType: "",
+  itemTypeCustom: "",
+  thresholdType: "ABSOLUTE",
   globalThreshold: "",
-  scheduleRules: "{}",
+  scheduleType: "NONE",
+  scheduleIntervalDays: "",
+  scheduleIntervalSequence: "",
   batchNumber: "",
   initialQuantity: "",
   purchasedDate: "",
@@ -106,6 +196,18 @@ const initialFormValues: InventoryFormValues = {
   note: "",
 };
 
+const INITIAL_REFILL_FORM: RefillFormValues = {
+  batchNumber: "",
+  initialQuantity: "",
+  purchasedDate: "",
+  expiryDate: "",
+  supplier: "",
+  costPrice: "",
+  note: "",
+};
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
 function getErrorMessage(error: unknown, fallback: string) {
   if (error instanceof Error && error.message) return error.message;
   return fallback;
@@ -113,14 +215,10 @@ function getErrorMessage(error: unknown, fallback: string) {
 
 function getStatusLabel(status?: string): StatusLabel {
   switch (status) {
-    case "IN_STOCK":
-      return "In Stock";
-    case "LOW_STOCK":
-      return "Low Stock";
-    case "OUT_OF_STOCK":
-      return "Out of Stock";
-    default:
-      return "Unknown";
+    case "IN_STOCK": return "In Stock";
+    case "LOW_STOCK": return "Low Stock";
+    case "OUT_OF_STOCK": return "Out of Stock";
+    default: return "Unknown";
   }
 }
 
@@ -144,74 +242,23 @@ function escapeHtml(value: string) {
     .replaceAll("'", "&#039;");
 }
 
-function buildItemPayload(values: InventoryFormValues): CreateInventoryItemPayload {
-  return {
-    name: values.name.trim(),
-    inventory_category: LAB_INVENTORY_CATEGORY,
-    drug_classification: "NORMAL",
-    item_type: values.itemType.trim(),
-    threshold_type: values.thresholdType.trim(),
-    global_threshold: Number(values.globalThreshold),
-    schedule_rules: values.scheduleRules.trim() || "{}",
-  };
-}
-
-function buildRefillPayload(values: InventoryFormValues): RefillItemPayload {
-  return {
-    batch_number: values.batchNumber.trim(),
-    initial_quantity: Number(values.initialQuantity),
-    purchased_date: values.purchasedDate,
-    expiry_date: values.expiryDate,
-    supplier: values.supplier.trim(),
-    cost_price: values.costPrice.trim(),
-    note: values.note.trim() || undefined,
-  };
-}
-
-function hasAnyRefillValue(values: InventoryFormValues) {
-  return Boolean(
-    values.batchNumber ||
-      values.initialQuantity ||
-      values.purchasedDate ||
-      values.expiryDate ||
-      values.supplier ||
-      values.costPrice ||
-      values.note,
-  );
-}
-
-function hasCompleteRefillValues(values: InventoryFormValues) {
-  return Boolean(
-    values.batchNumber &&
-      values.initialQuantity &&
-      values.purchasedDate &&
-      values.expiryDate &&
-      values.supplier &&
-      values.costPrice,
-  );
-}
-
-function getInitialValues(item?: InventoryItem): InventoryFormValues {
-  const batch = item ? getPrimaryBatch(item) : null;
-
-  return {
-    name: item?.name ?? "",
-    itemType: item?.item_type ?? initialFormValues.itemType,
-    thresholdType: item?.threshold_type ?? initialFormValues.thresholdType,
-    globalThreshold:
-      item?.global_threshold === undefined ? "" : String(item.global_threshold),
-    scheduleRules: item?.schedule_rules ?? initialFormValues.scheduleRules,
-    batchNumber: batch?.batch_number ?? "",
-    initialQuantity:
-      batch?.remaining_quantity === undefined
-        ? ""
-        : String(batch.remaining_quantity),
-    purchasedDate: batch?.purchased_date ?? "",
-    expiryDate: batch?.expiry_date ?? "",
-    supplier: batch?.supplier ?? "",
-    costPrice: batch?.cost_price ?? "",
-    note: batch?.note ?? "",
-  };
+function buildScheduleRules(form: AddItemFormValues) {
+  if (form.scheduleType === "NONE") return null;
+  if (form.scheduleType === "ONCE") return { type: "ONCE" as const };
+  if (form.scheduleType === "RECURRING") {
+    const days = parseInt(form.scheduleIntervalDays);
+    if (!days || days <= 0) return null;
+    return { type: "RECURRING" as const, interval_days: days };
+  }
+  if (form.scheduleType === "VARIABLE_SEQUENCE") {
+    const intervals = form.scheduleIntervalSequence
+      .split(",")
+      .map((s) => parseInt(s.trim()))
+      .filter((n) => !isNaN(n) && n > 0);
+    if (intervals.length === 0) return null;
+    return { type: "VARIABLE_SEQUENCE" as const, intervals_in_days: intervals };
+  }
+  return null;
 }
 
 function printInventoryItem(item: InventoryItem) {
@@ -234,9 +281,7 @@ function printInventoryItem(item: InventoryItem) {
     ["Note", batch?.note ?? "-"],
   ];
   const printWindow = window.open("", "_blank", "width=900,height=700");
-
   if (!printWindow) return false;
-
   printWindow.document.write(`
     <!doctype html>
     <html>
@@ -257,10 +302,7 @@ function printInventoryItem(item: InventoryItem) {
         <table>
           <tbody>
             ${printableRows
-              .map(
-                ([label, value]) =>
-                  `<tr><th>${escapeHtml(label)}</th><td>${escapeHtml(value)}</td></tr>`,
-              )
+              .map(([label, value]) => `<tr><th>${escapeHtml(label)}</th><td>${escapeHtml(value)}</td></tr>`)
               .join("")}
           </tbody>
         </table>
@@ -272,6 +314,8 @@ function printInventoryItem(item: InventoryItem) {
   printWindow.print();
   return true;
 }
+
+// ─── Shared UI Primitives ─────────────────────────────────────────────────────
 
 function StatCard({
   title,
@@ -285,37 +329,17 @@ function StatCard({
   active?: boolean;
 }) {
   return (
-    <div
-      className={`min-h-36 rounded-xl p-4 ${
-        active ? "bg-[#046C3F] text-white" : "bg-white text-gray-500"
-      }`}
-    >
+    <div className={`min-h-36 rounded-xl p-4 ${active ? "bg-[#046C3F] text-white" : "bg-white text-gray-500"}`}>
       <div className="mb-8 flex items-start justify-between">
-        <span
-          className={`flex h-9 w-9 items-center justify-center rounded-lg ${
-            active ? "bg-[#0B7F4D] text-white" : "bg-[#FFF7ED] text-gray-700"
-          }`}
-        >
+        <span className={`flex h-9 w-9 items-center justify-center rounded-lg ${active ? "bg-[#0B7F4D] text-white" : "bg-[#FFF7ED] text-gray-700"}`}>
           <Icon size={21} />
         </span>
-        <span
-          className={`flex items-center gap-1 text-xs ${
-            active ? "text-white" : "text-gray-300"
-          }`}
-        >
+        <span className={`flex items-center gap-1 text-xs ${active ? "text-white" : "text-gray-300"}`}>
           This Week <ChevronDown size={14} />
         </span>
       </div>
-      <p className={`mb-3 text-sm ${active ? "text-white" : "text-gray-400"}`}>
-        {title}
-      </p>
-      <p
-        className={`text-3xl font-semibold ${
-          active ? "text-white" : "text-gray-800"
-        }`}
-      >
-        {value}
-      </p>
+      <p className={`mb-3 text-sm ${active ? "text-white" : "text-gray-400"}`}>{title}</p>
+      <p className={`text-3xl font-semibold ${active ? "text-white" : "text-gray-800"}`}>{value}</p>
     </div>
   );
 }
@@ -338,11 +362,7 @@ function Field({
   onChange: (value: string) => void;
 }) {
   return (
-    <label
-      className={`flex min-h-[58px] items-center gap-3 rounded-lg border border-gray-300 px-4 ${
-        readOnly ? "bg-gray-100" : "bg-white"
-      }`}
-    >
+    <label className={`flex min-h-[58px] items-center gap-3 rounded-lg border border-gray-300 px-4 ${readOnly ? "bg-gray-100" : "bg-white"}`}>
       {icon && <span className="shrink-0 text-gray-600">{icon}</span>}
       <span className="min-w-0 flex-1">
         <span className="block text-xs text-gray-500">{label}</span>
@@ -359,251 +379,375 @@ function Field({
   );
 }
 
-function SelectField({
-  label,
-  value,
-  options,
-  readOnly,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  options: string[];
-  readOnly?: boolean;
-  onChange: (value: string) => void;
-}) {
+function SectionHeading({ children }: { children: ReactNode }) {
   return (
-    <label
-      className={`flex min-h-[58px] items-center gap-3 rounded-lg border border-gray-300 px-4 ${
-        readOnly ? "bg-gray-100" : "bg-white"
-      }`}
-    >
-      <span className="min-w-0 flex-1">
-        <span className="block text-xs text-gray-500">{label}</span>
-        <select
-          disabled={readOnly}
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-          className="mt-1 w-full bg-transparent text-base text-gray-500 outline-none disabled:opacity-100"
-        >
-          {options.map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
-      </span>
-    </label>
+    <h3 className="mb-4 text-xs font-semibold uppercase tracking-wider text-gray-400">
+      {children}
+    </h3>
   );
 }
 
-function Notes({
-  value,
+function ItemTypeSelect({
+  itemType,
+  itemTypeCustom,
   readOnly,
-  onChange,
+  onTypeChange,
+  onCustomChange,
 }: {
-  value: string;
+  itemType: string;
+  itemTypeCustom: string;
   readOnly?: boolean;
-  onChange: (value: string) => void;
+  onTypeChange: (v: string) => void;
+  onCustomChange: (v: string) => void;
 }) {
+  if (readOnly) {
+    const displayLabel =
+      ITEM_TYPE_OPTIONS.find((o) => o.value === itemType)?.label ||
+      itemTypeCustom ||
+      itemType;
+    return <Field label="Item Type" value={displayLabel} readOnly onChange={() => {}} />;
+  }
   return (
-    <label
-      className={`block rounded-lg border border-gray-300 px-4 py-3 ${
-        readOnly ? "bg-gray-100" : "bg-white"
-      }`}
-    >
-      <span className="block text-xs text-gray-500">Notes (Optional)</span>
-      <textarea
-        readOnly={readOnly}
-        value={value}
-        placeholder="Additional notes"
-        onChange={(event) => onChange(event.target.value)}
-        className="mt-1 h-32 w-full resize-none bg-transparent text-base text-gray-500 outline-none placeholder:text-gray-400"
+    <div>
+      <SystemSelectField
+        label="Item Type / Unit *"
+        placeholder="Select unit type"
+        options={ITEM_TYPE_OPTIONS}
+        value={itemType}
+        onChange={onTypeChange}
       />
-    </label>
+      {itemType === "OTHER" && (
+        <div className="mt-2">
+          <Field
+            label="Specify unit type *"
+            value={itemTypeCustom}
+            placeholder="e.g. Cuvettes"
+            onChange={onCustomChange}
+          />
+        </div>
+      )}
+    </div>
   );
 }
 
-function InventoryForm({
-  title,
-  initialValues = initialFormValues,
-  submitLabel,
+function ThresholdTypeSelect({
+  value,
   readOnly,
+  onChange,
+}: {
+  value: string;
+  readOnly?: boolean;
+  onChange: (v: string) => void;
+}) {
+  if (readOnly) {
+    const label = THRESHOLD_TYPE_OPTIONS.find((o) => o.value === value)?.label || value;
+    return <Field label="Threshold Type" value={label} readOnly onChange={() => {}} />;
+  }
+  return (
+    <SystemSelectField
+      label="Threshold Type *"
+      placeholder="Select threshold type"
+      options={THRESHOLD_TYPE_OPTIONS}
+      value={value}
+      onChange={onChange}
+    />
+  );
+}
+
+// ─── Add Item Form ────────────────────────────────────────────────────────────
+
+function AddItemForm({
   isSubmitting,
+  formError,
   onCancel,
   onSubmit,
 }: {
-  title: string;
-  initialValues?: InventoryFormValues;
-  submitLabel: string;
-  readOnly?: boolean;
   isSubmitting?: boolean;
-  onCancel?: () => void;
-  onSubmit?: (values: InventoryFormValues) => void;
+  formError: string;
+  onCancel: () => void;
+  onSubmit: (values: AddItemFormValues) => void;
 }) {
-  const [values, setValues] = useState(initialValues);
+  const [form, setForm] = useState<AddItemFormValues>(INITIAL_ADD_FORM);
 
-  const handleChange = (field: keyof InventoryFormValues, value: string) => {
-    setValues((current) => ({ ...current, [field]: value }));
+  const isDrug = form.inventoryCategory === "DRUG";
+  const isImmunization = isDrug && form.drugClassification === "IMMUNIZATION";
+
+  const handleChange = <K extends keyof AddItemFormValues>(field: K, value: AddItemFormValues[K]) => {
+    setForm((current) => {
+      const next = { ...current, [field]: value };
+      if (field === "inventoryCategory" && value !== "DRUG") {
+        next.drugClassification = "NORMAL";
+        next.scheduleType = "NONE";
+      }
+      if (field === "drugClassification" && value !== "IMMUNIZATION") {
+        next.scheduleType = "NONE";
+      }
+      return next;
+    });
   };
 
   return (
     <form
-      onSubmit={(event) => {
-        event.preventDefault();
-        onSubmit?.(values);
-      }}
-      className="rounded-xl bg-white px-6 py-8 lg:px-8"
+      onSubmit={(e) => { e.preventDefault(); onSubmit(form); }}
+      className="rounded-xl bg-white px-5 py-8 shadow-sm sm:px-6 mt-6"
     >
-      {title && (
-        <div className="mb-8 flex items-center gap-3">
-          <ClipboardList size={24} className="text-[#046C3F]" />
-          <h2 className="text-xl font-semibold text-black">{title}</h2>
-        </div>
-      )}
-
-      <div className="grid max-w-4xl grid-cols-1 gap-7 md:grid-cols-2">
-        <Field
-          label="Name of Item"
-          value={values.name}
-          placeholder="Search"
-          icon={<Search size={24} />}
-          readOnly={readOnly}
-          onChange={(value) => handleChange("name", value)}
-        />
-        <SelectField
-          label="Item Type"
-          value={values.itemType}
-          options={ITEM_TYPE_OPTIONS}
-          readOnly={readOnly}
-          onChange={(value) => handleChange("itemType", value)}
-        />
-        <Field
-          label="Threshold Type"
-          value={values.thresholdType}
-          placeholder="e.g. GLOBAL"
-          readOnly={readOnly}
-          onChange={(value) => handleChange("thresholdType", value)}
-        />
-        <Field
-          label="Threshold"
-          value={values.globalThreshold}
-          type="number"
-          readOnly={readOnly}
-          onChange={(value) => handleChange("globalThreshold", value)}
-        />
-        <Field
-          label="Batch Number"
-          value={values.batchNumber}
-          placeholder="Enter Batch Number"
-          readOnly={readOnly}
-          onChange={(value) => handleChange("batchNumber", value)}
-        />
-        <Field
-          label="Quantity Added"
-          value={values.initialQuantity}
-          type="number"
-          readOnly={readOnly}
-          onChange={(value) => handleChange("initialQuantity", value)}
-        />
-        <Field
-          label="Purchase Date"
-          value={values.purchasedDate}
-          type="date"
-          icon={<Calendar size={22} />}
-          readOnly={readOnly}
-          onChange={(value) => handleChange("purchasedDate", value)}
-        />
-        <Field
-          label="Expiry Date"
-          value={values.expiryDate}
-          type="date"
-          icon={<Calendar size={22} />}
-          readOnly={readOnly}
-          onChange={(value) => handleChange("expiryDate", value)}
-        />
-        <Field
-          label="Supplier(Optional)"
-          value={values.supplier}
-          placeholder="Enter Supplier"
-          readOnly={readOnly}
-          onChange={(value) => handleChange("supplier", value)}
-        />
-        <Field
-          label="Cost Price"
-          value={values.costPrice}
-          placeholder="0.00"
-          readOnly={readOnly}
-          onChange={(value) => handleChange("costPrice", value)}
-        />
-        <Field
-          label="Schedule Rules"
-          value={values.scheduleRules}
-          placeholder="{}"
-          readOnly={readOnly}
-          onChange={(value) => handleChange("scheduleRules", value)}
-        />
-        <div className="md:col-span-2">
-          <Notes
-            value={values.note}
-            readOnly={readOnly}
-            onChange={(value) => handleChange("note", value)}
-          />
-        </div>
+      <div className="mb-8 flex items-center gap-3">
+        <PackagePlus size={26} className="text-[#046C3F]" />
+        <h1 className="text-2xl font-semibold text-black">Add New Stock Item</h1>
       </div>
 
-      {!readOnly && (
-        <div className="mt-7 flex flex-col justify-start gap-4 sm:flex-row">
-          <>
-            <button
-              type="button"
-              onClick={onCancel}
-              disabled={isSubmitting}
-              className="h-14 rounded-xl bg-[#BEC1CB] px-16 text-lg font-medium text-white disabled:opacity-70"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="flex h-14 items-center justify-center gap-3 rounded-xl bg-[#046C3F] px-16 text-lg font-medium text-white disabled:opacity-70"
-            >
-              {isSubmitting && <Loader2 size={20} className="animate-spin" />}
-              {submitLabel}
-            </button>
-          </>
+      <div className="max-w-[800px]">
+        {formError && (
+          <div className="mb-6 rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
+            {formError}
+          </div>
+        )}
+
+        {/* ── Item Details ── */}
+        <SectionHeading>Item Details</SectionHeading>
+        <div className="mb-8 grid grid-cols-1 gap-5 md:grid-cols-2">
+          <SystemSelectField
+            label="Category *"
+            placeholder="Select category"
+            options={INVENTORY_CATEGORY_OPTIONS}
+            value={form.inventoryCategory}
+            onChange={(v) => handleChange("inventoryCategory", v)}
+          />
+
+          {isDrug && (
+            <SystemSelectField
+              label="Drug Classification *"
+              placeholder="Select classification"
+              options={DRUG_CLASSIFICATION_OPTIONS}
+              value={form.drugClassification}
+              onChange={(v) => handleChange("drugClassification", v)}
+            />
+          )}
+
+          <Field
+            label="Item Name *"
+            value={form.name}
+            placeholder={isDrug ? "e.g. Paracetamol 500mg" : "e.g. Malaria RDT Kit"}
+            onChange={(v) => handleChange("name", v)}
+          />
+
+          <ItemTypeSelect
+            itemType={form.itemType}
+            itemTypeCustom={form.itemTypeCustom}
+            onTypeChange={(v) => handleChange("itemType", v)}
+            onCustomChange={(v) => handleChange("itemTypeCustom", v)}
+          />
+
+          <ThresholdTypeSelect
+            value={form.thresholdType}
+            onChange={(v) => handleChange("thresholdType", v)}
+          />
+
+          <Field
+            label={`Low Stock Threshold${form.thresholdType === "PERCENTAGE" ? " (%)" : " (units)"} *`}
+            value={form.globalThreshold}
+            type="number"
+            placeholder={form.thresholdType === "PERCENTAGE" ? "e.g. 20" : "e.g. 50"}
+            onChange={(v) => handleChange("globalThreshold", v)}
+          />
         </div>
-      )}
+
+        {/* ── Schedule Rules (Immunization only) ── */}
+        {isImmunization && (
+          <>
+            <SectionHeading>Dosage Schedule</SectionHeading>
+            <p className="mb-5 text-sm text-gray-500">
+              Define how often patients should return for each dose.
+            </p>
+            <div className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {SCHEDULE_CARDS.map((card) => {
+                const Icon = card.icon;
+                const selected = form.scheduleType === card.value;
+                return (
+                  <div
+                    key={card.value}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => handleChange("scheduleType", card.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ")
+                        handleChange("scheduleType", card.value);
+                    }}
+                    className={`flex flex-col rounded-xl border-2 p-4 text-left transition-all cursor-pointer select-none ${
+                      selected
+                        ? "border-[#046C3F] bg-[#F0FAF5]"
+                        : "border-gray-200 bg-white hover:border-gray-300"
+                    }`}
+                  >
+                    <div className="mb-3 flex items-center justify-between">
+                      <span
+                        className={`flex h-9 w-9 items-center justify-center rounded-lg ${
+                          selected ? "bg-[#046C3F] text-white" : "bg-gray-100 text-gray-400"
+                        }`}
+                      >
+                        <Icon size={18} />
+                      </span>
+                      <span
+                        className={`flex h-5 w-5 items-center justify-center rounded-full border-2 ${
+                          selected ? "border-[#046C3F]" : "border-gray-300"
+                        }`}
+                      >
+                        {selected && <span className="h-2.5 w-2.5 rounded-full bg-[#046C3F]" />}
+                      </span>
+                    </div>
+                    <span className={`text-sm font-semibold ${selected ? "text-[#046C3F]" : "text-gray-700"}`}>
+                      {card.title}
+                    </span>
+                    <span className="mt-0.5 text-xs text-gray-500">{card.description}</span>
+
+                    {selected && card.value === "RECURRING" && (
+                      <div
+                        className="mt-4"
+                        onClick={(e) => e.stopPropagation()}
+                        onKeyDown={(e) => e.stopPropagation()}
+                        role="presentation"
+                      >
+                        <Field
+                          label="Days between doses *"
+                          value={form.scheduleIntervalDays}
+                          type="number"
+                          placeholder="e.g. 30"
+                          onChange={(v) => handleChange("scheduleIntervalDays", v)}
+                        />
+                      </div>
+                    )}
+
+                    {selected && card.value === "VARIABLE_SEQUENCE" && (
+                      <div
+                        className="mt-4"
+                        onClick={(e) => e.stopPropagation()}
+                        onKeyDown={(e) => e.stopPropagation()}
+                        role="presentation"
+                      >
+                        <Field
+                          label="Intervals in days (comma-separated) *"
+                          value={form.scheduleIntervalSequence}
+                          placeholder="e.g. 42, 28, 28"
+                          onChange={(v) => handleChange("scheduleIntervalSequence", v)}
+                        />
+                        <p className="mt-2 text-xs text-gray-400">
+                          Days after each dose. Example: 42, 28, 28 → doses at week 6, 10, 14.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+
+        <hr className="mb-8 border-gray-100" />
+
+        {/* ── Initial Batch ── */}
+        <SectionHeading>Initial Batch Entry</SectionHeading>
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+          <Field
+            label="Batch / Lot Number *"
+            value={form.batchNumber}
+            placeholder="e.g. LOT-2026-0041"
+            onChange={(v) => handleChange("batchNumber", v)}
+          />
+          <Field
+            label="Quantity Received *"
+            value={form.initialQuantity}
+            type="number"
+            placeholder="e.g. 500"
+            onChange={(v) => handleChange("initialQuantity", v)}
+          />
+          <Field
+            label="Purchase Date *"
+            value={form.purchasedDate}
+            type="date"
+            icon={<Calendar size={18} className="text-gray-400 shrink-0" />}
+            onChange={(v) => handleChange("purchasedDate", v)}
+          />
+          <Field
+            label="Expiry Date (leave blank if no expiry)"
+            value={form.expiryDate}
+            type="date"
+            icon={<Calendar size={18} className="text-gray-400 shrink-0" />}
+            onChange={(v) => handleChange("expiryDate", v)}
+          />
+          <Field
+            label="Supplier *"
+            value={form.supplier}
+            placeholder="e.g. HealthMed Nigeria Ltd"
+            onChange={(v) => handleChange("supplier", v)}
+          />
+          <Field
+            label="Cost Price per Unit *"
+            value={form.costPrice}
+            type="number"
+            placeholder="e.g. 4500.00"
+            onChange={(v) => handleChange("costPrice", v)}
+          />
+        </div>
+
+        <textarea
+          value={form.note}
+          onChange={(e) => handleChange("note", e.target.value)}
+          className="mt-6 h-24 w-full resize-none rounded-lg border border-gray-300 px-4 py-3 text-base text-gray-500 outline-none placeholder:text-gray-400 focus:border-[#046C3F] focus:ring-1 focus:ring-[#046C3F]"
+          placeholder="Delivery note or internal remarks (optional)"
+        />
+
+        <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={isSubmitting}
+            className="h-14 rounded-lg bg-[#C1C4CE] px-12 text-lg font-medium text-white transition-colors hover:bg-gray-400 disabled:opacity-70"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="flex h-14 items-center justify-center gap-3 rounded-lg bg-[#046C3F] px-12 text-lg font-medium text-white transition-colors hover:bg-[#035a34] disabled:opacity-70"
+          >
+            {isSubmitting && <Loader2 size={20} className="animate-spin" />}
+            {isSubmitting ? "Adding to Inventory…" : "Add to Inventory"}
+          </button>
+        </div>
+      </div>
     </form>
   );
 }
 
-function InventoryModal({
-  mode,
+// ─── Refill Modal ─────────────────────────────────────────────────────────────
+
+function RefillModal({
   item,
   isSubmitting,
+  formError,
   onClose,
   onSubmit,
 }: {
-  mode: "view" | "update";
   item: InventoryItem;
   isSubmitting?: boolean;
+  formError: string;
   onClose: () => void;
-  onSubmit: (item: InventoryItem, values: InventoryFormValues) => void;
+  onSubmit: (values: RefillFormValues) => void;
 }) {
+  const [form, setForm] = useState<RefillFormValues>(INITIAL_REFILL_FORM);
+  const handle = (field: keyof RefillFormValues, value: string) =>
+    setForm((c) => ({ ...c, [field]: value }));
+
   return createPortal(
     <div className="fixed inset-0 z-[9999] overflow-y-auto bg-black/20 px-4 py-16 backdrop-blur-sm">
-      <div className="mx-auto max-w-4xl rounded-xl bg-white px-6 py-8 shadow-2xl lg:px-8">
+      <div className="mx-auto max-w-2xl rounded-xl bg-white px-6 py-8 shadow-2xl lg:px-8">
         <div className="mb-7 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {mode === "view" ? (
-              <PackageCheck size={26} className="text-[#046C3F]" />
-            ) : (
-              <ClipboardList size={24} className="text-[#046C3F]" />
-            )}
-            <h2 className="text-xl font-semibold text-black">
-              {mode === "view" ? `View ${item.name}` : `Update ${item.name}`}
-            </h2>
+            <PackagePlus size={24} className="text-[#046C3F]" />
+            <div>
+              <h2 className="text-xl font-semibold text-black">Refill Stock</h2>
+              <p className="text-sm text-gray-500">{item.name}</p>
+            </div>
           </div>
           <button
             onClick={onClose}
@@ -613,44 +757,337 @@ function InventoryModal({
             <X size={20} />
           </button>
         </div>
-        <InventoryForm
-          key={`${mode}-${item.id}`}
-          title=""
-          initialValues={getInitialValues(item)}
-          submitLabel="Update Item"
-          readOnly={mode === "view"}
-          isSubmitting={isSubmitting}
-          onCancel={onClose}
-          onSubmit={(values) => onSubmit(item, values)}
-        />
+
+        {formError && (
+          <div className="mb-5 rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
+            {formError}
+          </div>
+        )}
+
+        <form
+          onSubmit={(e) => { e.preventDefault(); onSubmit(form); }}
+          className="space-y-0"
+        >
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+            <Field
+              label="Batch / Lot Number *"
+              value={form.batchNumber}
+              placeholder="e.g. LOT-2026-0041"
+              onChange={(v) => handle("batchNumber", v)}
+            />
+            <Field
+              label="Quantity Received *"
+              value={form.initialQuantity}
+              type="number"
+              placeholder="e.g. 500"
+              onChange={(v) => handle("initialQuantity", v)}
+            />
+            <Field
+              label="Purchase Date *"
+              value={form.purchasedDate}
+              type="date"
+              icon={<Calendar size={18} className="text-gray-400 shrink-0" />}
+              onChange={(v) => handle("purchasedDate", v)}
+            />
+            <Field
+              label="Expiry Date (leave blank if no expiry)"
+              value={form.expiryDate}
+              type="date"
+              icon={<Calendar size={18} className="text-gray-400 shrink-0" />}
+              onChange={(v) => handle("expiryDate", v)}
+            />
+            <Field
+              label="Supplier *"
+              value={form.supplier}
+              placeholder="e.g. HealthMed Nigeria Ltd"
+              onChange={(v) => handle("supplier", v)}
+            />
+            <Field
+              label="Cost Price per Unit *"
+              value={form.costPrice}
+              type="number"
+              placeholder="0.00"
+              onChange={(v) => handle("costPrice", v)}
+            />
+          </div>
+
+          <div className="mt-5">
+            <label className="block rounded-lg border border-gray-300 bg-white px-4 py-3">
+              <span className="block text-xs text-gray-500">Notes (Optional)</span>
+              <textarea
+                value={form.note}
+                placeholder="Delivery note or internal remarks"
+                onChange={(e) => handle("note", e.target.value)}
+                className="mt-1 h-20 w-full resize-none bg-transparent text-base text-gray-500 outline-none placeholder:text-gray-400"
+              />
+            </label>
+          </div>
+
+          <div className="mt-7 flex flex-col gap-4 sm:flex-row sm:justify-end">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isSubmitting}
+              className="h-14 rounded-xl bg-[#BEC1CB] px-14 text-lg font-medium text-white disabled:opacity-70"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="flex h-14 items-center justify-center gap-3 rounded-xl bg-[#046C3F] px-14 text-lg font-medium text-white disabled:opacity-70"
+            >
+              {isSubmitting && <Loader2 size={20} className="animate-spin" />}
+              {isSubmitting ? "Adding Stock…" : "Add Stock"}
+            </button>
+          </div>
+        </form>
       </div>
     </div>,
     document.body,
   );
 }
 
+// ─── View Modal ───────────────────────────────────────────────────────────────
+
+function ViewModal({
+  item,
+  onClose,
+  onRefill,
+}: {
+  item: InventoryItem;
+  onClose: () => void;
+  onRefill: () => void;
+}) {
+  const batch = getPrimaryBatch(item);
+
+  const itemRows = [
+    { label: "Category", value: item.inventory_category },
+    { label: "Classification", value: item.drug_classification || "-" },
+    { label: "Item Type", value: item.item_type || "-" },
+    { label: "Threshold Type", value: item.threshold_type },
+    { label: "Low Stock Threshold", value: String(item.global_threshold) },
+    { label: "Total Stock", value: String(item.total_stock) },
+  ];
+
+  const batchRows = batch
+    ? [
+        { label: "Batch Number", value: batch.batch_number || "-" },
+        { label: "Remaining Qty", value: String(batch.remaining_quantity ?? "-") },
+        { label: "Purchase Date", value: formatDate(batch.purchased_date) },
+        { label: "Expiry Date", value: formatDate(batch.expiry_date) },
+        { label: "Supplier", value: batch.supplier || "-" },
+        { label: "Cost Price", value: batch.cost_price || "-" },
+        { label: "Note", value: batch.note || "-" },
+      ]
+    : [];
+
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] overflow-y-auto bg-black/20 px-4 py-16 backdrop-blur-sm">
+      <div className="mx-auto max-w-2xl rounded-xl bg-white px-6 py-8 shadow-2xl lg:px-8">
+        <div className="mb-7 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <PackageCheck size={24} className="text-[#046C3F]" />
+            <h2 className="text-xl font-semibold text-black">{item.name}</h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#FFF4E5] text-black"
+            aria-label="Close"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="space-y-6">
+          <div>
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">
+              Item Details
+            </p>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              {itemRows.map(({ label, value }) => (
+                <div key={label} className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+                  <p className="text-xs text-gray-500">{label}</p>
+                  <p className="mt-1 text-base text-gray-800">{value}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {batchRows.length > 0 && (
+            <div>
+              <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">
+                Active Batch
+              </p>
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                {batchRows.map(({ label, value }) => (
+                  <div key={label} className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+                    <p className="text-xs text-gray-500">{label}</p>
+                    <p className="mt-1 text-base text-gray-800">{value}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-end">
+          <button
+            onClick={onClose}
+            className="h-12 rounded-xl bg-[#BEC1CB] px-10 text-base font-medium text-white"
+          >
+            Close
+          </button>
+          <button
+            onClick={onRefill}
+            className="flex h-12 items-center justify-center gap-2 rounded-xl bg-[#046C3F] px-10 text-base font-medium text-white"
+          >
+            <PackagePlus size={18} /> Refill Stock
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+// ─── Edit Modal ───────────────────────────────────────────────────────────────
+
+function EditModal({
+  item,
+  isSubmitting,
+  formError,
+  onClose,
+  onSubmit,
+}: {
+  item: InventoryItem;
+  isSubmitting?: boolean;
+  formError: string;
+  onClose: () => void;
+  onSubmit: (values: EditItemFormValues) => void;
+}) {
+  const storedItemType = item.item_type ?? "";
+  const isKnownType = ITEM_TYPE_OPTIONS.some(
+    (o) => o.value !== "OTHER" && o.value === storedItemType,
+  );
+  const [form, setForm] = useState<EditItemFormValues>({
+    name: item.name,
+    itemType: isKnownType ? storedItemType : storedItemType ? "OTHER" : "",
+    itemTypeCustom: isKnownType ? "" : storedItemType,
+    thresholdType: item.threshold_type ?? "ABSOLUTE",
+    globalThreshold: item.global_threshold !== undefined ? String(item.global_threshold) : "",
+  });
+  const handle = (field: keyof EditItemFormValues, value: string) =>
+    setForm((c) => ({ ...c, [field]: value }));
+
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] overflow-y-auto bg-black/20 px-4 py-16 backdrop-blur-sm">
+      <div className="mx-auto max-w-2xl rounded-xl bg-white px-6 py-8 shadow-2xl lg:px-8">
+        <div className="mb-7 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <ClipboardList size={24} className="text-[#046C3F]" />
+            <h2 className="text-xl font-semibold text-black">Edit — {item.name}</h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#FFF4E5] text-black"
+            aria-label="Close"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        {formError && (
+          <div className="mb-5 rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
+            {formError}
+          </div>
+        )}
+
+        <form
+          onSubmit={(e) => { e.preventDefault(); onSubmit(form); }}
+          className="grid grid-cols-1 gap-5 md:grid-cols-2"
+        >
+          <div className="md:col-span-2">
+            <Field
+              label="Item Name *"
+              value={form.name}
+              placeholder="Item name"
+              onChange={(v) => handle("name", v)}
+            />
+          </div>
+
+          <ItemTypeSelect
+            itemType={form.itemType}
+            itemTypeCustom={form.itemTypeCustom}
+            onTypeChange={(v) => handle("itemType", v)}
+            onCustomChange={(v) => handle("itemTypeCustom", v)}
+          />
+
+          <ThresholdTypeSelect
+            value={form.thresholdType}
+            onChange={(v) => handle("thresholdType", v)}
+          />
+
+          <div className="md:col-span-2">
+            <Field
+              label={`Low Stock Threshold${form.thresholdType === "PERCENTAGE" ? " (%)" : " (units)"} *`}
+              value={form.globalThreshold}
+              type="number"
+              placeholder={form.thresholdType === "PERCENTAGE" ? "e.g. 20" : "e.g. 50"}
+              onChange={(v) => handle("globalThreshold", v)}
+            />
+          </div>
+
+          <div className="md:col-span-2 flex flex-col gap-4 sm:flex-row sm:justify-end mt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isSubmitting}
+              className="h-14 rounded-xl bg-[#BEC1CB] px-14 text-lg font-medium text-white disabled:opacity-70"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="flex h-14 items-center justify-center gap-3 rounded-xl bg-[#046C3F] px-14 text-lg font-medium text-white disabled:opacity-70"
+            >
+              {isSubmitting && <Loader2 size={20} className="animate-spin" />}
+              {isSubmitting ? "Saving…" : "Save Changes"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+// ─── Action Menu ──────────────────────────────────────────────────────────────
+
 function ActionMenu({
   item,
   onView,
-  onUpdate,
+  onRefill,
+  onEdit,
   onExport,
 }: {
   item: InventoryItem;
   onView: (item: InventoryItem) => void;
-  onUpdate: (item: InventoryItem) => void;
+  onRefill: (item: InventoryItem) => void;
+  onEdit: (item: InventoryItem) => void;
   onExport: (item: InventoryItem) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [coords, setCoords] = useState({ top: 0, left: 0 });
   const buttonRef = useRef<HTMLButtonElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
 
   const toggle = () => {
     if (!open && buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
       setCoords({ top: rect.bottom + 6, left: rect.right - 210 });
     }
-    setOpen((value) => !value);
+    setOpen((v) => !v);
   };
 
   const actionClass =
@@ -670,40 +1107,19 @@ function ActionMenu({
         typeof document !== "undefined" &&
         createPortal(
           <div
-            ref={menuRef}
-            style={{
-              position: "fixed",
-              top: coords.top,
-              left: coords.left,
-              width: 210,
-            }}
+            style={{ position: "fixed", top: coords.top, left: coords.left, width: 210 }}
             className="z-[9999] rounded-lg border border-gray-200 bg-white py-3 shadow-xl"
           >
-            <button
-              className={actionClass}
-              onClick={() => {
-                setOpen(false);
-                onView(item);
-              }}
-            >
-              <Eye size={20} /> View
+            <button className={actionClass} onClick={() => { setOpen(false); onView(item); }}>
+              <Eye size={20} /> View Details
             </button>
-            <button
-              className={actionClass}
-              onClick={() => {
-                setOpen(false);
-                onUpdate(item);
-              }}
-            >
-              <Plus size={20} /> Update Item
+            <button className={actionClass} onClick={() => { setOpen(false); onRefill(item); }}>
+              <PackagePlus size={20} /> Refill Stock
             </button>
-            <button
-              className={actionClass}
-              onClick={() => {
-                setOpen(false);
-                onExport(item);
-              }}
-            >
+            <button className={actionClass} onClick={() => { setOpen(false); onEdit(item); }}>
+              <Plus size={20} /> Edit Item
+            </button>
+            <button className={actionClass} onClick={() => { setOpen(false); onExport(item); }}>
               <Download size={20} /> Export
             </button>
           </div>,
@@ -712,6 +1128,8 @@ function ActionMenu({
     </>
   );
 }
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function Inventory() {
   const searchParams = useSearchParams();
@@ -728,20 +1146,12 @@ export default function Inventory() {
   const [formError, setFormError] = useState("");
 
   const inventoryFilters = useMemo(
-    () => ({
-      page,
-      page_size: pageSize,
-      search,
-      status: STATUS_FILTERS[status],
-      start_date: startDate,
-      end_date: endDate,
-    }),
+    () => ({ page, page_size: pageSize, search, status: STATUS_FILTERS[status], start_date: startDate, end_date: endDate }),
     [page, pageSize, search, status, startDate, endDate],
   );
 
   const { data: statsData } = useComprehensiveInventoryStats({});
-  const { data: itemsData, isLoading: isLoadingItems } =
-    useInventoryItems(inventoryFilters);
+  const { data: itemsData, isLoading: isLoadingItems } = useInventoryItems(inventoryFilters);
   const createItemMutation = useCreateInventoryItem();
   const refillItemMutation = useRefillInventoryItem();
   const patchItemMutation = usePatchInventoryItem();
@@ -758,127 +1168,137 @@ export default function Inventory() {
 
   const handleExport = (item: InventoryItem) => {
     const didPrint = printInventoryItem(item);
-    if (!didPrint) {
-      showToast("Unable to open the print window. Please allow pop-ups.");
-      return;
-    }
-    showToast(`${item.name} export opened`);
+    if (!didPrint) showToast("Unable to open the print window. Please allow pop-ups.");
+    else showToast(`${item.name} export opened`);
   };
 
-  const handleCreate = async (values: InventoryFormValues) => {
+  const handleCreate = async (values: AddItemFormValues) => {
     setFormError("");
+    const isDrug = values.inventoryCategory === "DRUG";
+    const isImmunization = isDrug && values.drugClassification === "IMMUNIZATION";
+    const effectiveItemType =
+      values.itemType === "OTHER" ? values.itemTypeCustom : values.itemType;
 
     if (
       !values.name ||
-      !values.itemType ||
+      !effectiveItemType ||
       !values.thresholdType ||
       !values.globalThreshold ||
-      !hasCompleteRefillValues(values)
+      !values.batchNumber ||
+      !values.initialQuantity ||
+      !values.purchasedDate ||
+      !values.supplier ||
+      !values.costPrice
     ) {
       setFormError("Please complete all required fields to add new stock.");
       return;
     }
 
-    try {
-      const created = await createItemMutation.mutateAsync(
-        buildItemPayload(values),
-      );
+    if (isImmunization && values.scheduleType === "RECURRING" && !values.scheduleIntervalDays) {
+      setFormError("Please enter the interval days for the recurring schedule.");
+      return;
+    }
 
+    if (isImmunization && values.scheduleType === "VARIABLE_SEQUENCE" && !values.scheduleIntervalSequence.trim()) {
+      setFormError("Please enter the dose intervals (comma-separated days).");
+      return;
+    }
+
+    const itemPayload: CreateInventoryItemPayload = {
+      name: values.name.trim(),
+      inventory_category: values.inventoryCategory,
+      drug_classification: isDrug ? values.drugClassification : null,
+      item_type: effectiveItemType,
+      threshold_type: values.thresholdType,
+      global_threshold: Number(values.globalThreshold),
+      schedule_rules: isImmunization ? (buildScheduleRules(values) as null) : null,
+    };
+
+    const refillPayload: RefillItemPayload = {
+      batch_number: values.batchNumber.trim(),
+      initial_quantity: Number(values.initialQuantity),
+      purchased_date: values.purchasedDate,
+      expiry_date: values.expiryDate || undefined,
+      supplier: values.supplier.trim(),
+      cost_price: values.costPrice.trim(),
+      note: values.note.trim() || undefined,
+    };
+
+    try {
+      const created = await createItemMutation.mutateAsync(itemPayload);
       if (!created.id) {
         setFormError("Inventory item was created, but its ID was not returned.");
         return;
       }
-
-      await refillItemMutation.mutateAsync({
-        id: created.id,
-        payload: buildRefillPayload(values),
-      });
-
+      await refillItemMutation.mutateAsync({ id: created.id, payload: refillPayload });
       setMode("list");
-      showToast("New item added successfully");
+      showToast(`${values.name} added to inventory`);
     } catch (error) {
-      setFormError(
-        getErrorMessage(error, "Failed to add inventory item. Please try again."),
-      );
+      setFormError(getErrorMessage(error, "Failed to add inventory item. Please try again."));
     }
   };
 
-  const handleUpdate = async (
-    item: InventoryItem,
-    values: InventoryFormValues,
-  ) => {
+  const handleRefill = async (item: InventoryItem, values: RefillFormValues) => {
     setFormError("");
-
-    if (
-      !values.name ||
-      !values.itemType ||
-      !values.thresholdType ||
-      !values.globalThreshold
-    ) {
-      setFormError("Please complete the required item fields.");
+    if (!values.batchNumber || !values.initialQuantity || !values.purchasedDate || !values.supplier || !values.costPrice) {
+      setFormError("Please complete all required batch fields.");
       return;
     }
+    try {
+      await refillItemMutation.mutateAsync({
+        id: item.id,
+        payload: {
+          batch_number: values.batchNumber.trim(),
+          initial_quantity: Number(values.initialQuantity),
+          purchased_date: values.purchasedDate,
+          expiry_date: values.expiryDate || undefined,
+          supplier: values.supplier.trim(),
+          cost_price: values.costPrice.trim(),
+          note: values.note.trim() || undefined,
+        },
+      });
+      setModal(null);
+      showToast(`${item.name} stock refilled`);
+    } catch (error) {
+      setFormError(getErrorMessage(error, "Failed to refill stock. Please try again."));
+    }
+  };
 
-    if (hasAnyRefillValue(values) && !hasCompleteRefillValues(values)) {
-      setFormError("Complete all batch fields before refilling stock.");
+  const handleEdit = async (item: InventoryItem, values: EditItemFormValues) => {
+    setFormError("");
+    const effectiveItemType =
+      values.itemType === "OTHER" ? values.itemTypeCustom : values.itemType;
+    if (!values.name || !effectiveItemType || !values.thresholdType || !values.globalThreshold) {
+      setFormError("Please complete all required fields.");
       return;
     }
-
     try {
       await patchItemMutation.mutateAsync({
         id: item.id,
-        payload: buildItemPayload(values),
+        payload: {
+          name: values.name.trim(),
+          item_type: effectiveItemType,
+          threshold_type: values.thresholdType,
+          global_threshold: Number(values.globalThreshold),
+        },
       });
-
-      if (hasCompleteRefillValues(values)) {
-        await refillItemMutation.mutateAsync({
-          id: item.id,
-          payload: buildRefillPayload(values),
-        });
-      }
-
       setModal(null);
-      showToast(`${item.name} updated successfully`);
+      showToast(`${item.name} updated`);
     } catch (error) {
-      setFormError(
-        getErrorMessage(error, "Failed to update inventory item. Please try again."),
-      );
+      setFormError(getErrorMessage(error, "Failed to update item. Please try again."));
     }
   };
 
   const stats = [
-    {
-      title: "Total Item",
-      value: statsData?.total_items || 0,
-      icon: ClipboardList,
-      active: true,
-    },
-    {
-      title: "Low Stock Items",
-      value: statsData?.low_stock_items || 0,
-      icon: ShieldAlert,
-    },
-    {
-      title: "Out of Stock",
-      value: statsData?.out_of_stock_items || 0,
-      icon: PackageCheck,
-    },
-    {
-      title: "Expiring Soon",
-      value: statsData?.expiring_soon_items || 0,
-      icon: Timer,
-    },
+    { title: "Total Item", value: statsData?.total_items || 0, icon: ClipboardList, active: true },
+    { title: "Low Stock Items", value: statsData?.low_stock_items || 0, icon: ShieldAlert },
+    { title: "Out of Stock", value: statsData?.out_of_stock_items || 0, icon: PackageCheck },
+    { title: "Expiring Soon", value: statsData?.expiring_soon_items || 0, icon: Timer },
   ];
-  const inventoryResult = itemsData as
-    | PaginatedInventoryItems
-    | InventoryItem[]
-    | undefined;
-  const inventoryRows = Array.isArray(inventoryResult)
-    ? inventoryResult
-    : inventoryResult?.results || [];
-  const inventoryTotalPages = Array.isArray(inventoryResult)
-    ? undefined
-    : inventoryResult?.total_pages;
+
+  const inventoryResult = itemsData as PaginatedInventoryItems | InventoryItem[] | undefined;
+  const inventoryRows = Array.isArray(inventoryResult) ? inventoryResult : inventoryResult?.results || [];
+  const inventoryTotalPages = Array.isArray(inventoryResult) ? undefined : inventoryResult?.total_pages;
 
   const columns: ColumnDef<InventoryItem>[] = [
     { header: "Item", accessorKey: "name", sortable: true },
@@ -900,14 +1320,7 @@ export default function Inventory() {
       render: (row) => {
         const label = getStatusLabel(row.status);
         const color = statusColors[label];
-
-        return (
-          <StatusBadge
-            label={label}
-            bgColorHex={color.bg}
-            textColorHex={color.text}
-          />
-        );
+        return <StatusBadge label={label} bgColorHex={color.bg} textColorHex={color.text} />;
       },
     },
     {
@@ -922,14 +1335,9 @@ export default function Inventory() {
       render: (row) => (
         <ActionMenu
           item={row}
-          onView={(selected) => {
-            setFormError("");
-            setModal({ mode: "view", item: selected });
-          }}
-          onUpdate={(selected) => {
-            setFormError("");
-            setModal({ mode: "update", item: selected });
-          }}
+          onView={(selected) => { setFormError(""); setModal({ mode: "view", item: selected }); }}
+          onRefill={(selected) => { setFormError(""); setModal({ mode: "refill", item: selected }); }}
+          onEdit={(selected) => { setFormError(""); setModal({ mode: "edit", item: selected }); }}
           onExport={handleExport}
         />
       ),
@@ -944,60 +1352,30 @@ export default function Inventory() {
           breadcrumbs={[{ label: "Lab Inventory" }, { label: "Add New Item" }]}
         />
         <div className="px-4 py-6 sm:px-6 lg:py-8">
-          <LabBackButton
-            onClick={() => {
-              setFormError("");
-              setMode("list");
-            }}
-          />
-          {formError && (
-            <div className="mb-6 rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
-              {formError}
-            </div>
-          )}
-          <InventoryForm
-            title="Add New Item"
-            submitLabel="Add Item"
+          <LabBackButton onClick={() => { setFormError(""); setMode("list"); }} />
+          <AddItemForm
             isSubmitting={isSubmitting}
-            onCancel={() => {
-              setFormError("");
-              setMode("list");
-            }}
+            formError={formError}
+            onCancel={() => { setFormError(""); setMode("list"); }}
             onSubmit={handleCreate}
           />
         </div>
-        {toast && (
-          <Toast
-            title={toast}
-            description="Lab inventory changes saved"
-            onClose={() => setToast(null)}
-          />
-        )}
+        {toast && <Toast title={toast} description="Lab inventory changes saved" onClose={() => setToast(null)} />}
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-[#F6F7FC]">
-      <LabDashboardHeader
-        title="Lab Inventory"
-        breadcrumbs={[{ label: "Lab Inventory" }]}
-      />
+      <LabDashboardHeader title="Lab Inventory" breadcrumbs={[{ label: "Lab Inventory" }]} />
       <div className="px-4 py-6 sm:px-6 lg:py-8">
         <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h1 className="text-2xl font-semibold text-black sm:text-3xl">
-              Inventory
-            </h1>
-            <p className="mt-2 text-base text-[#3F3F46]">
-              Monitor lab supplies, low stock and expiry
-            </p>
+            <h1 className="text-2xl font-semibold text-black sm:text-3xl">Inventory</h1>
+            <p className="mt-2 text-base text-[#3F3F46]">Monitor lab supplies, low stock and expiry</p>
           </div>
           <button
-            onClick={() => {
-              setFormError("");
-              setMode("add");
-            }}
+            onClick={() => { setFormError(""); setMode("add"); }}
             className="flex h-11 items-center justify-center gap-3 rounded-xl bg-[#046C3F] px-10 text-base font-medium text-white"
           >
             <Heart size={21} /> Add New Item
@@ -1005,9 +1383,7 @@ export default function Inventory() {
         </div>
 
         <div className="mb-6 grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
-          {stats.map((stat) => (
-            <StatCard key={stat.title} {...stat} />
-          ))}
+          {stats.map((stat) => <StatCard key={stat.title} {...stat} />)}
         </div>
 
         <DataTable
@@ -1023,60 +1399,50 @@ export default function Inventory() {
                 startDate={startDate}
                 endDate={endDate}
                 label="Last Updated"
-                onApply={(start, end) => {
-                  setStartDate(start);
-                  setEndDate(end);
-                }}
-                onClear={() => {
-                  setStartDate("");
-                  setEndDate("");
-                }}
+                onApply={(start, end) => { setStartDate(start); setEndDate(end); }}
+                onClear={() => { setStartDate(""); setEndDate(""); }}
               />
-              <CustomDropdown
-                options={STATUS_OPTIONS}
-                selected={status}
-                onSelect={setStatus}
-              />
+              <CustomDropdown options={STATUS_OPTIONS} selected={status} onSelect={setStatus} />
             </>
           }
           totalPages={inventoryTotalPages}
-          emptyMessage={
-            isLoadingItems
-              ? "Loading inventory items..."
-              : "No inventory items match your criteria."
-          }
+          emptyMessage={isLoadingItems ? "Loading inventory items..." : "No inventory items match your criteria."}
         />
       </div>
 
-      {modal && (
-        <>
-          {formError && (
-            <div className="fixed left-1/2 top-6 z-[10000] w-[min(560px,calc(100vw-2rem))] -translate-x-1/2 rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600 shadow-lg">
-              {formError}
-            </div>
-          )}
-          <InventoryModal
-            mode={modal.mode}
-            item={modal.item}
-            isSubmitting={isSubmitting}
-            onClose={() => {
-              setFormError("");
-              setModal(null);
-            }}
-            onSubmit={handleUpdate}
-          />
-        </>
-      )}
-      {toast && (
-        <Toast
-          title={toast}
-          description="Inventory changes saved"
-          onClose={() => setToast(null)}
+      {/* Modals */}
+      {modal?.mode === "view" && (
+        <ViewModal
+          item={modal.item}
+          onClose={() => setModal(null)}
+          onRefill={() => { setFormError(""); setModal({ mode: "refill", item: modal.item }); }}
         />
       )}
+      {modal?.mode === "refill" && (
+        <RefillModal
+          item={modal.item}
+          isSubmitting={isSubmitting}
+          formError={formError}
+          onClose={() => { setFormError(""); setModal(null); }}
+          onSubmit={(values) => handleRefill(modal.item, values)}
+        />
+      )}
+      {modal?.mode === "edit" && (
+        <EditModal
+          item={modal.item}
+          isSubmitting={isSubmitting}
+          formError={formError}
+          onClose={() => { setFormError(""); setModal(null); }}
+          onSubmit={(values) => handleEdit(modal.item, values)}
+        />
+      )}
+
+      {toast && <Toast title={toast} description="Inventory changes saved" onClose={() => setToast(null)} />}
     </div>
   );
 }
+
+// ─── Toast ────────────────────────────────────────────────────────────────────
 
 function Toast({
   title,

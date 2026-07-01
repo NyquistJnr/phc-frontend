@@ -10,9 +10,8 @@ import {
   CreateLabRequestPayload,
   UpdateLabRequestPayload,
   LabTestPayload,
-  SubmitTestResultPayload
+  SubmitTestResultPayload,
 } from "@/src/components/lab-dashboard/home/types";
-
 
 export function useLabStats(filters: {
   start_date?: string;
@@ -70,7 +69,6 @@ export function useLabRequests(filters: LabFilters) {
   });
 }
 
-
 // ==========================================
 // NEW QUERIES: REQUESTS
 // ==========================================
@@ -83,8 +81,10 @@ export function useAdvancedLabRequests(filters: AdvancedLabRequestFilters) {
     queryFn: async () => {
       const params = new URLSearchParams();
       if (filters.page) params.append("page", String(filters.page));
-      if (filters.page_size) params.append("page_size", String(filters.page_size));
-      if (filters.appointment_ID) params.append("appointment_ID", filters.appointment_ID);
+      if (filters.page_size)
+        params.append("page_size", String(filters.page_size));
+      if (filters.appointment_ID)
+        params.append("appointment_ID", filters.appointment_ID);
       if (filters.patient_id) params.append("patient_id", filters.patient_id);
       if (filters.priority) params.append("priority", filters.priority);
       if (filters.search) params.append("search", filters.search);
@@ -116,7 +116,6 @@ export function useLabRequestById(id: string) {
   });
 }
 
-
 export function useLabTests(filters: LabTestFilters) {
   const api = useApi();
 
@@ -125,8 +124,10 @@ export function useLabTests(filters: LabTestFilters) {
     queryFn: async () => {
       const params = new URLSearchParams();
       if (filters.page) params.append("page", String(filters.page));
-      if (filters.page_size) params.append("page_size", String(filters.page_size));
-      if (filters.lab_request_id) params.append("lab_request_id", filters.lab_request_id);
+      if (filters.page_size)
+        params.append("page_size", String(filters.page_size));
+      if (filters.lab_request_id)
+        params.append("lab_request_id", filters.lab_request_id);
       if (filters.search) params.append("search", filters.search);
       if (filters.start_date) params.append("start_date", filters.start_date);
       if (filters.end_date) params.append("end_date", filters.end_date);
@@ -171,7 +172,9 @@ export function useLabRequestStats(filters: StatsFilters) {
       if (filters.end_date) params.append("end_date", filters.end_date);
 
       const queryString = params.toString() ? `?${params.toString()}` : "";
-      const res = await api.get<any>(`/laboratory/stats/requests/${queryString}`);
+      const res = await api.get<any>(
+        `/laboratory/stats/requests/${queryString}`,
+      );
       return res?.data?.data || res?.data || res;
     },
     enabled: api.isAuthenticated && !api.isLoading,
@@ -196,8 +199,6 @@ export function useLabTestStats(filters: StatsFilters) {
   });
 }
 
-
-
 export function useCreateLabRequest() {
   const api = useApi();
   const queryClient = useQueryClient();
@@ -208,7 +209,9 @@ export function useCreateLabRequest() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["laboratory-requests"] });
-      queryClient.invalidateQueries({ queryKey: ["laboratory-requests-advanced"] });
+      queryClient.invalidateQueries({
+        queryKey: ["laboratory-requests-advanced"],
+      });
       queryClient.invalidateQueries({ queryKey: ["laboratory-request-stats"] });
     },
   });
@@ -219,13 +222,23 @@ export function useUpdateLabRequest() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, payload }: { id: string; payload: UpdateLabRequestPayload }) => {
+    mutationFn: async ({
+      id,
+      payload,
+    }: {
+      id: string;
+      payload: UpdateLabRequestPayload;
+    }) => {
       return await api.put(`/laboratory/requests/${id}/`, payload);
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["laboratory-requests"] });
-      queryClient.invalidateQueries({ queryKey: ["laboratory-requests-advanced"] });
-      queryClient.invalidateQueries({ queryKey: ["laboratory-request", variables.id] });
+      queryClient.invalidateQueries({
+        queryKey: ["laboratory-requests-advanced"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["laboratory-request", variables.id],
+      });
     },
   });
 }
@@ -235,13 +248,23 @@ export function usePatchLabRequest() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, payload }: { id: string; payload: Partial<UpdateLabRequestPayload> }) => {
+    mutationFn: async ({
+      id,
+      payload,
+    }: {
+      id: string;
+      payload: Partial<UpdateLabRequestPayload>;
+    }) => {
       return await api.patch(`/laboratory/requests/${id}/`, payload);
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["laboratory-requests"] });
-      queryClient.invalidateQueries({ queryKey: ["laboratory-requests-advanced"] });
-      queryClient.invalidateQueries({ queryKey: ["laboratory-request", variables.id] });
+      queryClient.invalidateQueries({
+        queryKey: ["laboratory-requests-advanced"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["laboratory-request", variables.id],
+      });
     },
   });
 }
@@ -256,26 +279,37 @@ export function useDeleteLabRequest() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["laboratory-requests"] });
-      queryClient.invalidateQueries({ queryKey: ["laboratory-requests-advanced"] });
+      queryClient.invalidateQueries({
+        queryKey: ["laboratory-requests-advanced"],
+      });
       queryClient.invalidateQueries({ queryKey: ["laboratory-request-stats"] });
     },
   });
 }
-
 
 export function usePatchLabTest() {
   const api = useApi();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, payload }: { id: string; payload: Partial<LabTestPayload> }) => {
+    mutationFn: async ({
+      id,
+      payload,
+    }: {
+      id: string;
+      payload: Partial<LabTestPayload>;
+    }) => {
       return await api.patch(`/laboratory/tests/${id}/`, payload);
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["laboratory-tests"] });
-      queryClient.invalidateQueries({ queryKey: ["laboratory-test", variables.id] });
+      queryClient.invalidateQueries({
+        queryKey: ["laboratory-test", variables.id],
+      });
       queryClient.invalidateQueries({ queryKey: ["laboratory-requests"] });
-      queryClient.invalidateQueries({ queryKey: ["laboratory-requests-advanced"] });
+      queryClient.invalidateQueries({
+        queryKey: ["laboratory-requests-advanced"],
+      });
     },
   });
 }
@@ -285,14 +319,24 @@ export function useSubmitLabTestResult() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, payload }: { id: string; payload: SubmitTestResultPayload }) => {
+    mutationFn: async ({
+      id,
+      payload,
+    }: {
+      id: string;
+      payload: SubmitTestResultPayload;
+    }) => {
       return await api.patch(`/laboratory/tests/${id}/submit-result/`, payload);
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["laboratory-tests"] });
-      queryClient.invalidateQueries({ queryKey: ["laboratory-test", variables.id] });
+      queryClient.invalidateQueries({
+        queryKey: ["laboratory-test", variables.id],
+      });
       queryClient.invalidateQueries({ queryKey: ["laboratory-requests"] });
-      queryClient.invalidateQueries({ queryKey: ["laboratory-requests-advanced"] });
+      queryClient.invalidateQueries({
+        queryKey: ["laboratory-requests-advanced"],
+      });
       queryClient.invalidateQueries({ queryKey: ["laboratory-test-stats"] });
     },
   });

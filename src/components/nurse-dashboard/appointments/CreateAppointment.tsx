@@ -2,7 +2,15 @@
 
 import React, { useRef, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarDays, Clock, Search, X, Loader2 } from "lucide-react";
+import {
+  Activity,
+  CalendarDays,
+  ChevronDown,
+  Clock,
+  Search,
+  X,
+  Loader2,
+} from "lucide-react";
 
 import NurseDashboardHeader from "@/src/components/nurse-dashboard/generics/NurseDashboardHeader";
 import NurseBackButton from "@/src/components/nurse-dashboard/generics/NurseBackButton";
@@ -59,6 +67,30 @@ export type AppointmentFormState = {
   babyExclusiveBreastfeeding: string;
   babyNeonatalJaundice: string;
   babyOutcome: string;
+
+  // New patient inline registration
+  newFirstName: string;
+  newLastName: string;
+  newMiddleName: string;
+  newSex: string;
+  newDateOfBirth: string;
+  newPhoneNumber: string;
+  newLga: string;
+  newWard: string;
+  newBloodGroup: string;
+  newGenotype: string;
+  newNextOfKinName: string;
+  newNextOfKinPhone: string;
+
+  // Optional vitals (non-ANC/PNC)
+  vitalTemperature: string;
+  vitalBloodPressure: string;
+  vitalPulseRate: string;
+  vitalRespiratoryRate: string;
+  vitalWeightKg: string;
+  vitalHeightCm: string;
+  vitalSpo2: string;
+  vitalNotes: string;
 };
 
 const BASE_VISIT_TYPES = [
@@ -69,6 +101,34 @@ const BASE_VISIT_TYPES = [
   { label: "Immunization", value: "IMMUNIZATION" },
   { label: "Emergency", value: "EMERGENCY" },
   { label: "Other", value: "OTHER" },
+];
+
+const SEX_OPTIONS = [
+  { label: "Male", value: "M" },
+  { label: "Female", value: "F" },
+  { label: "Other", value: "O" },
+];
+
+const BLOOD_GROUP_OPTIONS = [
+  { label: "A+", value: "A+" },
+  { label: "A-", value: "A-" },
+  { label: "B+", value: "B+" },
+  { label: "B-", value: "B-" },
+  { label: "AB+", value: "AB+" },
+  { label: "AB-", value: "AB-" },
+  { label: "O+", value: "O+" },
+  { label: "O-", value: "O-" },
+  { label: "Unknown", value: "UNKNOWN" },
+];
+
+const GENOTYPE_OPTIONS = [
+  { label: "AA", value: "AA" },
+  { label: "AS", value: "AS" },
+  { label: "SS", value: "SS" },
+  { label: "AC", value: "AC" },
+  { label: "SC", value: "SC" },
+  { label: "CC", value: "CC" },
+  { label: "Unknown", value: "UNKNOWN" },
 ];
 
 const INITIAL_FORM: AppointmentFormState = {
@@ -108,6 +168,26 @@ const INITIAL_FORM: AppointmentFormState = {
   babyExclusiveBreastfeeding: "",
   babyNeonatalJaundice: "",
   babyOutcome: "",
+  newFirstName: "",
+  newLastName: "",
+  newMiddleName: "",
+  newSex: "",
+  newDateOfBirth: "",
+  newPhoneNumber: "",
+  newLga: "",
+  newWard: "",
+  newBloodGroup: "",
+  newGenotype: "",
+  newNextOfKinName: "",
+  newNextOfKinPhone: "",
+  vitalTemperature: "",
+  vitalBloodPressure: "",
+  vitalPulseRate: "",
+  vitalRespiratoryRate: "",
+  vitalWeightKg: "",
+  vitalHeightCm: "",
+  vitalSpo2: "",
+  vitalNotes: "",
 };
 
 function SuccessToast({ onClose }: { onClose: () => void }) {
@@ -137,6 +217,11 @@ function SuccessToast({ onClose }: { onClose: () => void }) {
 export default function NewAppointments() {
   const router = useRouter();
   const [form, setForm] = useState<AppointmentFormState>(INITIAL_FORM);
+  const [patientMode, setPatientMode] = useState<"existing" | "new">(
+    "existing",
+  );
+  const [appointmentMode, setAppointmentMode] = useState<"scheduled" | "walkin">("scheduled");
+  const [showVitals, setShowVitals] = useState(false);
   const [formError, setFormError] = useState("");
   const [toastVisible, setToastVisible] = useState(false);
   const [patientSearchTerm, setPatientSearchTerm] = useState("");
@@ -202,6 +287,9 @@ export default function NewAppointments() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const isAncPnc =
+    form.visitType === "ANTENATAL" || form.visitType === "POSTNATAL";
+
   const availableVisitTypes = BASE_VISIT_TYPES.filter((type) => {
     if (!selectedPatientData) return true;
     const maternalStatus = selectedPatientData.current_maternal_episode?.status;
@@ -214,22 +302,56 @@ export default function NewAppointments() {
   const maternalEpisode = selectedPatientData?.current_maternal_episode;
   const showHistoryFields = form.visitType === "ANTENATAL" && !maternalEpisode;
 
+  const handlePatientModeChange = (mode: "existing" | "new") => {
+    setPatientMode(mode);
+    setShowVitals(false);
+    setFormError("");
+  };
+
+  const handleAppointmentModeChange = (mode: "scheduled" | "walkin") => {
+    setAppointmentMode(mode);
+    if (mode === "walkin") {
+      const now = new Date();
+      handleChange("date", now.toISOString().split("T")[0]);
+      handleChange("time", now.toTimeString().slice(0, 5));
+    }
+  };
+
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (
-      !form.patientId ||
-      !form.visitType ||
-      !form.assignedTo ||
-      !form.date ||
-      !form.time ||
-      (!form.reason.trim() &&
-        form.visitType !== "POSTNATAL" &&
-        form.visitType !== "ANTENATAL")
-    ) {
+    if (patientMode === "existing" && !form.patientId) {
       setFormError(
-        "Please complete all required appointment fields, ensuring a patient is selected from the list.",
+        "Please search and select a patient from the list.",
       );
+      return;
+    }
+
+    if (patientMode === "new") {
+      if (
+        !form.newFirstName ||
+        !form.newLastName ||
+        !form.newSex ||
+        !form.newDateOfBirth
+      ) {
+        setFormError(
+          "Please complete the required new patient fields: First Name, Last Name, Sex, and Date of Birth.",
+        );
+        return;
+      }
+    }
+
+    if (!form.visitType || !form.assignedTo || !form.date || !form.time) {
+      setFormError("Please complete all required appointment fields.");
+      return;
+    }
+
+    if (
+      !form.reason.trim() &&
+      form.visitType !== "POSTNATAL" &&
+      form.visitType !== "ANTENATAL"
+    ) {
+      setFormError("Please enter a reason for the visit.");
       return;
     }
 
@@ -258,15 +380,35 @@ export default function NewAppointments() {
     };
 
     const handleError = (error: any) => {
-      setFormError(
-        error?.response?.data?.message ||
-          "Failed to create appointment. Please try again.",
-      );
+      const errData = error?.response?.data;
+      const message =
+        errData?.message ||
+        errData?.detail ||
+        (typeof errData === "object" && !Array.isArray(errData)
+          ? Object.values(errData).flat().join(". ")
+          : null) ||
+        "Failed to create appointment. Please try again.";
+      setFormError(message);
     };
 
     if (form.visitType === "ANTENATAL") {
       const ancPayload: any = {
-        patient_id: form.patientId,
+        ...(patientMode === "existing"
+          ? { patient_id: form.patientId }
+          : {
+              first_name: form.newFirstName,
+              last_name: form.newLastName,
+              sex: form.newSex,
+              date_of_birth: form.newDateOfBirth,
+              ...(form.newMiddleName && { middle_name: form.newMiddleName }),
+              ...(form.newPhoneNumber && { phone_number: form.newPhoneNumber }),
+              ...(form.newLga && { lga: form.newLga }),
+              ...(form.newWard && { ward: form.newWard }),
+              ...(form.newBloodGroup && { blood_group: form.newBloodGroup }),
+              ...(form.newGenotype && { genotype: form.newGenotype }),
+              ...(form.newNextOfKinName && { next_of_kin_name: form.newNextOfKinName }),
+              ...(form.newNextOfKinPhone && { next_of_kin_phone: form.newNextOfKinPhone }),
+            }),
         assigned_to_id: form.assignedTo,
         appointment_date: form.date,
         appointment_time: formattedTime,
@@ -291,13 +433,39 @@ export default function NewAppointments() {
         ancPayload.partner_phone = form.partnerPhone;
       }
 
+      if (showVitals) {
+        if (form.vitalTemperature) ancPayload.temperature = parseFloat(form.vitalTemperature);
+        if (form.vitalBloodPressure) ancPayload.blood_pressure = form.vitalBloodPressure;
+        if (form.vitalPulseRate) ancPayload.pulse_rate = parseInt(form.vitalPulseRate);
+        if (form.vitalRespiratoryRate) ancPayload.respiratory_rate = parseInt(form.vitalRespiratoryRate);
+        if (form.vitalWeightKg) ancPayload.weight_kg = parseFloat(form.vitalWeightKg);
+        if (form.vitalHeightCm) ancPayload.height_cm = parseFloat(form.vitalHeightCm);
+        if (form.vitalSpo2) ancPayload.spo2 = parseInt(form.vitalSpo2);
+        if (form.vitalNotes) ancPayload.vitals_notes = form.vitalNotes;
+      }
+
       createAncAppointment(ancPayload, {
         onSuccess: handleSuccess,
         onError: handleError,
       });
     } else if (form.visitType === "POSTNATAL") {
-      const pncPayload = {
-        patient_id: form.patientId,
+      const pncPayload: any = {
+        ...(patientMode === "existing"
+          ? { patient_id: form.patientId }
+          : {
+              first_name: form.newFirstName,
+              last_name: form.newLastName,
+              sex: form.newSex,
+              date_of_birth: form.newDateOfBirth,
+              ...(form.newMiddleName && { middle_name: form.newMiddleName }),
+              ...(form.newPhoneNumber && { phone_number: form.newPhoneNumber }),
+              ...(form.newLga && { lga: form.newLga }),
+              ...(form.newWard && { ward: form.newWard }),
+              ...(form.newBloodGroup && { blood_group: form.newBloodGroup }),
+              ...(form.newGenotype && { genotype: form.newGenotype }),
+              ...(form.newNextOfKinName && { next_of_kin_name: form.newNextOfKinName }),
+              ...(form.newNextOfKinPhone && { next_of_kin_phone: form.newNextOfKinPhone }),
+            }),
         appointment_date: form.date,
         appointment_time: `${form.time}:00`,
         timing_of_visit: form.timingOfVisit,
@@ -321,26 +489,71 @@ export default function NewAppointments() {
         ],
       };
 
+      if (showVitals) {
+        if (form.vitalTemperature) pncPayload.temperature = parseFloat(form.vitalTemperature);
+        if (form.vitalBloodPressure) pncPayload.blood_pressure = form.vitalBloodPressure;
+        if (form.vitalPulseRate) pncPayload.pulse_rate = parseInt(form.vitalPulseRate);
+        if (form.vitalRespiratoryRate) pncPayload.respiratory_rate = parseInt(form.vitalRespiratoryRate);
+        if (form.vitalWeightKg) pncPayload.weight_kg = parseFloat(form.vitalWeightKg);
+        if (form.vitalHeightCm) pncPayload.height_cm = parseFloat(form.vitalHeightCm);
+        if (form.vitalSpo2) pncPayload.spo2 = parseInt(form.vitalSpo2);
+        if (form.vitalNotes) pncPayload.vitals_notes = form.vitalNotes;
+      }
+
       createPncAppointment(pncPayload, {
         onSuccess: handleSuccess,
         onError: handleError,
       });
     } else {
-      createAppointment(
-        {
-          patient: form.patientId,
-          assigned_to: form.assignedTo,
-          appointment_date: form.date,
-          appointment_time: formattedTime,
-          visit_type: form.visitType,
-          reason_for_visit: form.reason,
-          notes: form.notes,
-        },
-        {
-          onSuccess: handleSuccess,
-          onError: handleError,
-        },
-      );
+      const payload: Record<string, any> = {
+        appointment_date: form.date,
+        appointment_time: formattedTime,
+        visit_type: form.visitType,
+        reason_for_visit: form.reason,
+        notes: form.notes,
+        assigned_to: form.assignedTo,
+      };
+
+      if (patientMode === "existing") {
+        payload.patient = form.patientId;
+      } else {
+        payload.first_name = form.newFirstName;
+        payload.last_name = form.newLastName;
+        payload.sex = form.newSex;
+        payload.date_of_birth = form.newDateOfBirth;
+        if (form.newMiddleName) payload.middle_name = form.newMiddleName;
+        if (form.newPhoneNumber) payload.phone_number = form.newPhoneNumber;
+        if (form.newLga) payload.lga = form.newLga;
+        if (form.newWard) payload.ward = form.newWard;
+        if (form.newBloodGroup) payload.blood_group = form.newBloodGroup;
+        if (form.newGenotype) payload.genotype = form.newGenotype;
+        if (form.newNextOfKinName)
+          payload.next_of_kin_name = form.newNextOfKinName;
+        if (form.newNextOfKinPhone)
+          payload.next_of_kin_phone = form.newNextOfKinPhone;
+      }
+
+      if (showVitals) {
+        if (form.vitalTemperature)
+          payload.temperature = parseFloat(form.vitalTemperature);
+        if (form.vitalBloodPressure)
+          payload.blood_pressure = form.vitalBloodPressure;
+        if (form.vitalPulseRate)
+          payload.pulse_rate = parseInt(form.vitalPulseRate);
+        if (form.vitalRespiratoryRate)
+          payload.respiratory_rate = parseInt(form.vitalRespiratoryRate);
+        if (form.vitalWeightKg)
+          payload.weight_kg = parseFloat(form.vitalWeightKg);
+        if (form.vitalHeightCm)
+          payload.height_cm = parseFloat(form.vitalHeightCm);
+        if (form.vitalSpo2) payload.spo2 = parseInt(form.vitalSpo2);
+        if (form.vitalNotes) payload.vitals_notes = form.vitalNotes;
+      }
+
+      createAppointment(payload, {
+        onSuccess: handleSuccess,
+        onError: handleError,
+      });
     }
   };
 
@@ -388,87 +601,275 @@ export default function NewAppointments() {
               </div>
             )}
 
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-              <div ref={patientRef} className="relative z-10">
-                <FieldShell label="Patient Name">
-                  <div className="flex items-center gap-3">
-                    <Search size={24} className="shrink-0 text-gray-900" />
+            {/* Walk-in vs Scheduled toggle — PNC only */}
+            {form.visitType === "POSTNATAL" && (
+              <div>
+                <p className="mb-2 text-sm font-medium text-gray-700">Appointment Type</p>
+                <div className="flex gap-6 rounded-lg border border-gray-100 bg-gray-50 p-3">
+                  <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-gray-700">
                     <input
-                      value={form.patientName}
-                      onChange={(e) => {
-                        handleChange("patientName", e.target.value);
-                        if (form.patientId) {
-                          handleChange("patientId", "");
-                          handleChange("patientDisplayId", "");
-                          handleChange("visitType", "");
-                          setSelectedPatientData(null);
-                        }
-                        setShowPatientDropdown(true);
-                      }}
-                      onFocus={() => setShowPatientDropdown(true)}
-                      placeholder="Search patient by name"
-                      className="w-full bg-transparent text-base text-gray-700 outline-none placeholder:text-gray-400"
+                      type="radio"
+                      checked={appointmentMode === "scheduled"}
+                      onChange={() => handleAppointmentModeChange("scheduled")}
+                      className="h-4 w-4 text-[#046C3F] focus:ring-[#046C3F]"
                     />
-                    {isLoadingPatients && (
-                      <Loader2
-                        size={20}
-                        className="animate-spin text-gray-400"
-                      />
-                    )}
-                  </div>
-                </FieldShell>
+                    Schedule Appointment
+                  </label>
+                  <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-gray-700">
+                    <input
+                      type="radio"
+                      checked={appointmentMode === "walkin"}
+                      onChange={() => handleAppointmentModeChange("walkin")}
+                      className="h-4 w-4 text-[#046C3F] focus:ring-[#046C3F]"
+                    />
+                    Walk-in Registration
+                  </label>
+                </div>
+                {appointmentMode === "walkin" && (
+                  <p className="mt-1.5 text-xs text-[#046C3F]">
+                    Date and time have been pre-filled to now. You can adjust them if needed.
+                  </p>
+                )}
+              </div>
+            )}
 
-                {showPatientDropdown && (
-                  <div className="absolute left-0 right-0 top-full mt-2 max-h-60 overflow-y-auto rounded-lg border border-gray-300 bg-white p-2 shadow-lg">
-                    {patientsList.length > 0 ? (
-                      patientsList.map((patient: any) => (
-                        <button
-                          key={patient.id}
-                          type="button"
-                          onClick={() => {
-                            handleChange("patientId", patient.id);
-                            handleChange(
-                              "patientDisplayId",
-                              patient.profile?.patient_id || "",
-                            );
-                            handleChange(
-                              "patientName",
-                              `${patient.first_name} ${patient.last_name}`,
-                            );
-                            handleChange("visitType", "");
-                            setSelectedPatientData(patient);
-                            setShowPatientDropdown(false);
+            {/* Patient Mode Toggle */}
+            <div>
+              <p className="mb-2 text-sm font-medium text-gray-700">Patient</p>
+              <div className="flex gap-6 rounded-lg border border-gray-100 bg-gray-50 p-3">
+                <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-gray-700">
+                  <input
+                    type="radio"
+                    checked={patientMode === "existing"}
+                    onChange={() => handlePatientModeChange("existing")}
+                    className="h-4 w-4 text-[#046C3F] focus:ring-[#046C3F]"
+                  />
+                  Existing Patient
+                </label>
+                <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-gray-700">
+                  <input
+                    type="radio"
+                    checked={patientMode === "new"}
+                    onChange={() => handlePatientModeChange("new")}
+                    className="h-4 w-4 text-[#046C3F] focus:ring-[#046C3F]"
+                  />
+                  New Patient
+                </label>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              {/* Existing patient search */}
+              {patientMode === "existing" && (
+                <>
+                  <div ref={patientRef} className="relative z-10">
+                    <FieldShell label="Patient Name">
+                      <div className="flex items-center gap-3">
+                        <Search size={24} className="shrink-0 text-gray-900" />
+                        <input
+                          value={form.patientName}
+                          onChange={(e) => {
+                            handleChange("patientName", e.target.value);
+                            if (form.patientId) {
+                              handleChange("patientId", "");
+                              handleChange("patientDisplayId", "");
+                              handleChange("visitType", "");
+                              setSelectedPatientData(null);
+                            }
+                            setShowPatientDropdown(true);
                           }}
-                          className="w-full rounded-md px-3 py-2 text-left text-sm hover:bg-gray-50"
-                        >
-                          <div className="font-medium text-gray-900">
-                            {patient.first_name} {patient.last_name}
+                          onFocus={() => setShowPatientDropdown(true)}
+                          placeholder="Search patient by name"
+                          className="w-full bg-transparent text-base text-gray-700 outline-none placeholder:text-gray-400"
+                        />
+                        {isLoadingPatients && (
+                          <Loader2
+                            size={20}
+                            className="animate-spin text-gray-400"
+                          />
+                        )}
+                      </div>
+                    </FieldShell>
+
+                    {showPatientDropdown && (
+                      <div className="absolute left-0 right-0 top-full mt-2 max-h-60 overflow-y-auto rounded-lg border border-gray-300 bg-white p-2 shadow-lg">
+                        {patientsList.length > 0 ? (
+                          patientsList.map((patient: any) => (
+                            <button
+                              key={patient.id}
+                              type="button"
+                              onClick={() => {
+                                handleChange("patientId", patient.id);
+                                handleChange(
+                                  "patientDisplayId",
+                                  patient.profile?.patient_id || "",
+                                );
+                                handleChange(
+                                  "patientName",
+                                  `${patient.first_name} ${patient.last_name}`,
+                                );
+                                handleChange("visitType", "");
+                                setSelectedPatientData(patient);
+                                setShowPatientDropdown(false);
+                              }}
+                              className="w-full rounded-md px-3 py-2 text-left text-sm hover:bg-gray-50"
+                            >
+                              <div className="font-medium text-gray-900">
+                                {patient.first_name} {patient.last_name}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                ID: {patient.profile?.patient_id || "N/A"} •{" "}
+                                {patient.phone_number || "No Phone"}
+                              </div>
+                            </button>
+                          ))
+                        ) : (
+                          <div className="px-3 py-2 text-sm text-gray-500">
+                            {isLoadingPatients
+                              ? "Searching..."
+                              : "No patients found"}
                           </div>
-                          <div className="text-xs text-gray-500">
-                            ID: {patient.profile?.patient_id || "N/A"} •{" "}
-                            {patient.phone_number || "No Phone"}
-                          </div>
-                        </button>
-                      ))
-                    ) : (
-                      <div className="px-3 py-2 text-sm text-gray-500">
-                        {isLoadingPatients
-                          ? "Searching..."
-                          : "No patients found"}
+                        )}
                       </div>
                     )}
                   </div>
-                )}
-              </div>
 
-              <FieldShell label="Patient ID">
-                <input
-                  value={form.patientDisplayId}
-                  readOnly
-                  placeholder="Auto-filled on selection"
-                  className="w-full bg-transparent text-base text-gray-400 outline-none"
-                />
-              </FieldShell>
+                  <FieldShell label="Patient ID">
+                    <input
+                      value={form.patientDisplayId}
+                      readOnly
+                      placeholder="Auto-filled on selection"
+                      className="w-full bg-transparent text-base text-gray-400 outline-none"
+                    />
+                  </FieldShell>
+                </>
+              )}
+
+              {/* New patient inline registration fields */}
+              {patientMode === "new" && (
+                <>
+                  <FieldShell label="First Name *">
+                    <input
+                      value={form.newFirstName}
+                      onChange={(e) =>
+                        handleChange("newFirstName", e.target.value)
+                      }
+                      placeholder="First name"
+                      className="w-full bg-transparent text-base text-gray-700 outline-none placeholder:text-gray-400"
+                    />
+                  </FieldShell>
+
+                  <FieldShell label="Last Name *">
+                    <input
+                      value={form.newLastName}
+                      onChange={(e) =>
+                        handleChange("newLastName", e.target.value)
+                      }
+                      placeholder="Last name"
+                      className="w-full bg-transparent text-base text-gray-700 outline-none placeholder:text-gray-400"
+                    />
+                  </FieldShell>
+
+                  <SelectField
+                    label="Sex *"
+                    placeholder="Select sex"
+                    options={SEX_OPTIONS}
+                    value={form.newSex}
+                    onChange={(value) => handleChange("newSex", value)}
+                  />
+
+                  <FieldShell label="Date of Birth *">
+                    <input
+                      type="date"
+                      value={form.newDateOfBirth}
+                      onChange={(e) =>
+                        handleChange("newDateOfBirth", e.target.value)
+                      }
+                      className="w-full bg-transparent text-base text-gray-700 outline-none"
+                    />
+                  </FieldShell>
+
+                  <FieldShell label="Middle Name (Optional)">
+                    <input
+                      value={form.newMiddleName}
+                      onChange={(e) =>
+                        handleChange("newMiddleName", e.target.value)
+                      }
+                      placeholder="Middle name"
+                      className="w-full bg-transparent text-base text-gray-700 outline-none placeholder:text-gray-400"
+                    />
+                  </FieldShell>
+
+                  <FieldShell label="Phone Number (Optional)">
+                    <input
+                      type="tel"
+                      value={form.newPhoneNumber}
+                      onChange={(e) =>
+                        handleChange("newPhoneNumber", e.target.value)
+                      }
+                      placeholder="e.g. 08012345678"
+                      className="w-full bg-transparent text-base text-gray-700 outline-none placeholder:text-gray-400"
+                    />
+                  </FieldShell>
+
+                  <FieldShell label="LGA (Optional)">
+                    <input
+                      value={form.newLga}
+                      onChange={(e) => handleChange("newLga", e.target.value)}
+                      placeholder="Local Government Area"
+                      className="w-full bg-transparent text-base text-gray-700 outline-none placeholder:text-gray-400"
+                    />
+                  </FieldShell>
+
+                  <FieldShell label="Ward (Optional)">
+                    <input
+                      value={form.newWard}
+                      onChange={(e) => handleChange("newWard", e.target.value)}
+                      placeholder="Ward"
+                      className="w-full bg-transparent text-base text-gray-700 outline-none placeholder:text-gray-400"
+                    />
+                  </FieldShell>
+
+                  <SelectField
+                    label="Blood Group (Optional)"
+                    placeholder="Select blood group"
+                    options={BLOOD_GROUP_OPTIONS}
+                    value={form.newBloodGroup}
+                    onChange={(value) => handleChange("newBloodGroup", value)}
+                  />
+
+                  <SelectField
+                    label="Genotype (Optional)"
+                    placeholder="Select genotype"
+                    options={GENOTYPE_OPTIONS}
+                    value={form.newGenotype}
+                    onChange={(value) => handleChange("newGenotype", value)}
+                  />
+
+                  <FieldShell label="Next of Kin Name (Optional)">
+                    <input
+                      value={form.newNextOfKinName}
+                      onChange={(e) =>
+                        handleChange("newNextOfKinName", e.target.value)
+                      }
+                      placeholder="NOK full name"
+                      className="w-full bg-transparent text-base text-gray-700 outline-none placeholder:text-gray-400"
+                    />
+                  </FieldShell>
+
+                  <FieldShell label="Next of Kin Phone (Optional)">
+                    <input
+                      type="tel"
+                      value={form.newNextOfKinPhone}
+                      onChange={(e) =>
+                        handleChange("newNextOfKinPhone", e.target.value)
+                      }
+                      placeholder="NOK phone number"
+                      className="w-full bg-transparent text-base text-gray-700 outline-none placeholder:text-gray-400"
+                    />
+                  </FieldShell>
+                </>
+              )}
 
               <FieldShell label="Date">
                 <div className="flex items-center gap-3">
@@ -498,7 +899,11 @@ export default function NewAppointments() {
                 placeholder="Select"
                 options={availableVisitTypes}
                 value={form.visitType}
-                onChange={(value) => handleChange("visitType", value)}
+                onChange={(value) => {
+                  handleChange("visitType", value);
+                  setShowVitals(false);
+                  if (value !== "POSTNATAL") setAppointmentMode("scheduled");
+                }}
               />
               <SelectField
                 label="Assigned To"
@@ -534,19 +939,14 @@ export default function NewAppointments() {
 
             <FieldShell
               label={
-                form.visitType === "POSTNATAL" || form.visitType === "ANTENATAL"
-                  ? "Clinical Notes / Reason"
-                  : "Reason for Visit"
+                isAncPnc ? "Clinical Notes / Reason" : "Reason for Visit"
               }
             >
               <textarea
                 value={form.reason}
                 onChange={(e) => handleChange("reason", e.target.value)}
                 placeholder={
-                  form.visitType === "POSTNATAL" ||
-                  form.visitType === "ANTENATAL"
-                    ? "Patient doing well..."
-                    : "Enter reason here"
+                  isAncPnc ? "Patient doing well..." : "Enter reason here"
                 }
                 rows={4}
                 className="w-full resize-none bg-transparent text-base text-gray-700 outline-none placeholder:text-gray-400"
@@ -562,6 +962,129 @@ export default function NewAppointments() {
                 className="w-full resize-none bg-transparent text-base text-gray-700 outline-none placeholder:text-gray-400"
               />
             </FieldShell>
+
+            {/* Optional vitals */}
+            <div className="border-t border-gray-100 pt-6">
+                <button
+                  type="button"
+                  onClick={() => setShowVitals((v) => !v)}
+                  className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-100"
+                >
+                  <Activity size={16} className="text-[#046C3F]" />
+                  {showVitals
+                    ? "Hide Vitals"
+                    : "Record Vitals Now (Optional)"}
+                  <ChevronDown
+                    size={16}
+                    className={`ml-1 text-gray-500 transition-transform ${showVitals ? "rotate-180" : ""}`}
+                  />
+                </button>
+
+                {showVitals && (
+                  <div className="mt-4 grid grid-cols-1 gap-6 md:grid-cols-2">
+                    <FieldShell label="Temperature (°C)">
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={form.vitalTemperature}
+                        onChange={(e) =>
+                          handleChange("vitalTemperature", e.target.value)
+                        }
+                        placeholder="e.g. 37.5"
+                        className="w-full bg-transparent text-base text-gray-700 outline-none placeholder:text-gray-400"
+                      />
+                    </FieldShell>
+
+                    <FieldShell label="Blood Pressure">
+                      <input
+                        type="text"
+                        value={form.vitalBloodPressure}
+                        onChange={(e) =>
+                          handleChange("vitalBloodPressure", e.target.value)
+                        }
+                        placeholder="e.g. 120/80"
+                        className="w-full bg-transparent text-base text-gray-700 outline-none placeholder:text-gray-400"
+                      />
+                    </FieldShell>
+
+                    <FieldShell label="Pulse Rate (BPM)">
+                      <input
+                        type="number"
+                        value={form.vitalPulseRate}
+                        onChange={(e) =>
+                          handleChange("vitalPulseRate", e.target.value)
+                        }
+                        placeholder="e.g. 72"
+                        className="w-full bg-transparent text-base text-gray-700 outline-none placeholder:text-gray-400"
+                      />
+                    </FieldShell>
+
+                    <FieldShell label="Respiratory Rate (breaths/min)">
+                      <input
+                        type="number"
+                        value={form.vitalRespiratoryRate}
+                        onChange={(e) =>
+                          handleChange("vitalRespiratoryRate", e.target.value)
+                        }
+                        placeholder="e.g. 16"
+                        className="w-full bg-transparent text-base text-gray-700 outline-none placeholder:text-gray-400"
+                      />
+                    </FieldShell>
+
+                    <FieldShell label="Weight (kg)">
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={form.vitalWeightKg}
+                        onChange={(e) =>
+                          handleChange("vitalWeightKg", e.target.value)
+                        }
+                        placeholder="e.g. 65.5"
+                        className="w-full bg-transparent text-base text-gray-700 outline-none placeholder:text-gray-400"
+                      />
+                    </FieldShell>
+
+                    <FieldShell label="Height (cm)">
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={form.vitalHeightCm}
+                        onChange={(e) =>
+                          handleChange("vitalHeightCm", e.target.value)
+                        }
+                        placeholder="e.g. 170.0"
+                        className="w-full bg-transparent text-base text-gray-700 outline-none placeholder:text-gray-400"
+                      />
+                    </FieldShell>
+
+                    <FieldShell label="SpO₂ (%)">
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={form.vitalSpo2}
+                        onChange={(e) =>
+                          handleChange("vitalSpo2", e.target.value)
+                        }
+                        placeholder="e.g. 98"
+                        className="w-full bg-transparent text-base text-gray-700 outline-none placeholder:text-gray-400"
+                      />
+                    </FieldShell>
+
+                    <FieldShell label="Vitals Notes (Optional)">
+                      <input
+                        type="text"
+                        value={form.vitalNotes}
+                        onChange={(e) =>
+                          handleChange("vitalNotes", e.target.value)
+                        }
+                        placeholder="Any relevant vitals notes"
+                        className="w-full bg-transparent text-base text-gray-700 outline-none placeholder:text-gray-400"
+                      />
+                    </FieldShell>
+                  </div>
+                )}
+              </div>
 
             <div className="flex flex-col items-stretch gap-4 pt-1 sm:flex-row sm:items-center">
               <button

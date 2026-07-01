@@ -48,6 +48,14 @@ const INITIAL_FORM: RegistrationFormState = {
   nextOfKinName: "",
   nextOfKinPhone: "",
   nextOfKinRelationship: "",
+  vitalTemperature: "",
+  vitalBloodPressure: "",
+  vitalPulseRate: "",
+  vitalRespiratoryRate: "",
+  vitalWeightKg: "",
+  vitalHeightCm: "",
+  vitalSpo2: "",
+  vitalNotes: "",
 };
 
 const SESSION_TYPES = [
@@ -414,6 +422,7 @@ export default function ImmunizationRegister() {
   const [patientMode, setPatientMode] = useState<"existing" | "new">(
     "existing",
   );
+  const [showVitals, setShowVitals] = useState(false);
   const [formError, setFormError] = useState("");
   const [toastVisible, setToastVisible] = useState(false);
   const [patientSearchTerm, setPatientSearchTerm] = useState("");
@@ -528,6 +537,25 @@ export default function ImmunizationRegister() {
         next_of_kin_phone: form.nextOfKinPhone,
         next_of_kin_relationship: form.nextOfKinRelationship,
       };
+    }
+
+    if (showVitals) {
+      const vitals: Record<string, any> = {};
+      if (form.vitalTemperature)
+        vitals.temperature = parseFloat(form.vitalTemperature);
+      if (form.vitalBloodPressure)
+        vitals.blood_pressure = form.vitalBloodPressure;
+      if (form.vitalPulseRate)
+        vitals.pulse_rate = parseInt(form.vitalPulseRate);
+      if (form.vitalRespiratoryRate)
+        vitals.respiratory_rate = parseInt(form.vitalRespiratoryRate);
+      if (form.vitalWeightKg)
+        vitals.weight_kg = parseFloat(form.vitalWeightKg);
+      if (form.vitalHeightCm)
+        vitals.height_cm = parseFloat(form.vitalHeightCm);
+      if (form.vitalSpo2) vitals.spo2 = parseInt(form.vitalSpo2);
+      if (form.vitalNotes) vitals.notes = form.vitalNotes;
+      if (Object.keys(vitals).length > 0) payload.vitals = vitals;
     }
 
     createImmunization(payload, {
@@ -872,6 +900,126 @@ export default function ImmunizationRegister() {
                 className="w-full resize-none bg-transparent text-base text-gray-700 outline-none placeholder:text-gray-400"
               />
             </FieldShell>
+
+            {/* Optional Vitals */}
+            <div className="border-t border-gray-100 pt-6">
+              <button
+                type="button"
+                onClick={() => setShowVitals((v) => !v)}
+                className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-100"
+              >
+                <ChevronDown
+                  size={16}
+                  className={`text-[#046C3F] transition-transform ${showVitals ? "rotate-180" : ""}`}
+                />
+                {showVitals ? "Hide Vitals" : "Record Vitals (Optional)"}
+              </button>
+
+              {showVitals && (
+                <div className="mt-4 grid grid-cols-1 gap-6 md:grid-cols-2">
+                  <FieldShell label="Temperature (°C)">
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={form.vitalTemperature}
+                      onChange={(e) =>
+                        handleChange("vitalTemperature", e.target.value)
+                      }
+                      placeholder="e.g. 36.9"
+                      className="w-full bg-transparent text-base outline-none placeholder:text-gray-400"
+                    />
+                  </FieldShell>
+
+                  <FieldShell label="Blood Pressure">
+                    <input
+                      type="text"
+                      value={form.vitalBloodPressure}
+                      onChange={(e) =>
+                        handleChange("vitalBloodPressure", e.target.value)
+                      }
+                      placeholder="e.g. 120/80"
+                      className="w-full bg-transparent text-base outline-none placeholder:text-gray-400"
+                    />
+                  </FieldShell>
+
+                  <FieldShell label="Pulse Rate (BPM)">
+                    <input
+                      type="number"
+                      value={form.vitalPulseRate}
+                      onChange={(e) =>
+                        handleChange("vitalPulseRate", e.target.value)
+                      }
+                      placeholder="e.g. 110"
+                      className="w-full bg-transparent text-base outline-none placeholder:text-gray-400"
+                    />
+                  </FieldShell>
+
+                  <FieldShell label="Respiratory Rate (breaths/min)">
+                    <input
+                      type="number"
+                      value={form.vitalRespiratoryRate}
+                      onChange={(e) =>
+                        handleChange("vitalRespiratoryRate", e.target.value)
+                      }
+                      placeholder="e.g. 30"
+                      className="w-full bg-transparent text-base outline-none placeholder:text-gray-400"
+                    />
+                  </FieldShell>
+
+                  <FieldShell label="Weight (kg)">
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={form.vitalWeightKg}
+                      onChange={(e) =>
+                        handleChange("vitalWeightKg", e.target.value)
+                      }
+                      placeholder="e.g. 4.2"
+                      className="w-full bg-transparent text-base outline-none placeholder:text-gray-400"
+                    />
+                  </FieldShell>
+
+                  <FieldShell label="Height (cm)">
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={form.vitalHeightCm}
+                      onChange={(e) =>
+                        handleChange("vitalHeightCm", e.target.value)
+                      }
+                      placeholder="e.g. 55.0"
+                      className="w-full bg-transparent text-base outline-none placeholder:text-gray-400"
+                    />
+                  </FieldShell>
+
+                  <FieldShell label="SpO₂ (%)">
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={form.vitalSpo2}
+                      onChange={(e) =>
+                        handleChange("vitalSpo2", e.target.value)
+                      }
+                      placeholder="e.g. 98"
+                      className="w-full bg-transparent text-base outline-none placeholder:text-gray-400"
+                    />
+                  </FieldShell>
+
+                  <FieldShell label="Vitals Notes (Optional)">
+                    <input
+                      type="text"
+                      value={form.vitalNotes}
+                      onChange={(e) =>
+                        handleChange("vitalNotes", e.target.value)
+                      }
+                      placeholder="Any relevant vitals notes"
+                      className="w-full bg-transparent text-base outline-none placeholder:text-gray-400"
+                    />
+                  </FieldShell>
+                </div>
+              )}
+            </div>
 
             <div className="flex flex-col items-stretch justify-end gap-4 pt-1 sm:flex-row sm:items-center">
               <button

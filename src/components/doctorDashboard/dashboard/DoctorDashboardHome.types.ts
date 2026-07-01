@@ -25,6 +25,8 @@ export type DoctorDashboardConsultationRow = {
   patientName: string;
   chiefComplaint: string;
   status: DoctorDashboardConsultationStatus;
+  appointmentId: string;
+  consultationId: string;
 };
 
 export type DoctorDashboardApiRecord = Record<string, unknown>;

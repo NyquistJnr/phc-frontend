@@ -3,7 +3,7 @@
 import { FormEvent, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, FileText, Activity, Info } from "lucide-react";
+import { ArrowLeft, FileText, Activity, Info, CheckCircle2, Pill } from "lucide-react";
 import DoctorHeader from "@/src/components/doctorDashboard/generics/Header";
 import { CustomDropdown } from "@/src/components/generic/ui/CustomDropdown";
 import {
@@ -14,6 +14,8 @@ import {
   useAppointmentVitals,
 } from "@/src/hooks/doctors/use-consultation";
 import type { MyAppointment, PaginatedResponse } from "./types";
+import LabRequestsSection from "./LabRequestsSection";
+import ReferralSection from "./ReferralSection";
 
 const INITIAL_FORM = {
   chief_complaint: "",
@@ -78,6 +80,7 @@ export default function CreateNote() {
   );
   const [form, setForm] = useState(INITIAL_FORM);
   const [formError, setFormError] = useState("");
+  const [savedConsultationId, setSavedConsultationId] = useState<string | null>(null);
 
   const { data: appointmentsData, isLoading: isLoadingAppointments } =
     useMyAppointments({});
@@ -147,11 +150,7 @@ export default function CreateNote() {
           id?: string;
         };
         const id = created?.data?.data?.id || created?.data?.id || created?.id;
-        router.push(
-          id
-            ? `/doctor-dashboard/consultations/${id}`
-            : "/doctor-dashboard/consultations",
-        );
+        setSavedConsultationId(id ?? "");
       },
       onError: (error) => {
         setFormError(
@@ -341,12 +340,6 @@ export default function CreateNote() {
             )}
 
             <TextareaField
-              label="Chief Complaint"
-              value={form.chief_complaint}
-              onChange={(value) => updateField("chief_complaint", value)}
-              required
-            />
-            <TextareaField
               label="Presenting Complaint"
               value={form.presenting_complaint}
               onChange={(value) => updateField("presenting_complaint", value)}
@@ -391,25 +384,72 @@ export default function CreateNote() {
               onChange={(value) => updateField("additional_notes", value)}
             />
 
-            <div className="flex justify-end gap-4 pt-2">
-              <button
-                type="button"
-                onClick={() => router.push("/doctor-dashboard/consultations")}
-                disabled={isPending}
-                className="h-12 rounded-xl bg-[#B9BDC9] px-8 text-sm font-medium text-white disabled:opacity-70"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={isPending}
-                className="h-12 rounded-xl bg-[#046C3F] px-8 text-sm font-medium text-white disabled:opacity-70"
-              >
-                {isPending ? "Saving..." : "Save Consultation"}
-              </button>
-            </div>
+            {savedConsultationId !== null ? (
+              <div className="rounded-xl border border-green-100 bg-green-50 p-6 space-y-5">
+                <div className="flex items-center gap-3">
+                  <CheckCircle2 size={22} className="text-[#046C3F] shrink-0" />
+                  <p className="text-sm font-semibold text-[#046C3F]">
+                    Consultation note saved successfully.
+                  </p>
+                </div>
+                <p className="text-xs text-gray-500 -mt-2">
+                  What would you like to do next?
+                </p>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <Link
+                    href={`/doctor-dashboard/prescriptions/new?appointment=${selectedAppointment}`}
+                    className="flex items-center gap-3 rounded-xl border border-purple-100 bg-white px-4 py-4 text-sm font-medium text-purple-700 shadow-sm hover:bg-purple-50 transition-colors"
+                  >
+                    <Pill size={18} className="shrink-0 text-purple-500" />
+                    Write Prescription
+                  </Link>
+                </div>
+                <div className="flex items-center gap-3 pt-1">
+                  {savedConsultationId && (
+                    <Link
+                      href={`/doctor-dashboard/consultations/${savedConsultationId}`}
+                      className="text-xs font-medium text-[#046C3F] hover:underline"
+                    >
+                      View consultation note
+                    </Link>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => router.push("/doctor-dashboard/consultations")}
+                    className="text-xs font-medium text-gray-500 hover:underline"
+                  >
+                    Done — back to consultations
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex justify-end gap-4 pt-2">
+                <button
+                  type="button"
+                  onClick={() => router.push("/doctor-dashboard/consultations")}
+                  disabled={isPending}
+                  className="h-12 rounded-xl bg-[#B9BDC9] px-8 text-sm font-medium text-white disabled:opacity-70"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isPending}
+                  className="h-12 rounded-xl bg-[#046C3F] px-8 text-sm font-medium text-white disabled:opacity-70"
+                >
+                  {isPending ? "Saving..." : "Save Consultation"}
+                </button>
+              </div>
+            )}
           </div>
         </form>
+
+        {selectedAppointment && (
+          <div className="mt-6 space-y-6">
+            <LabRequestsSection appointmentId={selectedAppointment} />
+            <ReferralSection appointmentId={selectedAppointment} />
+          </div>
+        )}
       </div>
     </div>
   );

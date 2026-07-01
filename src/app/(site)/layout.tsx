@@ -1,6 +1,6 @@
-import type { ReactNode } from 'react';
-import SiteFooter from '@/src/components/site-footer';
-import SiteNav from '@/src/components/site-nav';
+import type { ReactNode } from "react";
+import SiteFooter from "@/src/components/site-footer";
+import SiteNav from "@/src/components/site-nav";
 
 type SiteLayoutProps = {
   children: ReactNode;
