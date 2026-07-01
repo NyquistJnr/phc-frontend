@@ -176,7 +176,7 @@ export function useFacilityStaff(searchTerm: string = "") {
         : "";
 
       const res = await api.get<PaginatedResponse<any>>(
-        `/users/facility-users/?is_active=true&page=1&page_size=10${searchParam}`,
+        `/users/facility-users/?is_active=true&role=MEDICALS&page=1&page_size=10${searchParam}`,
       );
       return res.results || [];
     },
