@@ -135,30 +135,48 @@ function ConsultationBadge({
 
 function ActionButton({
   status,
+  appointmentId,
+  consultationId,
 }: {
   status: DoctorDashboardConsultationStatus;
+  appointmentId: string;
+  consultationId: string;
 }) {
+  const noteHref = appointmentId
+    ? `/doctor-dashboard/consultations/new?appointment=${appointmentId}`
+    : "/doctor-dashboard/consultations";
+
   if (status === "In-consultation") {
     return (
-      <button className="px-4 py-1.5 rounded-lg border border-gray-300 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
+      <Link
+        href={noteHref}
+        className="inline-block px-4 py-1.5 rounded-lg border border-gray-300 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+      >
         Continue
-      </button>
+      </Link>
     );
   }
   if (status === "Completed") {
+    const viewHref = consultationId
+      ? `/doctor-dashboard/consultations/${consultationId}`
+      : "/doctor-dashboard/consultations";
     return (
-      <button className="px-4 py-1.5 rounded-lg border border-gray-300 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
+      <Link
+        href={viewHref}
+        className="inline-block px-4 py-1.5 rounded-lg border border-gray-300 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+      >
         View
-      </button>
+      </Link>
     );
   }
   return (
-    <button
-      className="px-4 py-1.5 rounded-lg text-white text-xs font-semibold transition-colors"
+    <Link
+      href={noteHref}
+      className="inline-block px-4 py-1.5 rounded-lg text-white text-xs font-semibold transition-colors"
       style={{ background: "#046C3F" }}
     >
       Start
-    </button>
+    </Link>
   );
 }
 
@@ -353,6 +371,11 @@ export default function DoctorDashboardHome() {
           getText(appointment, ["reason_for_visit", "notes"], "-"),
         ),
         status,
+        appointmentId:
+          typeof record.appointment === "string"
+            ? record.appointment
+            : getText(appointment, ["id"], ""),
+        consultationId: getText(record, ["id"], ""),
       };
     });
 
@@ -519,7 +542,11 @@ export default function DoctorDashboardHome() {
                       <ConsultationBadge status={row.status} />
                     </td>
                     <td className="py-4 px-2">
-                      <ActionButton status={row.status} />
+                      <ActionButton
+                        status={row.status}
+                        appointmentId={row.appointmentId}
+                        consultationId={row.consultationId}
+                      />
                     </td>
                   </tr>
                 ))}

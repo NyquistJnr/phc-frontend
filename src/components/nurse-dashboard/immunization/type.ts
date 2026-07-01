@@ -65,6 +65,16 @@ export type ImmunizationRegistrationPayload = {
     next_of_kin_phone: string;
     next_of_kin_relationship: string;
   };
+  vitals?: {
+    temperature?: number;
+    blood_pressure?: string;
+    pulse_rate?: number;
+    respiratory_rate?: number;
+    weight_kg?: number;
+    height_cm?: number;
+    spo2?: number;
+    notes?: string;
+  };
 };
 
 export type InventoryItem = {
@@ -111,4 +121,12 @@ export type RegistrationFormState = {
   nextOfKinName: string;
   nextOfKinPhone: string;
   nextOfKinRelationship: string;
+  vitalTemperature: string;
+  vitalBloodPressure: string;
+  vitalPulseRate: string;
+  vitalRespiratoryRate: string;
+  vitalWeightKg: string;
+  vitalHeightCm: string;
+  vitalSpo2: string;
+  vitalNotes: string;
 };
