@@ -5,6 +5,7 @@ export interface PrescriptionFilters {
   page?: number;
   page_size?: number;
   patient_id?: string;
+  appointment_id?: string;
   search?: string;
   start_date?: string;
   end_date?: string;
@@ -48,6 +49,8 @@ export function usePrescriptions(filters: PrescriptionFilters) {
       if (filters.page_size)
         params.append("page_size", String(filters.page_size));
       if (filters.patient_id) params.append("patient_id", filters.patient_id);
+      if (filters.appointment_id)
+        params.append("appointment_id", filters.appointment_id);
       if (filters.search) params.append("search", filters.search);
       if (filters.start_date) params.append("start_date", filters.start_date);
       if (filters.end_date) params.append("end_date", filters.end_date);
