@@ -94,7 +94,9 @@ function AppointmentActionMenu({ row }: { row: MyAppointment }) {
             <button
               type="button"
               onClick={() => {
-                router.push(`/doctor-dashboard/consultations/new?appointment=${row.id}`);
+                router.push(
+                  `/doctor-dashboard/consultations/new?appointment=${row.id}`,
+                );
                 setOpen(false);
               }}
               className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm font-medium text-gray-700 hover:bg-gray-50"
@@ -143,7 +145,10 @@ export default function DoctorAppointments() {
     end_date: endDate,
   });
 
-  const appointmentData = data as PaginatedResponse<MyAppointment> | MyAppointment[] | undefined;
+  const appointmentData = data as
+    | PaginatedResponse<MyAppointment>
+    | MyAppointment[]
+    | undefined;
   const appointments = Array.isArray(appointmentData)
     ? appointmentData
     : appointmentData?.results || [];
@@ -163,8 +168,16 @@ export default function DoctorAppointments() {
 
   const columns = useMemo<ColumnDef<MyAppointment>[]>(
     () => [
-      { header: "Appointment ID", accessorKey: "appointment_id", sortable: true },
-      { header: "Patient ID", accessorKey: "patient_display_id", sortable: true },
+      {
+        header: "Appointment ID",
+        accessorKey: "appointment_id",
+        sortable: true,
+      },
+      {
+        header: "Patient ID",
+        accessorKey: "patient_display_id",
+        sortable: true,
+      },
       { header: "Patient Name", accessorKey: "patient_name", sortable: true },
       {
         header: "Date & Time",
@@ -180,7 +193,10 @@ export default function DoctorAppointments() {
         header: "Status",
         render: (row) => {
           const status = row.status || "UNKNOWN";
-          const color = statusColors[status] || { bg: "#F3F4F6", text: "#374151" };
+          const color = statusColors[status] || {
+            bg: "#F3F4F6",
+            text: "#374151",
+          };
           return (
             <StatusBadge
               label={status.replaceAll("_", " ")}
@@ -190,7 +206,10 @@ export default function DoctorAppointments() {
           );
         },
       },
-      { header: "Action", render: (row) => <AppointmentActionMenu row={row} /> },
+      {
+        header: "Action",
+        render: (row) => <AppointmentActionMenu row={row} />,
+      },
     ],
     [],
   );
@@ -199,7 +218,10 @@ export default function DoctorAppointments() {
     <div className="min-h-screen bg-[#F6F7FC]">
       <DoctorHeader
         title="Consultations"
-        breadcrumbs={[{ label: "Consultations" }, { label: "Appointments", active: true }]}
+        breadcrumbs={[
+          { label: "Consultations" },
+          { label: "Appointments", active: true },
+        ]}
       />
       <div className="px-4 py-6 sm:px-6 lg:py-8">
         <div className="mb-7">
@@ -218,8 +240,14 @@ export default function DoctorAppointments() {
           showSearch
           searchPlaceholder="Search by patient name or ID"
           onSearch={setLocalSearch}
-          totalPages={Array.isArray(appointmentData) ? 1 : appointmentData?.total_pages}
-          emptyMessage={isLoading ? "Loading appointments..." : "No assigned appointments found."}
+          totalPages={
+            Array.isArray(appointmentData) ? 1 : appointmentData?.total_pages
+          }
+          emptyMessage={
+            isLoading
+              ? "Loading appointments..."
+              : "No assigned appointments found."
+          }
           toolbarActions={
             <>
               <NurseDateRangeFilter
@@ -231,13 +259,17 @@ export default function DoctorAppointments() {
                   else params.delete("start_date");
                   if (end) params.set("end_date", end);
                   else params.delete("end_date");
-                  router.push(`${pathname}?${params.toString()}`, { scroll: false });
+                  router.push(`${pathname}?${params.toString()}`, {
+                    scroll: false,
+                  });
                 }}
                 onClear={() => {
                   const params = new URLSearchParams(searchParams.toString());
                   params.delete("start_date");
                   params.delete("end_date");
-                  router.push(`${pathname}?${params.toString()}`, { scroll: false });
+                  router.push(`${pathname}?${params.toString()}`, {
+                    scroll: false,
+                  });
                 }}
               />
               <CustomDropdown

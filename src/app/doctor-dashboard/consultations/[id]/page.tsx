@@ -1,5 +1,10 @@
-import ConsultationDetails from "@/src/components/doctorDashboard/consultations/ConsultationDetails";
+import { Suspense } from "react";
+import ConsultationWorkspace from "@/src/components/doctorDashboard/consultations/ConsultationWorkspace";
 
 export default function ConsultationDetailsPage() {
-  return <ConsultationDetails />;
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ConsultationWorkspace />
+    </Suspense>
+  );
 }
