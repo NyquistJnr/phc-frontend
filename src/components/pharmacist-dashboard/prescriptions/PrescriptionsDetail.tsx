@@ -65,6 +65,7 @@ function printPrescriptionOrder(order: PrescriptionOrder) {
         <tr>
           <td>${index + 1}</td>
           <td>${escapeHtml(item.custom_drug_name || item.medication_name)}</td>
+          <td>${item.quantity ?? 1}</td>
           <td>${escapeHtml(item.dosage || "-")}</td>
           <td>${escapeHtml(item.frequency || "-")}</td>
           <td>${escapeHtml(item.duration || "-")}</td>
@@ -104,7 +105,7 @@ function printPrescriptionOrder(order: PrescriptionOrder) {
         <h2>Medications</h2>
         <table>
           <thead>
-            <tr><th>#</th><th>Drug</th><th>Dosage</th><th>Frequency</th><th>Duration</th></tr>
+            <tr><th>#</th><th>Drug</th><th>Qty</th><th>Dosage</th><th>Frequency</th><th>Duration</th></tr>
           </thead>
           <tbody>
             ${medicationRows}
@@ -281,6 +282,10 @@ export default function PharmacistPrescriptionsDetail() {
                       label="Drug Name"
                       value={item.custom_drug_name || item.medication_name}
                     />
+                    <ReadonlyField
+                      label="Quantity"
+                      value={String(item.quantity ?? 1)}
+                    />
                   </div>
 
                   <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
@@ -343,31 +348,24 @@ export default function PharmacistPrescriptionsDetail() {
           isSubmitting={dispenseMutation.isPending}
           errorMessage={dispenseError}
           onClose={() => setDispenseModalOpen(false)}
-          onConfirm={(items) => {
+          onConfirm={() => {
             setDispenseError("");
-            dispenseMutation.mutate(
-              {
-                orderId: prescription.id,
-                patientId: prescription.patient,
-                items,
+            dispenseMutation.mutate(prescription.id, {
+              onSuccess: () => {
+                setDispenseModalOpen(false);
+                setToastMessage(
+                  `${prescription.prescription_id} dispensed successfully`,
+                );
+                window.setTimeout(() => setToastMessage(""), 3500);
               },
-              {
-                onSuccess: () => {
-                  setDispenseModalOpen(false);
-                  setToastMessage(
-                    `${prescription.prescription_id} dispensed successfully`,
-                  );
-                  window.setTimeout(() => setToastMessage(""), 3500);
-                },
-                onError: (error: unknown) => {
-                  setDispenseError(
-                    error instanceof Error
-                      ? error.message
-                      : "Failed to dispense. Please try again.",
-                  );
-                },
+              onError: (error: unknown) => {
+                setDispenseError(
+                  error instanceof Error
+                    ? error.message
+                    : "Failed to dispense. Please try again.",
+                );
               },
-            );
+            });
           }}
         />
       )}

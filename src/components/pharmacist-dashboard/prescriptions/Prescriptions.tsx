@@ -321,31 +321,24 @@ export default function Prescriptions() {
             isSubmitting={dispenseMutation.isPending}
             errorMessage={dispenseError}
             onClose={() => setDispenseModalOpen(false)}
-            onConfirm={(items, note) => {
+            onConfirm={() => {
               setDispenseError("");
-              dispenseMutation.mutate(
-                {
-                  orderId: selectedOrder.id,
-                  patientId: selectedOrder.patient,
-                  items,
+              dispenseMutation.mutate(selectedOrder.id, {
+                onSuccess: () => {
+                  setDispenseModalOpen(false);
+                  setToastMessage(
+                    `${selectedOrder.prescription_id} dispensed successfully`,
+                  );
+                  window.setTimeout(() => setToastMessage(""), 3500);
                 },
-                {
-                  onSuccess: () => {
-                    setDispenseModalOpen(false);
-                    setToastMessage(
-                      `${selectedOrder.prescription_id} dispensed successfully`,
-                    );
-                    window.setTimeout(() => setToastMessage(""), 3500);
-                  },
-                  onError: (error: unknown) => {
-                    setDispenseError(
-                      error instanceof Error
-                        ? error.message
-                        : "Failed to dispense. Please try again.",
-                    );
-                  },
+                onError: (error: unknown) => {
+                  setDispenseError(
+                    error instanceof Error
+                      ? error.message
+                      : "Failed to dispense. Please try again.",
+                  );
                 },
-              );
+              });
             }}
           />
         )

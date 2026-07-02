@@ -15,6 +15,7 @@ export interface PrescriptionFilters {
 export interface PrescriptionItemPayload {
   drug: string;
   custom_drug_name?: string;
+  quantity: number;
   dosage: string;
   frequency: string;
   duration: string;

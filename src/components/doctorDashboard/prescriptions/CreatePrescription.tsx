@@ -30,6 +30,7 @@ interface MedicationItem {
   inventory_item: string;
   inventory_item_label: string;
   custom_drug_name: string;
+  quantity: string;
   dosage: string;
   frequency: string;
   duration: string;
@@ -41,6 +42,7 @@ const EMPTY_MEDICATION_FIELDS = {
   inventory_item: "",
   inventory_item_label: "",
   custom_drug_name: "",
+  quantity: "1",
   dosage: "",
   frequency: "",
   duration: "",
@@ -601,6 +603,15 @@ export default function CreatePrescription() {
       return;
     }
 
+    const hasInvalidQuantity = form.items.some(
+      (item) => !item.quantity || Number(item.quantity) <= 0,
+    );
+
+    if (hasInvalidQuantity) {
+      setFormError("Please enter a valid quantity for every medication.");
+      return;
+    }
+
     const payload: any = {
       patient: selectedAptObj.patient,
       appointment: form.appointmentId,
@@ -608,6 +619,7 @@ export default function CreatePrescription() {
       instructions: form.instructions,
       items: form.items.map((item) => {
         const itemPayload: any = {
+          quantity: Number(item.quantity) || 1,
           dosage: item.dosage,
           frequency: item.frequency,
           duration: item.duration,
@@ -802,6 +814,23 @@ export default function CreatePrescription() {
                           }
                           className="mt-1 w-full bg-transparent text-base outline-none"
                           placeholder="e.g. 2 Tablets, 10ml"
+                        />
+                      </FieldShell>
+
+                      <FieldShell label="Quantity to Dispense *">
+                        <input
+                          type="number"
+                          min="1"
+                          value={item.quantity}
+                          onChange={(e) =>
+                            handleMedicationChange(
+                              item.id,
+                              "quantity",
+                              e.target.value,
+                            )
+                          }
+                          className="mt-1 w-full bg-transparent text-base outline-none"
+                          placeholder="e.g. 20"
                         />
                       </FieldShell>
 

@@ -3,6 +3,7 @@ export interface PrescriptionItem {
   inventory_item: string;
   custom_drug_name: string | null;
   medication_name: string;
+  quantity: number;
   dosage: string;
   frequency: string;
   duration: string;
