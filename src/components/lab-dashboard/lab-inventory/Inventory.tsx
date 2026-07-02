@@ -167,7 +167,7 @@ const SCHEDULE_CARDS = [
   },
 ];
 
-const DEFAULT_INVENTORY_CATEGORIES = ["DRUG", "CONSUMABLE"];
+const DEFAULT_INVENTORY_CATEGORIES = ["LAB_EQUIPMENT", "CONSUMABLE"];
 
 const STATUS_OPTIONS = ["All Status", "In Stock", "Low Stock", "Out of Stock"];
 const STATUS_FILTERS: Record<string, string | undefined> = {
@@ -1268,7 +1268,8 @@ export default function Inventory() {
       search,
       status: STATUS_FILTERS[status],
       inventory_category:
-        categories.length > 0 && categories.length < INVENTORY_CATEGORY_OPTIONS.length
+        categories.length > 0 &&
+        categories.length < INVENTORY_CATEGORY_OPTIONS.length
           ? categories.join(",")
           : undefined,
       start_date: startDate,
