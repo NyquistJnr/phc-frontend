@@ -143,7 +143,7 @@ function ActionButton({
   consultationId: string;
 }) {
   const noteHref = appointmentId
-    ? `/doctor-dashboard/consultations/new?appointment=${appointmentId}`
+    ? `/doctor-dashboard/consultations/${consultationId}`
     : "/doctor-dashboard/consultations";
 
   if (status === "In-consultation") {

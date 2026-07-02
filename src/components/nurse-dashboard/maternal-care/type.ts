@@ -48,6 +48,10 @@ export interface CreateEpisodePayload {
 export interface AncVisitResult {
   id: string;
   appointment_date: string;
+  appointment_custom_id?: string;
+  patient_id?: string;
+  patient_name?: string;
+  patient_display_id?: string;
   attendance_type: "NEW" | "RETURN";
   hiv_status: string;
   vdrl_syphilis: string;
@@ -85,6 +89,10 @@ export interface PncVisitResult {
   episode: string;
   appointment: string;
   appointment_date: string;
+  appointment_custom_id?: string;
+  patient_id?: string;
+  patient_name?: string;
+  patient_display_id?: string;
   attendance_type: "NEW" | "RETURN";
   timing_of_visit: string;
   vaginal_examination_conducted: boolean;
@@ -222,6 +230,10 @@ export const INITIAL_FORM: MaternalForm = {
 export interface AncVisitResult {
   id: string;
   appointment_date: string;
+  appointment_custom_id?: string;
+  patient_id?: string;
+  patient_name?: string;
+  patient_display_id?: string;
   attendance_type: "NEW" | "RETURN";
   hiv_status: string;
   vdrl_syphilis: string;
@@ -243,6 +255,10 @@ export interface PncVisitResult {
   episode: string;
   appointment: string;
   appointment_date: string;
+  appointment_custom_id?: string;
+  patient_id?: string;
+  patient_name?: string;
+  patient_display_id?: string;
   attendance_type: "NEW" | "RETURN";
   timing_of_visit: string;
   vaginal_examination_conducted: boolean;

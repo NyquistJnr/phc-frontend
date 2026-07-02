@@ -1,19 +1,35 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, FileText, Activity, Info, CheckCircle2, Pill } from "lucide-react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { toast } from "react-toastify";
+import {
+  ArrowLeft,
+  FileText,
+  Activity,
+  Info,
+  Pill,
+  Loader2,
+  Clock,
+} from "lucide-react";
 import DoctorHeader from "@/src/components/doctorDashboard/generics/Header";
 import { CustomDropdown } from "@/src/components/generic/ui/CustomDropdown";
 import {
   ConsultationPayload,
   useCreateConsultation,
+  usePatchConsultation,
   useMyAppointments,
   useAppointmentById,
   useAppointmentVitals,
+  useConsultationById,
+  useConsultationByAppointmentId,
 } from "@/src/hooks/doctors/use-consultation";
-import type { MyAppointment, PaginatedResponse } from "./types";
+import type {
+  MyAppointment,
+  PaginatedResponse,
+  ConsultationRecord,
+} from "./types";
 import LabRequestsSection from "./LabRequestsSection";
 import ReferralSection from "./ReferralSection";
 
@@ -40,6 +56,17 @@ function getApiErrorMessage(error: unknown, fallback: string) {
     maybeError.response?.data?.detail ||
     fallback
   );
+}
+
+function formatDate(value?: string) {
+  if (!value) return "";
+  return new Date(value).toLocaleString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 function TextareaField({
@@ -69,29 +96,39 @@ function TextareaField({
   );
 }
 
-export default function CreateNote() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const appointmentId = searchParams.get("appointment") || "";
-  const isAppointmentLocked = !!appointmentId; // Determine if we should lock the dropdown
-
-  const [selectedAppointment, setSelectedAppointment] = useState(
-    () => appointmentId,
+function CenteredCard({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex min-h-[240px] items-center justify-center rounded-xl border border-gray-100 bg-white p-8 text-center shadow-sm">
+      {children}
+    </div>
   );
-  const [form, setForm] = useState(INITIAL_FORM);
-  const [formError, setFormError] = useState("");
-  const [savedConsultationId, setSavedConsultationId] = useState<string | null>(null);
+}
+
+export default function ConsultationWorkspace() {
+  const router = useRouter();
+  const params = useParams();
+  const searchParams = useSearchParams();
+
+  const routeId = (params?.id as string) || "";
+  const appointmentQueryParam = searchParams.get("appointment") || "";
+  const isEditRoute = !!routeId;
+
+  // ── Resolve the record when arriving via /consultations/{id} ──────────────
+  const {
+    data: consultationData,
+    isLoading: isLoadingConsultation,
+    isError: isConsultationError,
+  } = useConsultationById(routeId);
+  const consultation = consultationData as ConsultationRecord | undefined;
+
+  // ── Resolve the appointment when arriving via /consultations/new ──────────
+  const [selectedAppointment, setSelectedAppointment] = useState(
+    () => appointmentQueryParam,
+  );
+  const isAppointmentLocked = !isEditRoute && !!appointmentQueryParam;
 
   const { data: appointmentsData, isLoading: isLoadingAppointments } =
     useMyAppointments({});
-
-  // Fetch detailed info for the selected appointment
-  const { data: appointmentDetails, isLoading: isLoadingDetails } =
-    useAppointmentById(selectedAppointment);
-  const { data: vitalsData, isLoading: isLoadingVitals } =
-    useAppointmentVitals(selectedAppointment);
-
-  const { mutate: createConsultation, isPending } = useCreateConsultation();
 
   const appointments = useMemo(() => {
     const appointmentPayload = appointmentsData as
@@ -114,11 +151,56 @@ export default function CreateNote() {
     [appointments],
   );
 
+  // Does a consultation already exist for the appointment we're about to create one for?
+  const { data: existingByAppointment, isFetched: isExistingChecked } =
+    useConsultationByAppointmentId(!isEditRoute ? selectedAppointment : "");
+
+  // Auto-forward /new?appointment=X to the canonical /consultations/{id} once we
+  // learn a record already exists — this is what turns the next save into a PATCH.
+  useEffect(() => {
+    if (
+      !isEditRoute &&
+      selectedAppointment &&
+      isExistingChecked &&
+      (existingByAppointment as ConsultationRecord | undefined)?.id
+    ) {
+      router.replace(
+        `/doctor-dashboard/consultations/${(existingByAppointment as ConsultationRecord).id}`,
+      );
+    }
+  }, [
+    isEditRoute,
+    selectedAppointment,
+    isExistingChecked,
+    existingByAppointment,
+    router,
+  ]);
+
+  const isRedirectingToExisting =
+    !isEditRoute &&
+    !!selectedAppointment &&
+    !!(existingByAppointment as ConsultationRecord | undefined)?.id;
+
+  const record: ConsultationRecord | undefined = isEditRoute
+    ? consultation
+    : isRedirectingToExisting
+      ? (existingByAppointment as ConsultationRecord)
+      : undefined;
+
+  const hasExistingRecord = !!record?.id;
+  const appointmentId = isEditRoute
+    ? consultation?.appointment || ""
+    : selectedAppointment;
+
   const activeAppointment = appointments.find(
     (appointment) => appointment.id === selectedAppointment,
   );
 
-  // Extract the most recent vitals if they exist
+  const { data: appointmentDetails, isLoading: isLoadingDetails } =
+    useAppointmentById(appointmentId);
+  const { data: vitalsData, isLoading: isLoadingVitals } =
+    useAppointmentVitals(appointmentId);
+
   const latestVitals = useMemo(() => {
     if (vitalsData?.results && vitalsData.results.length > 0) {
       return vitalsData.results[0];
@@ -126,39 +208,161 @@ export default function CreateNote() {
     return null;
   }, [vitalsData]);
 
+  // ── Form state, hydrated from the existing record when editing ────────────
+  const [form, setForm] = useState(INITIAL_FORM);
+  const [hydratedRecordId, setHydratedRecordId] = useState<string | null>(null);
+  const [formError, setFormError] = useState("");
+
+  // Adjusting state during render (rather than in an effect) to sync the form
+  // with whichever record just loaded, per React's "resetting state" pattern.
+  if (record && record.id !== hydratedRecordId) {
+    setHydratedRecordId(record.id);
+    setForm({
+      chief_complaint: record.chief_complaint || "",
+      presenting_complaint: record.presenting_complaint || "",
+      history_of_present_complaint: record.history_of_present_complaint || "",
+      past_medical_history: record.past_medical_history || "",
+      examination_findings: record.examination_findings || "",
+      primary_diagnosis: record.primary_diagnosis || "",
+      secondary_diagnosis: record.secondary_diagnosis || "",
+      treatment_plan: record.treatment_plan || "",
+      additional_notes: record.additional_notes || "",
+    });
+  }
+
   const updateField = (field: FieldName, value: string) => {
     setForm((current) => ({ ...current, [field]: value }));
     setFormError("");
   };
 
+  const { mutate: createConsultation, isPending: isCreating } =
+    useCreateConsultation();
+  const { mutate: patchConsultation, isPending: isPatching } =
+    usePatchConsultation();
+  const isSaving = isCreating || isPatching;
+
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!selectedAppointment) {
+    setFormError("");
+
+    if (!appointmentId) {
       setFormError("Please select an appointment.");
       return;
     }
 
     const payload: ConsultationPayload = {
-      appointment: selectedAppointment,
+      appointment: appointmentId,
       ...form,
     };
 
-    createConsultation(payload, {
-      onSuccess: (response) => {
-        const created = response as {
-          data?: { data?: { id?: string }; id?: string };
-          id?: string;
-        };
-        const id = created?.data?.data?.id || created?.data?.id || created?.id;
-        setSavedConsultationId(id ?? "");
-      },
-      onError: (error) => {
-        setFormError(
-          getApiErrorMessage(error, "Failed to save consultation note."),
-        );
-      },
-    });
+    if (hasExistingRecord && record?.id) {
+      patchConsultation(
+        { id: record.id, payload },
+        {
+          onSuccess: () => {
+            toast.success("Consultation note updated successfully.");
+          },
+          onError: (error) => {
+            setFormError(
+              getApiErrorMessage(error, "Failed to update consultation note."),
+            );
+          },
+        },
+      );
+    } else {
+      createConsultation(payload, {
+        onSuccess: (response) => {
+          const created = response as {
+            data?: { data?: { id?: string }; id?: string };
+            id?: string;
+          };
+          const id =
+            created?.data?.data?.id || created?.data?.id || created?.id;
+          toast.success("Consultation note created successfully.");
+          if (id) {
+            router.replace(`/doctor-dashboard/consultations/${id}`);
+          }
+        },
+        onError: (error) => {
+          setFormError(
+            getApiErrorMessage(error, "Failed to save consultation note."),
+          );
+        },
+      });
+    }
   };
+
+  // ── Loading / error states for the /consultations/{id} entry point ────────
+  if (isEditRoute && isLoadingConsultation) {
+    return (
+      <div className="min-h-screen bg-[#F6F7FC]">
+        <DoctorHeader
+          title="Consultations"
+          breadcrumbs={[
+            { label: "Consultations", href: "/doctor-dashboard/consultations" },
+            { label: "Consultation", active: true },
+          ]}
+        />
+        <div className="px-4 py-6 sm:px-6 lg:py-8">
+          <CenteredCard>
+            <div className="flex items-center gap-2 text-gray-500">
+              <Loader2 size={18} className="animate-spin" />
+              Loading consultation...
+            </div>
+          </CenteredCard>
+        </div>
+      </div>
+    );
+  }
+
+  if (isEditRoute && (isConsultationError || !consultation)) {
+    return (
+      <div className="min-h-screen bg-[#F6F7FC]">
+        <DoctorHeader
+          title="Consultations"
+          breadcrumbs={[
+            { label: "Consultations", href: "/doctor-dashboard/consultations" },
+            { label: "Consultation", active: true },
+          ]}
+        />
+        <div className="px-4 py-6 sm:px-6 lg:py-8">
+          <Link
+            href="/doctor-dashboard/consultations"
+            className="mb-8 inline-flex items-center gap-2 rounded border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-[#046C3F] transition-colors hover:bg-[#F8FAF9]"
+          >
+            <ArrowLeft size={15} />
+            Back
+          </Link>
+          <CenteredCard>
+            <p className="text-red-500">Failed to load consultation details.</p>
+          </CenteredCard>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Transient state: /new?appointment=X resolved to an existing record ────
+  if (isRedirectingToExisting) {
+    return (
+      <div className="min-h-screen bg-[#F6F7FC]">
+        <DoctorHeader
+          title="Consultations"
+          breadcrumbs={[
+            { label: "Consultations", href: "/doctor-dashboard/consultations" },
+            { label: "Consultation", active: true },
+          ]}
+        />
+        <div className="px-4 py-6 sm:px-6 lg:py-8">
+          <CenteredCard>
+            <div className="flex items-center gap-2 text-gray-500">
+              <Loader2 size={18} className="animate-spin" />A consultation note
+              already exists for this appointment. Opening it...
+            </div>
+          </CenteredCard>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#F6F7FC]">
@@ -166,27 +370,59 @@ export default function CreateNote() {
         title="Consultations"
         breadcrumbs={[
           { label: "Consultations", href: "/doctor-dashboard/consultations" },
-          { label: "Create Note", active: true },
+          {
+            label: hasExistingRecord ? "Edit Consultation" : "New Consultation",
+            active: true,
+          },
         ]}
       />
       <div className="px-4 py-6 sm:px-6 lg:py-8">
-        <Link
-          href="/doctor-dashboard/consultations"
-          className="mb-8 inline-flex items-center gap-2 rounded border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-[#046C3F] transition-colors hover:bg-[#F8FAF9]"
-        >
-          <ArrowLeft size={15} />
-          Back
-        </Link>
+        <div className="mb-8 flex flex-wrap items-center justify-between gap-3">
+          <Link
+            href="/doctor-dashboard/consultations"
+            className="inline-flex items-center gap-2 rounded border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-[#046C3F] transition-colors hover:bg-[#F8FAF9]"
+          >
+            <ArrowLeft size={15} />
+            Back
+          </Link>
+
+          {appointmentId && (
+            <Link
+              href={`/doctor-dashboard/prescriptions/new?appointment=${appointmentId}`}
+              className="inline-flex items-center gap-2 rounded border border-purple-100 bg-white px-3 py-2 text-xs font-medium text-purple-700 shadow-sm transition-colors hover:bg-purple-50"
+            >
+              <Pill size={14} />
+              Write Prescription
+            </Link>
+          )}
+        </div>
 
         <form
           onSubmit={handleSubmit}
           className="rounded-xl border border-gray-100 bg-white px-5 py-7 shadow-sm sm:px-6 lg:px-8"
         >
-          <div className="mb-8 flex items-center gap-3">
-            <FileText size={21} className="text-[#046C3F]" />
-            <h2 className="text-xl font-semibold text-black">
-              Consultation Note
-            </h2>
+          <div className="mb-8 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <FileText size={21} className="text-[#046C3F]" />
+              <h2 className="text-xl font-semibold text-black">
+                Consultation Note
+              </h2>
+              <span
+                className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                  hasExistingRecord
+                    ? "bg-[#DFF3EA] text-[#039855]"
+                    : "bg-gray-100 text-gray-500"
+                }`}
+              >
+                {hasExistingRecord ? "Saved" : "Draft"}
+              </span>
+            </div>
+            {record?.updated_at && (
+              <span className="flex items-center gap-1.5 text-xs text-gray-400">
+                <Clock size={13} />
+                Last updated {formatDate(record.updated_at)}
+              </span>
+            )}
           </div>
 
           <div className="max-w-4xl space-y-6">
@@ -197,13 +433,13 @@ export default function CreateNote() {
             )}
 
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-              <div>
+              <div className="rounded-lg border border-gray-300 bg-gray-50 px-4 py-3">
                 <p className="mb-2 text-xs text-[#62636C]">Appointment *</p>
-                {isAppointmentLocked ? (
-                  // Locked State UI
-                  <div className="rounded-lg border border-gray-200 bg-gray-100 px-4 py-3 cursor-not-allowed">
+                {isEditRoute || isAppointmentLocked ? (
+                  <div className="cursor-not-allowed">
                     <p className="text-sm font-medium text-gray-700">
-                      {appointmentDetails?.patient_name ||
+                      {consultation?.patient_name ||
+                        appointmentDetails?.patient_name ||
                         activeAppointment?.patient_name ||
                         "Loading Appointment..."}{" "}
                       -{" "}
@@ -213,7 +449,6 @@ export default function CreateNote() {
                     </p>
                   </div>
                 ) : (
-                  // Selectable Dropdown
                   <CustomDropdown
                     options={appointmentOptions.map((option) => option.label)}
                     selected={
@@ -229,6 +464,8 @@ export default function CreateNote() {
                         (option) => option.label === label,
                       );
                       setSelectedAppointment(match?.value || "");
+                      setHydratedRecordId(null);
+                      setForm(INITIAL_FORM);
                     }}
                   />
                 )}
@@ -236,12 +473,14 @@ export default function CreateNote() {
               <div className="rounded-lg border border-gray-300 bg-gray-50 px-4 py-3">
                 <p className="mb-2 text-xs text-[#62636C]">Patient</p>
                 <p className="text-sm font-medium text-gray-900">
-                  {appointmentDetails?.patient_name ||
+                  {consultation?.patient_name ||
+                    appointmentDetails?.patient_name ||
                     activeAppointment?.patient_name ||
                     "-"}
                 </p>
                 <p className="mt-1 text-xs text-gray-500">
-                  {appointmentDetails?.patient_display_id ||
+                  {consultation?.patient_display_id ||
+                    appointmentDetails?.patient_display_id ||
                     activeAppointment?.patient_display_id ||
                     ""}
                 </p>
@@ -249,9 +488,8 @@ export default function CreateNote() {
             </div>
 
             {/* Context Info Display (Appointment Details & Vitals) */}
-            {selectedAppointment && (
+            {appointmentId && (
               <div className="rounded-xl border border-blue-100 bg-blue-50/50 p-5">
-                {/* Appointment Info */}
                 <div className="mb-4">
                   <div className="flex items-center gap-2 mb-3">
                     <Info size={16} className="text-blue-600" />
@@ -289,7 +527,6 @@ export default function CreateNote() {
 
                 <hr className="border-blue-100 my-4" />
 
-                {/* Vitals Info */}
                 <div>
                   <div className="flex items-center gap-2 mb-3">
                     <Activity size={16} className="text-[#046C3F]" />
@@ -340,6 +577,11 @@ export default function CreateNote() {
             )}
 
             <TextareaField
+              label="Chief Complaint"
+              value={form.chief_complaint}
+              onChange={(value) => updateField("chief_complaint", value)}
+            />
+            <TextareaField
               label="Presenting Complaint"
               value={form.presenting_complaint}
               onChange={(value) => updateField("presenting_complaint", value)}
@@ -384,70 +626,34 @@ export default function CreateNote() {
               onChange={(value) => updateField("additional_notes", value)}
             />
 
-            {savedConsultationId !== null ? (
-              <div className="rounded-xl border border-green-100 bg-green-50 p-6 space-y-5">
-                <div className="flex items-center gap-3">
-                  <CheckCircle2 size={22} className="text-[#046C3F] shrink-0" />
-                  <p className="text-sm font-semibold text-[#046C3F]">
-                    Consultation note saved successfully.
-                  </p>
-                </div>
-                <p className="text-xs text-gray-500 -mt-2">
-                  What would you like to do next?
-                </p>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <Link
-                    href={`/doctor-dashboard/prescriptions/new?appointment=${selectedAppointment}`}
-                    className="flex items-center gap-3 rounded-xl border border-purple-100 bg-white px-4 py-4 text-sm font-medium text-purple-700 shadow-sm hover:bg-purple-50 transition-colors"
-                  >
-                    <Pill size={18} className="shrink-0 text-purple-500" />
-                    Write Prescription
-                  </Link>
-                </div>
-                <div className="flex items-center gap-3 pt-1">
-                  {savedConsultationId && (
-                    <Link
-                      href={`/doctor-dashboard/consultations/${savedConsultationId}`}
-                      className="text-xs font-medium text-[#046C3F] hover:underline"
-                    >
-                      View consultation note
-                    </Link>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => router.push("/doctor-dashboard/consultations")}
-                    className="text-xs font-medium text-gray-500 hover:underline"
-                  >
-                    Done — back to consultations
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="flex justify-end gap-4 pt-2">
-                <button
-                  type="button"
-                  onClick={() => router.push("/doctor-dashboard/consultations")}
-                  disabled={isPending}
-                  className="h-12 rounded-xl bg-[#B9BDC9] px-8 text-sm font-medium text-white disabled:opacity-70"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isPending}
-                  className="h-12 rounded-xl bg-[#046C3F] px-8 text-sm font-medium text-white disabled:opacity-70"
-                >
-                  {isPending ? "Saving..." : "Save Consultation"}
-                </button>
-              </div>
-            )}
+            <div className="flex justify-end gap-4 pt-2">
+              <button
+                type="button"
+                onClick={() => router.push("/doctor-dashboard/consultations")}
+                disabled={isSaving}
+                className="h-12 rounded-xl bg-[#B9BDC9] px-8 text-sm font-medium text-white disabled:opacity-70"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSaving}
+                className="h-12 rounded-xl bg-[#046C3F] px-8 text-sm font-medium text-white disabled:opacity-70"
+              >
+                {isSaving
+                  ? "Saving..."
+                  : hasExistingRecord
+                    ? "Update Consultation"
+                    : "Save Consultation"}
+              </button>
+            </div>
           </div>
         </form>
 
-        {selectedAppointment && (
+        {appointmentId && (
           <div className="mt-6 space-y-6">
-            <LabRequestsSection appointmentId={selectedAppointment} />
-            <ReferralSection appointmentId={selectedAppointment} />
+            <LabRequestsSection appointmentId={appointmentId} />
+            <ReferralSection appointmentId={appointmentId} />
           </div>
         )}
       </div>
