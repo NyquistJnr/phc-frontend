@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { ElementType, ReactNode } from "react";
 import {
   Ban,
@@ -51,7 +51,6 @@ import type {
 
 type Mode = "list" | "add";
 type ModalState =
-  | { mode: "view"; item: InventoryItem }
   | { mode: "refill"; item: InventoryItem }
   | { mode: "edit"; item: InventoryItem };
 type StatusLabel = "In Stock" | "Low Stock" | "Out of Stock" | "Unknown";
@@ -848,109 +847,6 @@ function RefillModal({
   );
 }
 
-// ─── View Modal ───────────────────────────────────────────────────────────────
-
-function ViewModal({
-  item,
-  onClose,
-  onRefill,
-}: {
-  item: InventoryItem;
-  onClose: () => void;
-  onRefill: () => void;
-}) {
-  const batch = getPrimaryBatch(item);
-
-  const itemRows = [
-    { label: "Category", value: item.inventory_category },
-    { label: "Classification", value: item.drug_classification || "-" },
-    { label: "Item Type", value: item.item_type || "-" },
-    { label: "Threshold Type", value: item.threshold_type },
-    { label: "Low Stock Threshold", value: String(item.global_threshold) },
-    { label: "Total Stock", value: String(item.total_stock) },
-  ];
-
-  const batchRows = batch
-    ? [
-        { label: "Batch Number", value: batch.batch_number || "-" },
-        { label: "Remaining Qty", value: String(batch.remaining_quantity ?? "-") },
-        { label: "Purchase Date", value: formatDate(batch.purchased_date) },
-        { label: "Expiry Date", value: formatDate(batch.expiry_date) },
-        { label: "Supplier", value: batch.supplier || "-" },
-        { label: "Cost Price", value: batch.cost_price || "-" },
-        { label: "Note", value: batch.note || "-" },
-      ]
-    : [];
-
-  return createPortal(
-    <div className="fixed inset-0 z-[9999] overflow-y-auto bg-black/20 px-4 py-16 backdrop-blur-sm">
-      <div className="mx-auto max-w-2xl rounded-xl bg-white px-6 py-8 shadow-2xl lg:px-8">
-        <div className="mb-7 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <PackageCheck size={24} className="text-[#046C3F]" />
-            <h2 className="text-xl font-semibold text-black">{item.name}</h2>
-          </div>
-          <button
-            onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#FFF4E5] text-black"
-            aria-label="Close"
-          >
-            <X size={20} />
-          </button>
-        </div>
-
-        <div className="space-y-6">
-          <div>
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">
-              Item Details
-            </p>
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              {itemRows.map(({ label, value }) => (
-                <div key={label} className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
-                  <p className="text-xs text-gray-500">{label}</p>
-                  <p className="mt-1 text-base text-gray-800">{value}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {batchRows.length > 0 && (
-            <div>
-              <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">
-                Active Batch
-              </p>
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                {batchRows.map(({ label, value }) => (
-                  <div key={label} className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
-                    <p className="text-xs text-gray-500">{label}</p>
-                    <p className="mt-1 text-base text-gray-800">{value}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-end">
-          <button
-            onClick={onClose}
-            className="h-12 rounded-xl bg-[#BEC1CB] px-10 text-base font-medium text-white"
-          >
-            Close
-          </button>
-          <button
-            onClick={onRefill}
-            className="flex h-12 items-center justify-center gap-2 rounded-xl bg-[#046C3F] px-10 text-base font-medium text-white"
-          >
-            <PackagePlus size={18} /> Refill Stock
-          </button>
-        </div>
-      </div>
-    </div>,
-    document.body,
-  );
-}
-
 // ─── Edit Modal ───────────────────────────────────────────────────────────────
 
 function EditModal({
@@ -1111,7 +1007,7 @@ function ActionMenu({
             className="z-[9999] rounded-lg border border-gray-200 bg-white py-3 shadow-xl"
           >
             <button className={actionClass} onClick={() => { setOpen(false); onView(item); }}>
-              <Eye size={20} /> View Details
+              <Eye size={20} /> View Full Information
             </button>
             <button className={actionClass} onClick={() => { setOpen(false); onRefill(item); }}>
               <PackagePlus size={20} /> Refill Stock
@@ -1132,6 +1028,7 @@ function ActionMenu({
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function Inventory() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const page = Number(searchParams.get("page")) || 1;
   const pageSize = Number(searchParams.get("page_size")) || 10;
@@ -1335,7 +1232,7 @@ export default function Inventory() {
       render: (row) => (
         <ActionMenu
           item={row}
-          onView={(selected) => { setFormError(""); setModal({ mode: "view", item: selected }); }}
+          onView={(selected) => router.push(`/lab-dashboard/lab-inventory/${selected.id}`)}
           onRefill={(selected) => { setFormError(""); setModal({ mode: "refill", item: selected }); }}
           onEdit={(selected) => { setFormError(""); setModal({ mode: "edit", item: selected }); }}
           onExport={handleExport}
@@ -1411,13 +1308,6 @@ export default function Inventory() {
       </div>
 
       {/* Modals */}
-      {modal?.mode === "view" && (
-        <ViewModal
-          item={modal.item}
-          onClose={() => setModal(null)}
-          onRefill={() => { setFormError(""); setModal({ mode: "refill", item: modal.item }); }}
-        />
-      )}
       {modal?.mode === "refill" && (
         <RefillModal
           item={modal.item}
