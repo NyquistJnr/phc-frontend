@@ -7,6 +7,8 @@ export interface MyAppointmentsFilters {
   search?: string;
   status?: string;
   visit_type?: string;
+  page?: number;
+  page_size?: number;
 }
 
 export interface ConsultationFilters {
@@ -45,6 +47,9 @@ export function useMyAppointments(filters: MyAppointmentsFilters) {
       if (filters.search) params.append("search", filters.search);
       if (filters.status) params.append("status", filters.status);
       if (filters.visit_type) params.append("visit_type", filters.visit_type);
+      if (filters.page) params.append("page", String(filters.page));
+      if (filters.page_size)
+        params.append("page_size", String(filters.page_size));
 
       const queryString = params.toString() ? `?${params.toString()}` : "";
       const res = await api.get<any>(

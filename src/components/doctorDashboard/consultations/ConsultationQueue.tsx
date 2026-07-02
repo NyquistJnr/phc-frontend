@@ -1,10 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Eye, FileText, MoreHorizontal, Plus } from "lucide-react";
+import { FileText, Plus } from "lucide-react";
 import DoctorHeader from "@/src/components/doctorDashboard/generics/Header";
 import NurseDateRangeFilter from "@/src/components/nurse-dashboard/generics/NurseDateRangeFilter";
 import { ColumnDef, DataTable } from "@/src/components/generic/ui/DataTable";
@@ -12,6 +11,7 @@ import { StatusBadge } from "@/src/components/generic/ui/TableHelpers";
 import { CustomDropdown } from "@/src/components/generic/ui/CustomDropdown";
 import { useConsultations } from "@/src/hooks/doctors/use-consultation";
 import type { ConsultationRecord, PaginatedResponse } from "./types";
+import AddConsultationModal from "./AddConsultationModal";
 
 const PAGE_SIZES = ["10", "50", "100"];
 const STATUS_OPTIONS = ["All Status", "IN_PROGRESS", "COMPLETED"];
@@ -37,88 +37,15 @@ function formatDate(value?: string) {
   });
 }
 
-function ConsultationActionMenu({ row }: { row: ConsultationRow }) {
-  const router = useRouter();
-  const [open, setOpen] = useState(false);
-  const [coords, setCoords] = useState({ top: 0, left: 0 });
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (
-        menuRef.current &&
-        !menuRef.current.contains(event.target as Node) &&
-        buttonRef.current &&
-        !buttonRef.current.contains(event.target as Node)
-      ) {
-        setOpen(false);
-      }
-    }
-
-    if (open) document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [open]);
-
-  const toggleMenu = () => {
-    if (!open && buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect();
-      setCoords({
-        top: rect.bottom + window.scrollY + 4,
-        left: Math.max(12, rect.right + window.scrollX - 220),
-      });
-    }
-    setOpen((current) => !current);
-  };
-
+function AddNoteAction({ row }: { row: ConsultationRow }) {
   return (
-    <>
-      <button
-        ref={buttonRef}
-        type="button"
-        onClick={toggleMenu}
-        className="inline-flex h-8 w-8 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-gray-100"
-      >
-        <MoreHorizontal size={18} />
-      </button>
-      {open &&
-        typeof document !== "undefined" &&
-        createPortal(
-          <div
-            ref={menuRef}
-            style={{ top: coords.top, left: coords.left }}
-            className="absolute z-[999] w-56 rounded-xl border border-gray-100 bg-white py-2 shadow-[0_8px_30px_rgb(0,0,0,0.12)]"
-          >
-            <button
-              type="button"
-              onClick={() => {
-                router.push(`/doctor-dashboard/consultations/${row.id}`);
-                setOpen(false);
-              }}
-              className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              <Eye size={16} className="text-gray-500" />
-              View Detail
-            </button>
-            {row.appointment && (
-              <button
-                type="button"
-                onClick={() => {
-                  router.push(
-                    `/doctor-dashboard/consultations/new?appointment=${row.appointment}`,
-                  );
-                  setOpen(false);
-                }}
-                className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm font-medium text-gray-700 hover:bg-gray-50"
-              >
-                <FileText size={16} className="text-gray-500" />
-                Add Note
-              </button>
-            )}
-          </div>,
-          document.body,
-        )}
-    </>
+    <Link
+      href={`/doctor-dashboard/consultations/new?appointment=${row.appointment}`}
+      className="inline-flex items-center gap-1.5 rounded-lg border border-[#046C3F] px-3 py-1.5 text-xs font-medium text-[#046C3F] transition-colors hover:bg-[#F0FAF5]"
+    >
+      <FileText size={14} />
+      Add Note
+    </Link>
   );
 }
 
@@ -126,6 +53,7 @@ export default function ConsultationQueue() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   const page = Number(searchParams.get("page")) || 1;
   const pageSize = Number(searchParams.get("page_size")) || 10;
@@ -212,7 +140,7 @@ export default function ConsultationQueue() {
       },
       {
         header: "Action",
-        render: (row) => <ConsultationActionMenu row={row} />,
+        render: (row) => <AddNoteAction row={row} />,
       },
     ],
     [],
@@ -234,13 +162,14 @@ export default function ConsultationQueue() {
               Review consultation records and continue patient notes.
             </p>
           </div>
-          <Link
-            href="/doctor-dashboard/appointments"
+          <button
+            type="button"
+            onClick={() => setIsAddModalOpen(true)}
             className="inline-flex h-11 items-center justify-center gap-3 rounded-xl bg-[#046C3F] px-7 text-base font-medium text-white transition-colors hover:bg-[#035a34]"
           >
             <Plus size={20} />
             Add Consultation Note
-          </Link>
+          </button>
         </div>
 
         <DataTable
@@ -295,6 +224,10 @@ export default function ConsultationQueue() {
           }
         />
       </div>
+
+      {isAddModalOpen && (
+        <AddConsultationModal onClose={() => setIsAddModalOpen(false)} />
+      )}
     </div>
   );
 }
