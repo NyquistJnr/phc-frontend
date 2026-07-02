@@ -54,7 +54,7 @@ type Mode = "list" | "add";
 type ModalState =
   | { mode: "refill"; item: InventoryItem }
   | { mode: "edit"; item: InventoryItem };
-type StatusLabel = "In Stock" | "Low Stock" | "Out of Stock" | "Unknown";
+export type StatusLabel = "In Stock" | "Low Stock" | "Out of Stock" | "Unknown";
 type ScheduleType = "NONE" | "ONCE" | "RECURRING" | "VARIABLE_SEQUENCE";
 
 type AddItemFormValues = {
@@ -97,7 +97,7 @@ type RefillFormValues = {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const INVENTORY_CATEGORY_OPTIONS = [
+export const INVENTORY_CATEGORY_OPTIONS = [
   { label: "Drug / Medication", value: "DRUG" },
   { label: "Lab Equipment", value: "LAB_EQUIPMENT" },
   { label: "Consumable", value: "CONSUMABLE" },
@@ -169,15 +169,20 @@ const SCHEDULE_CARDS = [
 
 const DEFAULT_INVENTORY_CATEGORIES = ["LAB_EQUIPMENT", "CONSUMABLE"];
 
-const STATUS_OPTIONS = ["All Status", "In Stock", "Low Stock", "Out of Stock"];
-const STATUS_FILTERS: Record<string, string | undefined> = {
+export const STATUS_OPTIONS = [
+  "All Status",
+  "In Stock",
+  "Low Stock",
+  "Out of Stock",
+];
+export const STATUS_FILTERS: Record<string, string | undefined> = {
   "All Status": undefined,
   "In Stock": "IN_STOCK",
   "Low Stock": "LOW_STOCK",
   "Out of Stock": "OUT_OF_STOCK",
 };
 
-const statusColors: Record<StatusLabel, { bg: string; text: string }> = {
+export const statusColors: Record<StatusLabel, { bg: string; text: string }> = {
   "In Stock": { bg: "#DFF3EA", text: "#039855" },
   "Low Stock": { bg: "#FFF4E5", text: "#1F2937" },
   "Out of Stock": { bg: "#FDE8E8", text: "#F33131" },
@@ -221,7 +226,7 @@ function getErrorMessage(error: unknown, fallback: string) {
   return fallback;
 }
 
-function getStatusLabel(status?: string): StatusLabel {
+export function getStatusLabel(status?: string): StatusLabel {
   switch (status) {
     case "IN_STOCK":
       return "In Stock";
@@ -238,7 +243,7 @@ function getPrimaryBatch(item: InventoryItem) {
   return item.active_batches?.[0] ?? null;
 }
 
-function formatDate(value?: string | null) {
+export function formatDate(value?: string | null) {
   if (!value) return "-";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
@@ -254,7 +259,7 @@ function escapeHtml(value: string) {
     .replaceAll("'", "&#039;");
 }
 
-function formatScheduleRules(rules: InventoryItem["schedule_rules"]) {
+export function formatScheduleRules(rules: InventoryItem["schedule_rules"]) {
   if (!rules) return "-";
   switch (rules.type) {
     case "ONCE":
@@ -287,7 +292,7 @@ function buildScheduleRules(form: AddItemFormValues) {
   return null;
 }
 
-function printInventoryItem(item: InventoryItem) {
+export function printInventoryItem(item: InventoryItem) {
   const batch = getPrimaryBatch(item);
   const status = getStatusLabel(item.status);
   const printableRows = [
@@ -1058,7 +1063,7 @@ function EditModal({
 
 // ─── Category Filter ──────────────────────────────────────────────────────────
 
-function CategoryFilterDropdown({
+export function CategoryFilterDropdown({
   options,
   selected,
   onChange,
@@ -1647,6 +1652,7 @@ export default function Inventory() {
           showSearch
           searchPlaceholder="Search by item name or batch no"
           onSearch={setSearch}
+          viewAllLink="/lab-dashboard/lab-inventory/all"
           toolbarActions={
             <>
               <DateRangeFilter
