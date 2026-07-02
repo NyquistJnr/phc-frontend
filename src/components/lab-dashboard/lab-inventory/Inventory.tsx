@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { ElementType, ReactNode } from "react";
 import {
   Ban,
   Calendar,
+  Check,
   CheckCircle2,
   ChevronDown,
   ClipboardList,
@@ -166,6 +167,8 @@ const SCHEDULE_CARDS = [
   },
 ];
 
+const DEFAULT_INVENTORY_CATEGORIES = ["DRUG", "CONSUMABLE"];
+
 const STATUS_OPTIONS = ["All Status", "In Stock", "Low Stock", "Out of Stock"];
 const STATUS_FILTERS: Record<string, string | undefined> = {
   "All Status": undefined,
@@ -249,6 +252,20 @@ function escapeHtml(value: string) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+function formatScheduleRules(rules: InventoryItem["schedule_rules"]) {
+  if (!rules) return "-";
+  switch (rules.type) {
+    case "ONCE":
+      return "One-time dose";
+    case "RECURRING":
+      return `Every ${rules.interval_days} day${rules.interval_days === 1 ? "" : "s"}`;
+    case "VARIABLE_SEQUENCE":
+      return `${rules.intervals_in_days.join(", ")} days`;
+    default:
+      return "-";
+  }
 }
 
 function buildScheduleRules(form: AddItemFormValues) {
@@ -1039,6 +1056,96 @@ function EditModal({
   );
 }
 
+// ─── Category Filter ──────────────────────────────────────────────────────────
+
+function CategoryFilterDropdown({
+  options,
+  selected,
+  onChange,
+}: {
+  options: { label: string; value: string }[];
+  selected: string[];
+  onChange: (values: string[]) => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (ref.current && !ref.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const toggleValue = (value: string) => {
+    if (selected.includes(value)) {
+      onChange(selected.filter((v) => v !== value));
+    } else {
+      onChange([...selected, value]);
+    }
+  };
+
+  const label =
+    selected.length === 0 || selected.length === options.length
+      ? "All Categories"
+      : options
+          .filter((option) => selected.includes(option.value))
+          .map((option) => option.label)
+          .join(", ");
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setIsOpen((current) => !current)}
+        className="flex w-full items-center justify-between gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-all hover:bg-gray-50 focus:border-[#0a6c38] focus:outline-none focus:ring-2 focus:ring-[#0a6c38]/20 sm:w-auto sm:min-w-[180px]"
+      >
+        <span className="truncate">{label}</span>
+        <ChevronDown
+          size={16}
+          className={`text-gray-400 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+        />
+      </button>
+      {isOpen && (
+        <div className="absolute right-0 z-10 mt-2 w-56 overflow-hidden rounded-xl border border-gray-100 bg-white shadow-lg">
+          <div className="py-1">
+            {options.map((option) => {
+              const checked = selected.includes(option.value);
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => toggleValue(option.value)}
+                  className={`flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm transition-colors ${
+                    checked
+                      ? "bg-[#e6f4ea] font-medium text-[#0a6c38]"
+                      : "text-gray-700 hover:bg-gray-50"
+                  }`}
+                >
+                  <span
+                    className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
+                      checked
+                        ? "border-[#046C3F] bg-[#046C3F]"
+                        : "border-gray-300"
+                    }`}
+                  >
+                    {checked && <Check size={11} className="text-white" />}
+                  </span>
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Action Menu ──────────────────────────────────────────────────────────────
 
 function ActionMenu({
@@ -1145,6 +1252,9 @@ export default function Inventory() {
   const [mode, setMode] = useState<Mode>("list");
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("All Status");
+  const [categories, setCategories] = useState<string[]>(
+    DEFAULT_INVENTORY_CATEGORIES,
+  );
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [modal, setModal] = useState<ModalState | null>(null);
@@ -1157,10 +1267,14 @@ export default function Inventory() {
       page_size: pageSize,
       search,
       status: STATUS_FILTERS[status],
+      inventory_category:
+        categories.length > 0 && categories.length < INVENTORY_CATEGORY_OPTIONS.length
+          ? categories.join(",")
+          : undefined,
       start_date: startDate,
       end_date: endDate,
     }),
-    [page, pageSize, search, status, startDate, endDate],
+    [page, pageSize, search, status, categories, startDate, endDate],
   );
 
   const { data: statsData } = useComprehensiveInventoryStats({});
@@ -1386,16 +1500,38 @@ export default function Inventory() {
   const columns: ColumnDef<InventoryItem>[] = [
     { header: "Item", accessorKey: "name", sortable: true },
     {
-      header: "Batch",
+      header: "Category",
       sortable: true,
-      render: (row) => getPrimaryBatch(row)?.batch_number || "-",
+      render: (row) => {
+        const categoryLabel =
+          INVENTORY_CATEGORY_OPTIONS.find(
+            (option) => option.value === row.inventory_category,
+          )?.label || row.inventory_category;
+        return (
+          <div>
+            <p className="text-gray-900">{categoryLabel}</p>
+            {row.drug_classification && (
+              <p className="text-xs text-gray-400">
+                {row.drug_classification === "IMMUNIZATION"
+                  ? "Immunization"
+                  : "Normal"}
+              </p>
+            )}
+          </div>
+        );
+      },
     },
-    { header: "Qty", accessorKey: "total_stock", sortable: true },
-    { header: "Threshold", accessorKey: "global_threshold", sortable: true },
+    { header: "Item Type", accessorKey: "item_type", sortable: true },
+    { header: "Total Stock", accessorKey: "total_stock", sortable: true },
     {
-      header: "Expiry",
+      header: "Threshold",
       sortable: true,
-      render: (row) => formatDate(getPrimaryBatch(row)?.expiry_date),
+      render: (row) =>
+        `${row.global_threshold}${row.threshold_type === "PERCENTAGE" ? "%" : ""}`,
+    },
+    {
+      header: "Schedule",
+      render: (row) => formatScheduleRules(row.schedule_rules),
     },
     {
       header: "Status",
@@ -1411,15 +1547,6 @@ export default function Inventory() {
           />
         );
       },
-    },
-    {
-      header: "Last Updated",
-      sortable: true,
-      render: (row) =>
-        formatDate(
-          getPrimaryBatch(row)?.updated_at ??
-            row.active_batches?.[0]?.created_at,
-        ),
     },
     {
       header: "Action",
@@ -1538,6 +1665,11 @@ export default function Inventory() {
                 options={STATUS_OPTIONS}
                 selected={status}
                 onSelect={setStatus}
+              />
+              <CategoryFilterDropdown
+                options={INVENTORY_CATEGORY_OPTIONS}
+                selected={categories}
+                onChange={setCategories}
               />
             </>
           }
