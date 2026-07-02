@@ -2,7 +2,13 @@
 
 import React, { useEffect, useRef, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, RefreshCcw, Search } from "lucide-react";
+import {
+  Building2,
+  ChevronDown,
+  RefreshCcw,
+  Search,
+  User,
+} from "lucide-react";
 import DoctorHeader from "@/src/components/doctorDashboard/generics/Header";
 import NurseBackButton from "@/src/components/nurse-dashboard/generics/NurseBackButton";
 import { useAppointments } from "@/src/hooks/nurses/use-appointments";
@@ -26,6 +32,9 @@ type ReferralFormState = {
 
   // Secondary/Tertiary Specific
   mode_of_referral: string;
+  // Which single target the softcopy email goes to — a doctor XOR a
+  // department, since the backend payload only supports one at a time.
+  target_type: "" | "DOCTOR" | "DEPARTMENT";
   target_doctor_email: string;
   target_department_email: string;
   email_subject: string;
@@ -67,6 +76,7 @@ const INITIAL_FORM: ReferralFormState = {
   receiving_facility: "",
   receiving_department: "",
   mode_of_referral: "",
+  target_type: "",
   target_doctor_email: "",
   target_department_email: "",
   email_subject: "",
@@ -246,6 +256,20 @@ export default function CreateReferral() {
     setFormError("");
   };
 
+  // Switching target keeps the two email fields mutually exclusive by
+  // construction, so the payload can never carry both at once.
+  const selectTargetType = (type: "DOCTOR" | "DEPARTMENT") => {
+    setForm((current) => ({
+      ...current,
+      target_type: type,
+      target_doctor_email:
+        type === "DOCTOR" ? current.target_doctor_email : "",
+      target_department_email:
+        type === "DEPARTMENT" ? current.target_department_email : "",
+    }));
+    setFormError("");
+  };
+
   const handleCancel = () => {
     setForm(INITIAL_FORM);
     setFormError("");
@@ -257,6 +281,7 @@ export default function CreateReferral() {
 
     const isTelemedicine = form.referral_type === "TELEMEDICINE";
     const isPrimary = form.destination_level === "PRIMARY";
+    const isSoftcopy = form.mode_of_referral === "SOFTCOPY";
 
     if (
       !form.appointment ||
@@ -267,6 +292,33 @@ export default function CreateReferral() {
     ) {
       setFormError("Please complete all required base fields.");
       return;
+    }
+
+    if (!isPrimary) {
+      if (!form.mode_of_referral) {
+        setFormError("Please select a mode of referral.");
+        return;
+      }
+      if (isSoftcopy) {
+        if (!form.target_type) {
+          setFormError(
+            "Please choose whether this referral is going to a doctor or a department.",
+          );
+          return;
+        }
+        const targetEmail =
+          form.target_type === "DOCTOR"
+            ? form.target_doctor_email
+            : form.target_department_email;
+        if (!targetEmail.trim()) {
+          setFormError(
+            form.target_type === "DOCTOR"
+              ? "Please provide the target doctor's email."
+              : "Please provide the target department's email.",
+          );
+          return;
+        }
+      }
     }
 
     const payload = {
@@ -284,10 +336,18 @@ export default function CreateReferral() {
       receiving_department: isPrimary ? form.receiving_department : null,
 
       mode_of_referral: isPrimary ? null : form.mode_of_referral,
-      target_doctor_email: isPrimary ? null : form.target_doctor_email,
-      target_department_email: isPrimary ? null : form.target_department_email,
-      email_subject: isPrimary ? "" : form.email_subject,
-      email_body: isPrimary ? "" : form.email_body,
+      // target_type keeps these mutually exclusive, but guard with `|| null`
+      // too so a cleared/never-set field is never sent as an empty string.
+      target_doctor_email:
+        !isPrimary && isSoftcopy && form.target_type === "DOCTOR"
+          ? form.target_doctor_email || null
+          : null,
+      target_department_email:
+        !isPrimary && isSoftcopy && form.target_type === "DEPARTMENT"
+          ? form.target_department_email || null
+          : null,
+      email_subject: !isPrimary && isSoftcopy ? form.email_subject : "",
+      email_body: !isPrimary && isSoftcopy ? form.email_body : "",
     };
 
     createReferral(payload, {
@@ -432,67 +492,125 @@ export default function CreateReferral() {
             {form.destination_level && form.destination_level !== "PRIMARY" && (
               <div className="space-y-6">
                 <SearchableSelect
-                  label="Mode of Referral"
+                  label="Mode of Referral *"
                   placeholder="Select mode"
                   options={REFERRAL_MODE_OPTIONS}
                   value={form.mode_of_referral}
-                  onChange={(value) =>
-                    handleFieldChange("mode_of_referral", value)
-                  }
+                  onChange={(value) => {
+                    handleFieldChange("mode_of_referral", value);
+                    if (value !== "SOFTCOPY") {
+                      // Hardcopy referrals hand off a physical document —
+                      // there's no email target, so clear any prior choice.
+                      setForm((current) => ({
+                        ...current,
+                        target_type: "",
+                        target_doctor_email: "",
+                        target_department_email: "",
+                        email_subject: "",
+                        email_body: "",
+                      }));
+                    }
+                  }}
                 />
 
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                  <FieldShell label="Target Doctor Email">
-                    <input
-                      type="email"
-                      value={form.target_doctor_email}
-                      onChange={(e) =>
-                        handleFieldChange("target_doctor_email", e.target.value)
-                      }
-                      placeholder="dr.smith@example.com"
-                      className="w-full bg-transparent text-base text-gray-700 placeholder:text-gray-400 outline-none"
-                    />
-                  </FieldShell>
+                {form.mode_of_referral === "SOFTCOPY" && (
+                  <>
+                    <div>
+                      <p className="mb-2 text-xs text-[#62636C]">
+                        Refer To *
+                      </p>
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <button
+                          type="button"
+                          onClick={() => selectTargetType("DOCTOR")}
+                          className={`flex items-center justify-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors ${
+                            form.target_type === "DOCTOR"
+                              ? "border-[#046C3F] bg-[#E8F7F0] text-[#046C3F]"
+                              : "border-gray-300 bg-white text-gray-600 hover:bg-gray-50"
+                          }`}
+                        >
+                          <User size={16} />A Specific Doctor
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => selectTargetType("DEPARTMENT")}
+                          className={`flex items-center justify-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors ${
+                            form.target_type === "DEPARTMENT"
+                              ? "border-[#046C3F] bg-[#E8F7F0] text-[#046C3F]"
+                              : "border-gray-300 bg-white text-gray-600 hover:bg-gray-50"
+                          }`}
+                        >
+                          <Building2 size={16} />A Department
+                        </button>
+                      </div>
+                    </div>
 
-                  <FieldShell label="Target Department Email">
-                    <input
-                      type="email"
-                      value={form.target_department_email}
-                      onChange={(e) =>
-                        handleFieldChange(
-                          "target_department_email",
-                          e.target.value,
-                        )
-                      }
-                      placeholder="surgery@example.com"
-                      className="w-full bg-transparent text-base text-gray-700 placeholder:text-gray-400 outline-none"
-                    />
-                  </FieldShell>
-                </div>
+                    {form.target_type === "DOCTOR" && (
+                      <FieldShell label="Target Doctor Email *">
+                        <input
+                          type="email"
+                          value={form.target_doctor_email}
+                          onChange={(e) =>
+                            handleFieldChange(
+                              "target_doctor_email",
+                              e.target.value,
+                            )
+                          }
+                          placeholder="dr.smith@example.com"
+                          className="w-full bg-transparent text-base text-gray-700 placeholder:text-gray-400 outline-none"
+                        />
+                      </FieldShell>
+                    )}
 
-                <FieldShell label="Email Subject">
-                  <input
-                    type="text"
-                    value={form.email_subject}
-                    onChange={(e) =>
-                      handleFieldChange("email_subject", e.target.value)
-                    }
-                    placeholder="Emergency Surgical Transfer..."
-                    className="w-full bg-transparent text-base text-gray-700 placeholder:text-gray-400 outline-none"
-                  />
-                </FieldShell>
+                    {form.target_type === "DEPARTMENT" && (
+                      <FieldShell label="Target Department Email *">
+                        <input
+                          type="email"
+                          value={form.target_department_email}
+                          onChange={(e) =>
+                            handleFieldChange(
+                              "target_department_email",
+                              e.target.value,
+                            )
+                          }
+                          placeholder="surgery@example.com"
+                          className="w-full bg-transparent text-base text-gray-700 placeholder:text-gray-400 outline-none"
+                        />
+                      </FieldShell>
+                    )}
 
-                <FieldShell label="Email Body" className="py-2">
-                  <textarea
-                    value={form.email_body}
-                    onChange={(e) =>
-                      handleFieldChange("email_body", e.target.value)
-                    }
-                    placeholder="Provide details for the receiving end..."
-                    rows={4}
-                    className="w-full resize-none bg-transparent text-base text-gray-700 placeholder:text-gray-400 outline-none"
-                  />
-                </FieldShell>
+                    {form.target_type && (
+                      <>
+                        <FieldShell label="Email Subject">
+                          <input
+                            type="text"
+                            value={form.email_subject}
+                            onChange={(e) =>
+                              handleFieldChange(
+                                "email_subject",
+                                e.target.value,
+                              )
+                            }
+                            placeholder="Emergency Surgical Transfer..."
+                            className="w-full bg-transparent text-base text-gray-700 placeholder:text-gray-400 outline-none"
+                          />
+                        </FieldShell>
+
+                        <FieldShell label="Email Body" className="py-2">
+                          <textarea
+                            value={form.email_body}
+                            onChange={(e) =>
+                              handleFieldChange("email_body", e.target.value)
+                            }
+                            placeholder="Provide details for the receiving end..."
+                            rows={4}
+                            className="w-full resize-none bg-transparent text-base text-gray-700 placeholder:text-gray-400 outline-none"
+                          />
+                        </FieldShell>
+                      </>
+                    )}
+                  </>
+                )}
               </div>
             )}
 
