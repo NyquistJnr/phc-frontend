@@ -39,7 +39,7 @@ export default function DispensePrescriptionModal({
         return;
       }
       items.push({
-        drugId: item.drug,
+        drugId: item.inventory_item,
         quantity: qty,
         note: note || undefined,
       });

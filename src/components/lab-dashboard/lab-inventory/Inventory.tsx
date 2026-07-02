@@ -108,8 +108,14 @@ const DRUG_CLASSIFICATION_OPTIONS = [
 ];
 
 const THRESHOLD_TYPE_OPTIONS = [
-  { label: "Absolute — alert when stock falls below N units", value: "ABSOLUTE" },
-  { label: "Percentage — alert when stock falls below N%", value: "PERCENTAGE" },
+  {
+    label: "Absolute — alert when stock falls below N units",
+    value: "ABSOLUTE",
+  },
+  {
+    label: "Percentage — alert when stock falls below N%",
+    value: "PERCENTAGE",
+  },
 ];
 
 const ITEM_TYPE_OPTIONS = [
@@ -214,10 +220,14 @@ function getErrorMessage(error: unknown, fallback: string) {
 
 function getStatusLabel(status?: string): StatusLabel {
   switch (status) {
-    case "IN_STOCK": return "In Stock";
-    case "LOW_STOCK": return "Low Stock";
-    case "OUT_OF_STOCK": return "Out of Stock";
-    default: return "Unknown";
+    case "IN_STOCK":
+      return "In Stock";
+    case "LOW_STOCK":
+      return "Low Stock";
+    case "OUT_OF_STOCK":
+      return "Out of Stock";
+    default:
+      return "Unknown";
   }
 }
 
@@ -301,7 +311,10 @@ function printInventoryItem(item: InventoryItem) {
         <table>
           <tbody>
             ${printableRows
-              .map(([label, value]) => `<tr><th>${escapeHtml(label)}</th><td>${escapeHtml(value)}</td></tr>`)
+              .map(
+                ([label, value]) =>
+                  `<tr><th>${escapeHtml(label)}</th><td>${escapeHtml(value)}</td></tr>`,
+              )
               .join("")}
           </tbody>
         </table>
@@ -328,17 +341,29 @@ function StatCard({
   active?: boolean;
 }) {
   return (
-    <div className={`min-h-36 rounded-xl p-4 ${active ? "bg-[#046C3F] text-white" : "bg-white text-gray-500"}`}>
+    <div
+      className={`min-h-36 rounded-xl p-4 ${active ? "bg-[#046C3F] text-white" : "bg-white text-gray-500"}`}
+    >
       <div className="mb-8 flex items-start justify-between">
-        <span className={`flex h-9 w-9 items-center justify-center rounded-lg ${active ? "bg-[#0B7F4D] text-white" : "bg-[#FFF7ED] text-gray-700"}`}>
+        <span
+          className={`flex h-9 w-9 items-center justify-center rounded-lg ${active ? "bg-[#0B7F4D] text-white" : "bg-[#FFF7ED] text-gray-700"}`}
+        >
           <Icon size={21} />
         </span>
-        <span className={`flex items-center gap-1 text-xs ${active ? "text-white" : "text-gray-300"}`}>
+        <span
+          className={`flex items-center gap-1 text-xs ${active ? "text-white" : "text-gray-300"}`}
+        >
           This Week <ChevronDown size={14} />
         </span>
       </div>
-      <p className={`mb-3 text-sm ${active ? "text-white" : "text-gray-400"}`}>{title}</p>
-      <p className={`text-3xl font-semibold ${active ? "text-white" : "text-gray-800"}`}>{value}</p>
+      <p className={`mb-3 text-sm ${active ? "text-white" : "text-gray-400"}`}>
+        {title}
+      </p>
+      <p
+        className={`text-3xl font-semibold ${active ? "text-white" : "text-gray-800"}`}
+      >
+        {value}
+      </p>
     </div>
   );
 }
@@ -361,7 +386,9 @@ function Field({
   onChange: (value: string) => void;
 }) {
   return (
-    <label className={`flex min-h-[58px] items-center gap-3 rounded-lg border border-gray-300 px-4 ${readOnly ? "bg-gray-100" : "bg-white"}`}>
+    <label
+      className={`flex min-h-[58px] items-center gap-3 rounded-lg border border-gray-300 px-4 ${readOnly ? "bg-gray-100" : "bg-white"}`}
+    >
       {icon && <span className="shrink-0 text-gray-600">{icon}</span>}
       <span className="min-w-0 flex-1">
         <span className="block text-xs text-gray-500">{label}</span>
@@ -404,7 +431,14 @@ function ItemTypeSelect({
       ITEM_TYPE_OPTIONS.find((o) => o.value === itemType)?.label ||
       itemTypeCustom ||
       itemType;
-    return <Field label="Item Type" value={displayLabel} readOnly onChange={() => {}} />;
+    return (
+      <Field
+        label="Item Type"
+        value={displayLabel}
+        readOnly
+        onChange={() => {}}
+      />
+    );
   }
   return (
     <div>
@@ -439,8 +473,16 @@ function ThresholdTypeSelect({
   onChange: (v: string) => void;
 }) {
   if (readOnly) {
-    const label = THRESHOLD_TYPE_OPTIONS.find((o) => o.value === value)?.label || value;
-    return <Field label="Threshold Type" value={label} readOnly onChange={() => {}} />;
+    const label =
+      THRESHOLD_TYPE_OPTIONS.find((o) => o.value === value)?.label || value;
+    return (
+      <Field
+        label="Threshold Type"
+        value={label}
+        readOnly
+        onChange={() => {}}
+      />
+    );
   }
   return (
     <SystemSelectField
@@ -471,7 +513,10 @@ function AddItemForm({
   const isDrug = form.inventoryCategory === "DRUG";
   const isImmunization = isDrug && form.drugClassification === "IMMUNIZATION";
 
-  const handleChange = <K extends keyof AddItemFormValues>(field: K, value: AddItemFormValues[K]) => {
+  const handleChange = <K extends keyof AddItemFormValues>(
+    field: K,
+    value: AddItemFormValues[K],
+  ) => {
     setForm((current) => {
       const next = { ...current, [field]: value };
       if (field === "inventoryCategory" && value !== "DRUG") {
@@ -487,12 +532,17 @@ function AddItemForm({
 
   return (
     <form
-      onSubmit={(e) => { e.preventDefault(); onSubmit(form); }}
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSubmit(form);
+      }}
       className="rounded-xl bg-white px-5 py-8 shadow-sm sm:px-6 mt-6"
     >
       <div className="mb-8 flex items-center gap-3">
         <PackagePlus size={26} className="text-[#046C3F]" />
-        <h1 className="text-2xl font-semibold text-black">Add New Stock Item</h1>
+        <h1 className="text-2xl font-semibold text-black">
+          Add New Stock Item
+        </h1>
       </div>
 
       <div className="max-w-[800px]">
@@ -526,7 +576,9 @@ function AddItemForm({
           <Field
             label="Item Name *"
             value={form.name}
-            placeholder={isDrug ? "e.g. Paracetamol 500mg" : "e.g. Malaria RDT Kit"}
+            placeholder={
+              isDrug ? "e.g. Paracetamol 500mg" : "e.g. Malaria RDT Kit"
+            }
             onChange={(v) => handleChange("name", v)}
           />
 
@@ -546,7 +598,9 @@ function AddItemForm({
             label={`Low Stock Threshold${form.thresholdType === "PERCENTAGE" ? " (%)" : " (units)"} *`}
             value={form.globalThreshold}
             type="number"
-            placeholder={form.thresholdType === "PERCENTAGE" ? "e.g. 20" : "e.g. 50"}
+            placeholder={
+              form.thresholdType === "PERCENTAGE" ? "e.g. 20" : "e.g. 50"
+            }
             onChange={(v) => handleChange("globalThreshold", v)}
           />
         </div>
@@ -581,7 +635,9 @@ function AddItemForm({
                     <div className="mb-3 flex items-center justify-between">
                       <span
                         className={`flex h-9 w-9 items-center justify-center rounded-lg ${
-                          selected ? "bg-[#046C3F] text-white" : "bg-gray-100 text-gray-400"
+                          selected
+                            ? "bg-[#046C3F] text-white"
+                            : "bg-gray-100 text-gray-400"
                         }`}
                       >
                         <Icon size={18} />
@@ -591,13 +647,19 @@ function AddItemForm({
                           selected ? "border-[#046C3F]" : "border-gray-300"
                         }`}
                       >
-                        {selected && <span className="h-2.5 w-2.5 rounded-full bg-[#046C3F]" />}
+                        {selected && (
+                          <span className="h-2.5 w-2.5 rounded-full bg-[#046C3F]" />
+                        )}
                       </span>
                     </div>
-                    <span className={`text-sm font-semibold ${selected ? "text-[#046C3F]" : "text-gray-700"}`}>
+                    <span
+                      className={`text-sm font-semibold ${selected ? "text-[#046C3F]" : "text-gray-700"}`}
+                    >
                       {card.title}
                     </span>
-                    <span className="mt-0.5 text-xs text-gray-500">{card.description}</span>
+                    <span className="mt-0.5 text-xs text-gray-500">
+                      {card.description}
+                    </span>
 
                     {selected && card.value === "RECURRING" && (
                       <div
@@ -611,7 +673,9 @@ function AddItemForm({
                           value={form.scheduleIntervalDays}
                           type="number"
                           placeholder="e.g. 30"
-                          onChange={(v) => handleChange("scheduleIntervalDays", v)}
+                          onChange={(v) =>
+                            handleChange("scheduleIntervalDays", v)
+                          }
                         />
                       </div>
                     )}
@@ -627,10 +691,13 @@ function AddItemForm({
                           label="Intervals in days (comma-separated) *"
                           value={form.scheduleIntervalSequence}
                           placeholder="e.g. 42, 28, 28"
-                          onChange={(v) => handleChange("scheduleIntervalSequence", v)}
+                          onChange={(v) =>
+                            handleChange("scheduleIntervalSequence", v)
+                          }
                         />
                         <p className="mt-2 text-xs text-gray-400">
-                          Days after each dose. Example: 42, 28, 28 → doses at week 6, 10, 14.
+                          Days after each dose. Example: 42, 28, 28 → doses at
+                          week 6, 10, 14.
                         </p>
                       </div>
                     )}
@@ -764,7 +831,10 @@ function RefillModal({
         )}
 
         <form
-          onSubmit={(e) => { e.preventDefault(); onSubmit(form); }}
+          onSubmit={(e) => {
+            e.preventDefault();
+            onSubmit(form);
+          }}
           className="space-y-0"
         >
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
@@ -812,7 +882,9 @@ function RefillModal({
 
           <div className="mt-5">
             <label className="block rounded-lg border border-gray-300 bg-white px-4 py-3">
-              <span className="block text-xs text-gray-500">Notes (Optional)</span>
+              <span className="block text-xs text-gray-500">
+                Notes (Optional)
+              </span>
               <textarea
                 value={form.note}
                 placeholder="Delivery note or internal remarks"
@@ -871,7 +943,8 @@ function EditModal({
     itemType: isKnownType ? storedItemType : storedItemType ? "OTHER" : "",
     itemTypeCustom: isKnownType ? "" : storedItemType,
     thresholdType: item.threshold_type ?? "ABSOLUTE",
-    globalThreshold: item.global_threshold !== undefined ? String(item.global_threshold) : "",
+    globalThreshold:
+      item.global_threshold !== undefined ? String(item.global_threshold) : "",
   });
   const handle = (field: keyof EditItemFormValues, value: string) =>
     setForm((c) => ({ ...c, [field]: value }));
@@ -882,7 +955,9 @@ function EditModal({
         <div className="mb-7 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <ClipboardList size={24} className="text-[#046C3F]" />
-            <h2 className="text-xl font-semibold text-black">Edit — {item.name}</h2>
+            <h2 className="text-xl font-semibold text-black">
+              Edit — {item.name}
+            </h2>
           </div>
           <button
             onClick={onClose}
@@ -900,7 +975,10 @@ function EditModal({
         )}
 
         <form
-          onSubmit={(e) => { e.preventDefault(); onSubmit(form); }}
+          onSubmit={(e) => {
+            e.preventDefault();
+            onSubmit(form);
+          }}
           className="grid grid-cols-1 gap-5 md:grid-cols-2"
         >
           <div className="md:col-span-2">
@@ -929,7 +1007,9 @@ function EditModal({
               label={`Low Stock Threshold${form.thresholdType === "PERCENTAGE" ? " (%)" : " (units)"} *`}
               value={form.globalThreshold}
               type="number"
-              placeholder={form.thresholdType === "PERCENTAGE" ? "e.g. 20" : "e.g. 50"}
+              placeholder={
+                form.thresholdType === "PERCENTAGE" ? "e.g. 20" : "e.g. 50"
+              }
               onChange={(v) => handle("globalThreshold", v)}
             />
           </div>
@@ -1003,19 +1083,48 @@ function ActionMenu({
         typeof document !== "undefined" &&
         createPortal(
           <div
-            style={{ position: "fixed", top: coords.top, left: coords.left, width: 210 }}
+            style={{
+              position: "fixed",
+              top: coords.top,
+              left: coords.left,
+              width: 210,
+            }}
             className="z-[9999] rounded-lg border border-gray-200 bg-white py-3 shadow-xl"
           >
-            <button className={actionClass} onClick={() => { setOpen(false); onView(item); }}>
-              <Eye size={20} /> View Full Information
+            <button
+              className={actionClass}
+              onClick={() => {
+                setOpen(false);
+                onView(item);
+              }}
+            >
+              <Eye size={20} /> View
             </button>
-            <button className={actionClass} onClick={() => { setOpen(false); onRefill(item); }}>
+            <button
+              className={actionClass}
+              onClick={() => {
+                setOpen(false);
+                onRefill(item);
+              }}
+            >
               <PackagePlus size={20} /> Refill Stock
             </button>
-            <button className={actionClass} onClick={() => { setOpen(false); onEdit(item); }}>
+            <button
+              className={actionClass}
+              onClick={() => {
+                setOpen(false);
+                onEdit(item);
+              }}
+            >
               <Plus size={20} /> Edit Item
             </button>
-            <button className={actionClass} onClick={() => { setOpen(false); onExport(item); }}>
+            <button
+              className={actionClass}
+              onClick={() => {
+                setOpen(false);
+                onExport(item);
+              }}
+            >
               <Download size={20} /> Export
             </button>
           </div>,
@@ -1043,12 +1152,20 @@ export default function Inventory() {
   const [formError, setFormError] = useState("");
 
   const inventoryFilters = useMemo(
-    () => ({ page, page_size: pageSize, search, status: STATUS_FILTERS[status], start_date: startDate, end_date: endDate }),
+    () => ({
+      page,
+      page_size: pageSize,
+      search,
+      status: STATUS_FILTERS[status],
+      start_date: startDate,
+      end_date: endDate,
+    }),
     [page, pageSize, search, status, startDate, endDate],
   );
 
   const { data: statsData } = useComprehensiveInventoryStats({});
-  const { data: itemsData, isLoading: isLoadingItems } = useInventoryItems(inventoryFilters);
+  const { data: itemsData, isLoading: isLoadingItems } =
+    useInventoryItems(inventoryFilters);
   const createItemMutation = useCreateInventoryItem();
   const refillItemMutation = useRefillInventoryItem();
   const patchItemMutation = usePatchInventoryItem();
@@ -1065,14 +1182,16 @@ export default function Inventory() {
 
   const handleExport = (item: InventoryItem) => {
     const didPrint = printInventoryItem(item);
-    if (!didPrint) showToast("Unable to open the print window. Please allow pop-ups.");
+    if (!didPrint)
+      showToast("Unable to open the print window. Please allow pop-ups.");
     else showToast(`${item.name} export opened`);
   };
 
   const handleCreate = async (values: AddItemFormValues) => {
     setFormError("");
     const isDrug = values.inventoryCategory === "DRUG";
-    const isImmunization = isDrug && values.drugClassification === "IMMUNIZATION";
+    const isImmunization =
+      isDrug && values.drugClassification === "IMMUNIZATION";
     const effectiveItemType =
       values.itemType === "OTHER" ? values.itemTypeCustom : values.itemType;
 
@@ -1091,12 +1210,22 @@ export default function Inventory() {
       return;
     }
 
-    if (isImmunization && values.scheduleType === "RECURRING" && !values.scheduleIntervalDays) {
-      setFormError("Please enter the interval days for the recurring schedule.");
+    if (
+      isImmunization &&
+      values.scheduleType === "RECURRING" &&
+      !values.scheduleIntervalDays
+    ) {
+      setFormError(
+        "Please enter the interval days for the recurring schedule.",
+      );
       return;
     }
 
-    if (isImmunization && values.scheduleType === "VARIABLE_SEQUENCE" && !values.scheduleIntervalSequence.trim()) {
+    if (
+      isImmunization &&
+      values.scheduleType === "VARIABLE_SEQUENCE" &&
+      !values.scheduleIntervalSequence.trim()
+    ) {
       setFormError("Please enter the dose intervals (comma-separated days).");
       return;
     }
@@ -1108,7 +1237,9 @@ export default function Inventory() {
       item_type: effectiveItemType,
       threshold_type: values.thresholdType,
       global_threshold: Number(values.globalThreshold),
-      schedule_rules: isImmunization ? (buildScheduleRules(values) as null) : null,
+      schedule_rules: isImmunization
+        ? (buildScheduleRules(values) as null)
+        : null,
     };
 
     const refillPayload: RefillItemPayload = {
@@ -1124,20 +1255,39 @@ export default function Inventory() {
     try {
       const created = await createItemMutation.mutateAsync(itemPayload);
       if (!created.id) {
-        setFormError("Inventory item was created, but its ID was not returned.");
+        setFormError(
+          "Inventory item was created, but its ID was not returned.",
+        );
         return;
       }
-      await refillItemMutation.mutateAsync({ id: created.id, payload: refillPayload });
+      await refillItemMutation.mutateAsync({
+        id: created.id,
+        payload: refillPayload,
+      });
       setMode("list");
       showToast(`${values.name} added to inventory`);
     } catch (error) {
-      setFormError(getErrorMessage(error, "Failed to add inventory item. Please try again."));
+      setFormError(
+        getErrorMessage(
+          error,
+          "Failed to add inventory item. Please try again.",
+        ),
+      );
     }
   };
 
-  const handleRefill = async (item: InventoryItem, values: RefillFormValues) => {
+  const handleRefill = async (
+    item: InventoryItem,
+    values: RefillFormValues,
+  ) => {
     setFormError("");
-    if (!values.batchNumber || !values.initialQuantity || !values.purchasedDate || !values.supplier || !values.costPrice) {
+    if (
+      !values.batchNumber ||
+      !values.initialQuantity ||
+      !values.purchasedDate ||
+      !values.supplier ||
+      !values.costPrice
+    ) {
       setFormError("Please complete all required batch fields.");
       return;
     }
@@ -1157,15 +1307,25 @@ export default function Inventory() {
       setModal(null);
       showToast(`${item.name} stock refilled`);
     } catch (error) {
-      setFormError(getErrorMessage(error, "Failed to refill stock. Please try again."));
+      setFormError(
+        getErrorMessage(error, "Failed to refill stock. Please try again."),
+      );
     }
   };
 
-  const handleEdit = async (item: InventoryItem, values: EditItemFormValues) => {
+  const handleEdit = async (
+    item: InventoryItem,
+    values: EditItemFormValues,
+  ) => {
     setFormError("");
     const effectiveItemType =
       values.itemType === "OTHER" ? values.itemTypeCustom : values.itemType;
-    if (!values.name || !effectiveItemType || !values.thresholdType || !values.globalThreshold) {
+    if (
+      !values.name ||
+      !effectiveItemType ||
+      !values.thresholdType ||
+      !values.globalThreshold
+    ) {
       setFormError("Please complete all required fields.");
       return;
     }
@@ -1182,20 +1342,46 @@ export default function Inventory() {
       setModal(null);
       showToast(`${item.name} updated`);
     } catch (error) {
-      setFormError(getErrorMessage(error, "Failed to update item. Please try again."));
+      setFormError(
+        getErrorMessage(error, "Failed to update item. Please try again."),
+      );
     }
   };
 
   const stats = [
-    { title: "Total Item", value: statsData?.total_items || 0, icon: ClipboardList, active: true },
-    { title: "Low Stock Items", value: statsData?.low_stock_items || 0, icon: ShieldAlert },
-    { title: "Out of Stock", value: statsData?.out_of_stock_items || 0, icon: PackageCheck },
-    { title: "Expiring Soon", value: statsData?.expiring_soon_items || 0, icon: Timer },
+    {
+      title: "Total Item",
+      value: statsData?.total_items || 0,
+      icon: ClipboardList,
+      active: true,
+    },
+    {
+      title: "Low Stock Items",
+      value: statsData?.low_stock_items || 0,
+      icon: ShieldAlert,
+    },
+    {
+      title: "Out of Stock",
+      value: statsData?.out_of_stock_items || 0,
+      icon: PackageCheck,
+    },
+    {
+      title: "Expiring Soon",
+      value: statsData?.expiring_soon_items || 0,
+      icon: Timer,
+    },
   ];
 
-  const inventoryResult = itemsData as PaginatedInventoryItems | InventoryItem[] | undefined;
-  const inventoryRows = Array.isArray(inventoryResult) ? inventoryResult : inventoryResult?.results || [];
-  const inventoryTotalPages = Array.isArray(inventoryResult) ? undefined : inventoryResult?.total_pages;
+  const inventoryResult = itemsData as
+    | PaginatedInventoryItems
+    | InventoryItem[]
+    | undefined;
+  const inventoryRows = Array.isArray(inventoryResult)
+    ? inventoryResult
+    : inventoryResult?.results || [];
+  const inventoryTotalPages = Array.isArray(inventoryResult)
+    ? undefined
+    : inventoryResult?.total_pages;
 
   const columns: ColumnDef<InventoryItem>[] = [
     { header: "Item", accessorKey: "name", sortable: true },
@@ -1217,14 +1403,23 @@ export default function Inventory() {
       render: (row) => {
         const label = getStatusLabel(row.status);
         const color = statusColors[label];
-        return <StatusBadge label={label} bgColorHex={color.bg} textColorHex={color.text} />;
+        return (
+          <StatusBadge
+            label={label}
+            bgColorHex={color.bg}
+            textColorHex={color.text}
+          />
+        );
       },
     },
     {
       header: "Last Updated",
       sortable: true,
       render: (row) =>
-        formatDate(getPrimaryBatch(row)?.updated_at ?? row.active_batches?.[0]?.created_at),
+        formatDate(
+          getPrimaryBatch(row)?.updated_at ??
+            row.active_batches?.[0]?.created_at,
+        ),
     },
     {
       header: "Action",
@@ -1232,9 +1427,17 @@ export default function Inventory() {
       render: (row) => (
         <ActionMenu
           item={row}
-          onView={(selected) => router.push(`/lab-dashboard/lab-inventory/${selected.id}`)}
-          onRefill={(selected) => { setFormError(""); setModal({ mode: "refill", item: selected }); }}
-          onEdit={(selected) => { setFormError(""); setModal({ mode: "edit", item: selected }); }}
+          onView={(selected) =>
+            router.push(`/lab-dashboard/lab-inventory/${selected.id}`)
+          }
+          onRefill={(selected) => {
+            setFormError("");
+            setModal({ mode: "refill", item: selected });
+          }}
+          onEdit={(selected) => {
+            setFormError("");
+            setModal({ mode: "edit", item: selected });
+          }}
           onExport={handleExport}
         />
       ),
@@ -1249,30 +1452,54 @@ export default function Inventory() {
           breadcrumbs={[{ label: "Lab Inventory" }, { label: "Add New Item" }]}
         />
         <div className="px-4 py-6 sm:px-6 lg:py-8">
-          <LabBackButton onClick={() => { setFormError(""); setMode("list"); }} />
+          <LabBackButton
+            onClick={() => {
+              setFormError("");
+              setMode("list");
+            }}
+          />
           <AddItemForm
             isSubmitting={isSubmitting}
             formError={formError}
-            onCancel={() => { setFormError(""); setMode("list"); }}
+            onCancel={() => {
+              setFormError("");
+              setMode("list");
+            }}
             onSubmit={handleCreate}
           />
         </div>
-        {toast && <Toast title={toast} description="Lab inventory changes saved" onClose={() => setToast(null)} />}
+        {toast && (
+          <Toast
+            title={toast}
+            description="Lab inventory changes saved"
+            onClose={() => setToast(null)}
+          />
+        )}
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-[#F6F7FC]">
-      <LabDashboardHeader title="Lab Inventory" breadcrumbs={[{ label: "Lab Inventory" }]} />
+      <LabDashboardHeader
+        title="Lab Inventory"
+        breadcrumbs={[{ label: "Lab Inventory" }]}
+      />
       <div className="px-4 py-6 sm:px-6 lg:py-8">
         <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h1 className="text-2xl font-semibold text-black sm:text-3xl">Inventory</h1>
-            <p className="mt-2 text-base text-[#3F3F46]">Monitor lab supplies, low stock and expiry</p>
+            <h1 className="text-2xl font-semibold text-black sm:text-3xl">
+              Inventory
+            </h1>
+            <p className="mt-2 text-base text-[#3F3F46]">
+              Monitor lab supplies, low stock and expiry
+            </p>
           </div>
           <button
-            onClick={() => { setFormError(""); setMode("add"); }}
+            onClick={() => {
+              setFormError("");
+              setMode("add");
+            }}
             className="flex h-11 items-center justify-center gap-3 rounded-xl bg-[#046C3F] px-10 text-base font-medium text-white"
           >
             <Heart size={21} /> Add New Item
@@ -1280,7 +1507,9 @@ export default function Inventory() {
         </div>
 
         <div className="mb-6 grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
-          {stats.map((stat) => <StatCard key={stat.title} {...stat} />)}
+          {stats.map((stat) => (
+            <StatCard key={stat.title} {...stat} />
+          ))}
         </div>
 
         <DataTable
@@ -1296,14 +1525,28 @@ export default function Inventory() {
                 startDate={startDate}
                 endDate={endDate}
                 label="Last Updated"
-                onApply={(start, end) => { setStartDate(start); setEndDate(end); }}
-                onClear={() => { setStartDate(""); setEndDate(""); }}
+                onApply={(start, end) => {
+                  setStartDate(start);
+                  setEndDate(end);
+                }}
+                onClear={() => {
+                  setStartDate("");
+                  setEndDate("");
+                }}
               />
-              <CustomDropdown options={STATUS_OPTIONS} selected={status} onSelect={setStatus} />
+              <CustomDropdown
+                options={STATUS_OPTIONS}
+                selected={status}
+                onSelect={setStatus}
+              />
             </>
           }
           totalPages={inventoryTotalPages}
-          emptyMessage={isLoadingItems ? "Loading inventory items..." : "No inventory items match your criteria."}
+          emptyMessage={
+            isLoadingItems
+              ? "Loading inventory items..."
+              : "No inventory items match your criteria."
+          }
         />
       </div>
 
@@ -1313,7 +1556,10 @@ export default function Inventory() {
           item={modal.item}
           isSubmitting={isSubmitting}
           formError={formError}
-          onClose={() => { setFormError(""); setModal(null); }}
+          onClose={() => {
+            setFormError("");
+            setModal(null);
+          }}
           onSubmit={(values) => handleRefill(modal.item, values)}
         />
       )}
@@ -1322,12 +1568,21 @@ export default function Inventory() {
           item={modal.item}
           isSubmitting={isSubmitting}
           formError={formError}
-          onClose={() => { setFormError(""); setModal(null); }}
+          onClose={() => {
+            setFormError("");
+            setModal(null);
+          }}
           onSubmit={(values) => handleEdit(modal.item, values)}
         />
       )}
 
-      {toast && <Toast title={toast} description="Inventory changes saved" onClose={() => setToast(null)} />}
+      {toast && (
+        <Toast
+          title={toast}
+          description="Inventory changes saved"
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   );
 }

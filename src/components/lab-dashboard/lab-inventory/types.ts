@@ -26,6 +26,11 @@ export interface InventoryStatsFilters {
   expiry_days?: number;
 }
 
+export type ScheduleRules =
+  | { type: "ONCE" }
+  | { type: "RECURRING"; interval_days: number }
+  | { type: "VARIABLE_SEQUENCE"; intervals_in_days: number[] };
+
 export interface InventoryItem {
   id: string;
   name: string;
@@ -34,7 +39,7 @@ export interface InventoryItem {
   item_type: string;
   threshold_type: string;
   global_threshold: number;
-  schedule_rules: string;
+  schedule_rules: ScheduleRules | null;
   total_stock: number;
   status: string;
   active_batches?: ActiveInventoryBatch[];

@@ -20,7 +20,11 @@ import {
   useInventoryItemById,
   useRefillInventoryItem,
 } from "@/src/hooks/laboratory/use-inventory";
-import type { ActiveInventoryBatch, RefillItemPayload } from "./types";
+import type {
+  ActiveInventoryBatch,
+  RefillItemPayload,
+  ScheduleRules,
+} from "./types";
 
 type StatusLabel = "In Stock" | "Low Stock" | "Out of Stock" | "Unknown";
 
@@ -54,6 +58,20 @@ function formatDate(value?: string | null) {
 function getErrorMessage(error: unknown, fallback: string) {
   if (error instanceof Error && error.message) return error.message;
   return fallback;
+}
+
+function formatScheduleRules(rules: ScheduleRules | null | undefined) {
+  if (!rules) return "-";
+  switch (rules.type) {
+    case "ONCE":
+      return "One-time dose";
+    case "RECURRING":
+      return `Recurring every ${rules.interval_days} day${rules.interval_days === 1 ? "" : "s"}`;
+    case "VARIABLE_SEQUENCE":
+      return `Variable sequence: ${rules.intervals_in_days.join(", ")} days`;
+    default:
+      return "-";
+  }
 }
 
 function DetailCell({ label, value }: { label: string; value: string }) {
@@ -376,7 +394,7 @@ export default function InventoryItemDetail() {
     { label: "Threshold Type", value: item.threshold_type || "-" },
     { label: "Low Stock Threshold", value: String(item.global_threshold) },
     { label: "Total Stock", value: String(item.total_stock) },
-    { label: "Schedule Rules", value: item.schedule_rules || "-" },
+    { label: "Schedule Rules", value: formatScheduleRules(item.schedule_rules) },
   ];
 
   return (

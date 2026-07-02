@@ -1,11 +1,13 @@
 export interface PrescriptionItem {
   id: string;
-  drug: string;
+  inventory_item: string;
   custom_drug_name: string | null;
   medication_name: string;
   dosage: string;
   frequency: string;
   duration: string;
+  route: string;
+  special_instructions: string;
 }
 
 export interface PrescriptionOrder {
