@@ -2,12 +2,14 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
+  Building2,
   CheckCircle2,
   ChevronDown,
   GitBranch,
   Loader2,
   Plus,
   Search,
+  User,
 } from "lucide-react";
 import { useCreateReferral, useDepartments, useReferrals } from "@/src/hooks/nurses/use-referrals";
 import { useFacilities } from "@/src/hooks/useFacilities";
@@ -166,6 +168,9 @@ type ReferralFormState = {
   receiving_facility: string;
   receiving_department: string;
   mode_of_referral: string;
+  // Which single target the softcopy email goes to — a doctor XOR a
+  // department, since the backend payload only supports one at a time.
+  target_type: "" | "DOCTOR" | "DEPARTMENT";
   target_doctor_email: string;
   target_department_email: string;
   email_subject: string;
@@ -181,6 +186,7 @@ const EMPTY_FORM: ReferralFormState = {
   receiving_facility: "",
   receiving_department: "",
   mode_of_referral: "",
+  target_type: "",
   target_doctor_email: "",
   target_department_email: "",
   email_subject: "",
