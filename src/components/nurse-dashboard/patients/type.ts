@@ -92,8 +92,9 @@ export interface PatientPrescription {
 export interface PatientReferral {
   id: string;
   referral_id: string;
-  referring_facility_name: string;
-  receiving_facility_name: string;
+  direction?: "inbound" | "outbound" | string;
+  referring_facility_name: string | null;
+  receiving_facility_name: string | null;
   referred_by_name: string;
   referral_type: string;
   reason_for_referral: string;
@@ -106,6 +107,7 @@ export interface TabFilters {
   page_size?: number;
   search?: string;
   status?: string;
+  direction?: string;
   start_date?: string;
   end_date?: string;
 }

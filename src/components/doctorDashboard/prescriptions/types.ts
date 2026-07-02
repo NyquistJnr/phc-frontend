@@ -4,6 +4,7 @@ export type PrescriptionItem = {
   drug_name?: string;
   medication_name?: string;
   custom_drug_name?: string;
+  quantity?: number;
   dosage?: string;
   frequency?: string;
   duration?: string;

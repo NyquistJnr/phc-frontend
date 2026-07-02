@@ -68,11 +68,16 @@ export function useDispensePrescriptionOrder() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      return await api.post(`/prescriptions/orders/${id}/dispense/`, {});
+      const res = await api.post<unknown>(
+        `/prescriptions/orders/${id}/dispense/`,
+      );
+      return unwrapApiData<PrescriptionOrder>(res);
     },
-    onSuccess: (_, id) => {
+    onSuccess: (data, id) => {
+      queryClient.setQueryData(["prescription-detail", id], data);
       queryClient.invalidateQueries({ queryKey: ["prescription-orders"] });
-      queryClient.invalidateQueries({ queryKey: ["prescription-detail", id] });
+      queryClient.invalidateQueries({ queryKey: ["inventory-drugs"] });
+      queryClient.invalidateQueries({ queryKey: ["inventory-stats"] });
     },
   });
 }

@@ -19,6 +19,11 @@ export interface ActiveBatch {
   updated_at?: string;
 }
 
+export type ScheduleRules =
+  | { type: "ONCE" }
+  | { type: "RECURRING"; interval_days: number }
+  | { type: "VARIABLE_SEQUENCE"; intervals_in_days: number[] };
+
 export interface DrugStockItem {
   id: string;
   name: string;
@@ -27,7 +32,7 @@ export interface DrugStockItem {
   item_type: string;
   threshold_type: string;
   global_threshold: number;
-  schedule_rules: string;
+  schedule_rules: ScheduleRules | null;
   total_stock: number;
   status: string;
   active_batches?: ActiveBatch[];
@@ -94,11 +99,6 @@ export interface RefillPayload {
   cost_price: string;
   note?: string;
 }
-
-export type ScheduleRules =
-  | { type: "ONCE" }
-  | { type: "RECURRING"; interval_days: number }
-  | { type: "VARIABLE_SEQUENCE"; intervals_in_days: number[] };
 
 export interface CreateDrugPayload {
   name: string;

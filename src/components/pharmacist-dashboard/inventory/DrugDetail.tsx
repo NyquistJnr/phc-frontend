@@ -17,9 +17,8 @@ import { ColumnDef, DataTable } from "@/src/components/generic/ui/DataTable";
 import {
   useDrugDetail,
   useRefillDrug,
-  useDispenseDrug,
 } from "@/src/hooks/pharmacist/use-inventory";
-import { ActiveBatch } from "./type";
+import { ActiveBatch, ScheduleRules } from "./type";
 
 type RefillFormState = {
   batchNumber: string;
@@ -95,6 +94,29 @@ function getErrorMessage(error: unknown, fallback: string) {
   return fallback;
 }
 
+function formatScheduleRules(rules: ScheduleRules | null | undefined) {
+  if (!rules) return "-";
+  switch (rules.type) {
+    case "ONCE":
+      return "One-time dose";
+    case "RECURRING":
+      return `Recurring every ${rules.interval_days} day${rules.interval_days === 1 ? "" : "s"}`;
+    case "VARIABLE_SEQUENCE":
+      return `Variable sequence: ${rules.intervals_in_days.join(", ")} days`;
+    default:
+      return "-";
+  }
+}
+
+function DetailCell({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+      <p className="text-xs text-gray-500">{label}</p>
+      <p className="mt-1 text-base text-gray-800">{value}</p>
+    </div>
+  );
+}
+
 export default function DrugDetail() {
   const router = useRouter();
   const params = useParams();
@@ -104,13 +126,8 @@ export default function DrugDetail() {
   const [formError, setFormError] = useState("");
   const [toastMessage, setToastMessage] = useState("");
 
-  const [dispenseQty, setDispenseQty] = useState("");
-  const [dispenseNote, setDispenseNote] = useState("");
-  const [dispenseError, setDispenseError] = useState("");
-
   const { data: drugData, isLoading: isLoadingDrug } = useDrugDetail(drugId);
   const { mutate: refillDrug, isPending: isRefilling } = useRefillDrug();
-  const { mutate: dispenseDrug, isPending: isDispensing } = useDispenseDrug();
 
   const handleChange = <K extends keyof RefillFormState>(
     field: K,
@@ -167,29 +184,6 @@ export default function DrugDetail() {
 
   const handleCancel = () => {
     router.push("/pharmacist-dashboard/inventory");
-  };
-
-  const handleDispense = () => {
-    const qty = parseInt(dispenseQty);
-    if (!qty || qty <= 0) {
-      setDispenseError("Please enter a valid quantity to dispense.");
-      return;
-    }
-    setDispenseError("");
-    dispenseDrug(
-      { id: drugId, payload: { quantity: qty, note: dispenseNote || undefined } },
-      {
-        onSuccess: () => {
-          setToastMessage(`Successfully dispensed ${qty} ${drugData?.item_type || "units"} of ${drugData?.name}.`);
-          setDispenseQty("");
-          setDispenseNote("");
-          setTimeout(() => setToastMessage(""), 4000);
-        },
-        onError: (error: unknown) => {
-          setDispenseError(getErrorMessage(error, "Failed to dispense. Insufficient stock or server error."));
-        },
-      },
-    );
   };
 
   const batchColumns: ColumnDef<ActiveBatch>[] = [
@@ -306,6 +300,36 @@ export default function DrugDetail() {
             </div>
           </div>
         </div>
+
+        <div className="mb-8 rounded-xl border border-gray-100 bg-white px-5 py-7 shadow-sm sm:px-6 lg:px-8">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">
+            Item Details
+          </p>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+            <DetailCell
+              label="Inventory Category"
+              value={drugData?.inventory_category || "-"}
+            />
+            <DetailCell
+              label="Drug Classification"
+              value={drugData?.drug_classification || "-"}
+            />
+            <DetailCell label="Item Type" value={drugData?.item_type || "-"} />
+            <DetailCell
+              label="Threshold Type"
+              value={drugData?.threshold_type || "-"}
+            />
+            <DetailCell
+              label="Low Stock Threshold"
+              value={String(drugData?.global_threshold ?? "-")}
+            />
+            <DetailCell
+              label="Schedule Rules"
+              value={formatScheduleRules(drugData?.schedule_rules)}
+            />
+          </div>
+        </div>
+
         <div className="mb-8">
           <DataTable
             title="Active Batches"
@@ -313,57 +337,6 @@ export default function DrugDetail() {
             columns={batchColumns}
             emptyMessage="No active batches found for this drug."
           />
-        </div>
-
-        {/* ── Dispense ── */}
-        <div className="mb-8 rounded-xl border border-gray-100 bg-white px-5 py-7 shadow-sm sm:px-6 lg:px-8">
-          <div className="mb-6 flex items-center gap-3">
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-100 text-amber-600">
-              <PackagePlus size={18} />
-            </span>
-            <h2 className="text-xl font-semibold text-black">Dispense Stock</h2>
-          </div>
-          <p className="mb-4 text-sm text-gray-500">
-            Stock is deducted using FEFO (First Expired First Out) — earliest expiring batch is consumed first.
-          </p>
-          {dispenseError && (
-            <div className="mb-4 rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
-              {dispenseError}
-            </div>
-          )}
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
-            <FieldShell label={`Quantity to Dispense (${drugData?.item_type || "units"})`} className="sm:w-48">
-              <input
-                type="number"
-                min="1"
-                value={dispenseQty}
-                onChange={(e) => { setDispenseQty(e.target.value); setDispenseError(""); }}
-                placeholder="e.g. 10"
-                className="w-full bg-transparent text-base text-gray-700 outline-none placeholder:text-gray-400"
-              />
-            </FieldShell>
-            <FieldShell label="Note (optional)" className="flex-1">
-              <input
-                type="text"
-                value={dispenseNote}
-                onChange={(e) => setDispenseNote(e.target.value)}
-                placeholder="Reason or additional notes"
-                className="w-full bg-transparent text-base text-gray-700 outline-none placeholder:text-gray-400"
-              />
-            </FieldShell>
-            <button
-              type="button"
-              onClick={handleDispense}
-              disabled={isDispensing || !drugData || drugData.total_stock === 0}
-              className="flex h-14 shrink-0 items-center justify-center gap-2 rounded-xl bg-amber-500 px-8 text-sm font-semibold text-white transition-colors hover:bg-amber-600 disabled:opacity-60"
-            >
-              {isDispensing ? <Loader2 size={18} className="animate-spin" /> : null}
-              {isDispensing ? "Dispensing..." : "Dispense"}
-            </button>
-          </div>
-          {drugData?.total_stock === 0 && (
-            <p className="mt-3 text-xs text-red-500">This item is out of stock and cannot be dispensed.</p>
-          )}
         </div>
 
         <form

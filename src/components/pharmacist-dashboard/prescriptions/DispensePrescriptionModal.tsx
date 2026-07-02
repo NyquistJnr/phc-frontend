@@ -6,11 +6,13 @@ import type { PrescriptionOrder } from "./type";
 export default function DispensePrescriptionModal({
   order,
   isSubmitting,
+  errorMessage,
   onClose,
   onConfirm,
 }: {
   order: PrescriptionOrder;
   isSubmitting?: boolean;
+  errorMessage?: string;
   onClose: () => void;
   onConfirm: () => void;
 }) {
@@ -71,19 +73,38 @@ export default function DispensePrescriptionModal({
             </div>
           </div>
 
+          {errorMessage && (
+            <div className="mb-4 rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
+              {errorMessage}
+            </div>
+          )}
+
           <div className="mb-8">
             <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">
               Medications
             </h3>
+            <p className="mb-3 text-xs text-gray-400">
+              This will dispense the full prescription in one go, deducting
+              stock for every inventory-linked item. It&apos;s all-or-nothing —
+              if any item is short on stock, nothing is deducted.
+            </p>
             <div className="divide-y divide-gray-100 rounded-lg border border-gray-100">
               {order.items.map((item) => (
-                <div key={item.id} className="p-4">
-                  <p className="font-medium text-gray-900">
-                    {item.custom_drug_name || item.medication_name}
-                  </p>
-                  <p className="mt-1 text-sm text-gray-500">
-                    {item.dosage} • {item.frequency} • {item.duration}
-                  </p>
+                <div
+                  key={item.id}
+                  className="flex flex-col gap-1 p-4 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div>
+                    <p className="font-medium text-gray-900">
+                      {item.custom_drug_name || item.medication_name}
+                    </p>
+                    <p className="mt-1 text-sm text-gray-500">
+                      {item.dosage} • {item.frequency} • {item.duration}
+                    </p>
+                  </div>
+                  <span className="text-sm font-medium text-gray-700">
+                    Qty: {item.quantity ?? 1}
+                  </span>
                 </div>
               ))}
             </div>

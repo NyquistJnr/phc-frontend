@@ -148,6 +148,7 @@ export default function Prescriptions() {
     null,
   );
   const [toastMessage, setToastMessage] = useState("");
+  const [dispenseError, setDispenseError] = useState("");
   const dispenseMutation = useDispensePrescriptionOrder();
 
   useEffect(() => {
@@ -230,6 +231,7 @@ export default function Prescriptions() {
           row={row}
           onDispense={(order) => {
             setSelectedOrder(order);
+            setDispenseError("");
             setDispenseModalOpen(true);
           }}
         />
@@ -317,8 +319,10 @@ export default function Prescriptions() {
           <DispensePrescriptionModal
             order={selectedOrder}
             isSubmitting={dispenseMutation.isPending}
+            errorMessage={dispenseError}
             onClose={() => setDispenseModalOpen(false)}
             onConfirm={() => {
+              setDispenseError("");
               dispenseMutation.mutate(selectedOrder.id, {
                 onSuccess: () => {
                   setDispenseModalOpen(false);
@@ -326,6 +330,13 @@ export default function Prescriptions() {
                     `${selectedOrder.prescription_id} dispensed successfully`,
                   );
                   window.setTimeout(() => setToastMessage(""), 3500);
+                },
+                onError: (error: unknown) => {
+                  setDispenseError(
+                    error instanceof Error
+                      ? error.message
+                      : "Failed to dispense. Please try again.",
+                  );
                 },
               });
             }}

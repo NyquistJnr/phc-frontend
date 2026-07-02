@@ -100,7 +100,7 @@ export default function PrescriptionDetail() {
                   prescription.items.map((item, index) => (
                     <div
                       key={item.id || index}
-                      className="grid grid-cols-1 gap-3 rounded-lg border border-gray-100 bg-gray-50 p-4 md:grid-cols-4"
+                      className="grid grid-cols-1 gap-3 rounded-lg border border-gray-100 bg-gray-50 p-4 md:grid-cols-5"
                     >
                       <DetailItem
                         label="Drug"
@@ -110,6 +110,10 @@ export default function PrescriptionDetail() {
                           item.custom_drug_name ||
                           item.drug
                         }
+                      />
+                      <DetailItem
+                        label="Quantity"
+                        value={String(item.quantity ?? 1)}
                       />
                       <DetailItem label="Dosage" value={item.dosage} />
                       <DetailItem label="Frequency" value={item.frequency} />

@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import {
   ArrowLeft,
+  Building2,
   Calendar,
   Clock,
   User,
@@ -35,6 +36,7 @@ import {
 import { useFacilities } from "@/src/hooks/useFacilities";
 import {
   useCreateReferral,
+  useDepartments,
   useReferrals,
 } from "@/src/hooks/nurses/use-referrals";
 
@@ -54,6 +56,25 @@ const REFERRAL_TYPE_OPTIONS = [
   { label: "Physical", value: "PHYSICAL" },
   { label: "Telemedicine", value: "TELEMEDICINE" },
   { label: "Emergency", value: "EMERGENCY" },
+];
+
+const DESTINATION_LEVEL_OPTIONS = [
+  { label: "Primary Health Care (Internal)", value: "PRIMARY" },
+  { label: "Secondary Health Care", value: "SECONDARY" },
+  { label: "Higher Health Care", value: "HIGHER" },
+  { label: "Other", value: "OTHER" },
+];
+
+const TRANSPORT_MODE_OPTIONS = [
+  { label: "Private Vehicle", value: "PRIVATE" },
+  { label: "Ambulance", value: "AMBULANCE" },
+  { label: "Public Transportation", value: "PUBLIC" },
+  { label: "Other", value: "OTHER" },
+];
+
+const REFERRAL_MODE_OPTIONS = [
+  { label: "Softcopy (Email/Digital)", value: "SOFTCOPY" },
+  { label: "Hardcopy (Physical Document)", value: "HARDCOPY" },
 ];
 
 type VitalValue = string | number | null | undefined;
@@ -396,8 +417,17 @@ export default function AppointmentDetails() {
 
   const [showReferralModal, setShowReferralModal] = useState(false);
   const [referralForm, setReferralForm] = useState({
-    receiving_facility: "",
+    destination_level: "",
     referral_type: "",
+    mode_of_transportation: "",
+    receiving_facility: "",
+    receiving_department: "",
+    mode_of_referral: "",
+    target_type: "" as "" | "DOCTOR" | "DEPARTMENT",
+    target_doctor_email: "",
+    target_department_email: "",
+    email_subject: "",
+    email_body: "",
     reason_for_referral: "",
     clinical_summary: "",
   });
@@ -410,6 +440,8 @@ export default function AppointmentDetails() {
 
   const { data: facilitiesData, isLoading: isLoadingFacilities } =
     useFacilities({ pageSize: 100, isActive: true });
+  const { data: departmentsData, isLoading: isLoadingDepartments } =
+    useDepartments(referralForm.receiving_facility);
   const { mutate: createReferral, isPending: isSubmittingReferral } =
     useCreateReferral();
   const { data: appointmentReferrals, isLoading: isLoadingReferrals } =
@@ -423,7 +455,29 @@ export default function AppointmentDetails() {
     }));
   }, [facilitiesData]);
 
+  const departmentOptions = useMemo(() => {
+    if (!departmentsData?.results) return [];
+    return departmentsData.results.map((dept: { id: string; name: string }) => ({
+      label: dept.name,
+      value: dept.id,
+    }));
+  }, [departmentsData]);
+
   const existingReferral = appointmentReferrals?.results?.[0];
+
+  // Switching target keeps the two email fields mutually exclusive by
+  // construction, so the payload can never carry both at once.
+  const selectReferralTargetType = (type: "DOCTOR" | "DEPARTMENT") => {
+    setReferralForm((current) => ({
+      ...current,
+      target_type: type,
+      target_doctor_email:
+        type === "DOCTOR" ? current.target_doctor_email : "",
+      target_department_email:
+        type === "DEPARTMENT" ? current.target_department_email : "",
+    }));
+    setReferralError("");
+  };
 
   if (isLoading) {
     return (
@@ -469,41 +523,97 @@ export default function AppointmentDetails() {
 
   const handleReferralSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    const isTelemedicine = referralForm.referral_type === "TELEMEDICINE";
+    const isPrimary = referralForm.destination_level === "PRIMARY";
+    const isSoftcopy = referralForm.mode_of_referral === "SOFTCOPY";
+
     if (
-      !referralForm.receiving_facility ||
+      !referralForm.destination_level ||
       !referralForm.referral_type ||
+      (!isTelemedicine && !referralForm.mode_of_transportation) ||
       !referralForm.reason_for_referral.trim()
     ) {
       setReferralError("Please complete all required fields.");
       return;
     }
 
+    if (isPrimary && !referralForm.receiving_department) {
+      setReferralError("Please select a receiving department.");
+      return;
+    }
+
+    if (!isPrimary) {
+      if (!referralForm.mode_of_referral) {
+        setReferralError("Please select a mode of referral.");
+        return;
+      }
+      if (isSoftcopy) {
+        if (!referralForm.target_type) {
+          setReferralError(
+            "Please choose whether this referral is going to a doctor or a department.",
+          );
+          return;
+        }
+        const targetEmail =
+          referralForm.target_type === "DOCTOR"
+            ? referralForm.target_doctor_email
+            : referralForm.target_department_email;
+        if (!targetEmail.trim()) {
+          setReferralError(
+            referralForm.target_type === "DOCTOR"
+              ? "Please provide the target doctor's email."
+              : "Please provide the target department's email.",
+          );
+          return;
+        }
+      }
+    }
+
     createReferral(
       {
         appointment: id,
-        receiving_facility: referralForm.receiving_facility,
+        destination_level: referralForm.destination_level,
         referral_type: referralForm.referral_type,
+        mode_of_transportation: isTelemedicine
+          ? null
+          : referralForm.mode_of_transportation,
         reason_for_referral: referralForm.reason_for_referral,
         clinical_summary: referralForm.clinical_summary,
 
-        // --- NEW REQUIRED API FIELDS ---
-        destination_level: "SECONDARY", // Update this with your actual default or add to referralForm
-        mode_of_transportation: null,
-        receiving_department: null,
-        mode_of_referral: null,
-        target_doctor_email: null,
-        target_department_email: null,
-        email_subject: "New Patient Referral", // Or generate dynamically
-        email_body:
-          referralForm.reason_for_referral ||
-          "Please review the attached clinical summary for details.",
+        receiving_facility: null,
+        receiving_department: isPrimary
+          ? referralForm.receiving_department
+          : null,
+        mode_of_referral: isPrimary ? null : referralForm.mode_of_referral,
+        // target_type keeps these mutually exclusive, but guard with
+        // `|| null` too so a cleared/never-set field is never sent as "".
+        target_doctor_email:
+          !isPrimary && isSoftcopy && referralForm.target_type === "DOCTOR"
+            ? referralForm.target_doctor_email || null
+            : null,
+        target_department_email:
+          !isPrimary && isSoftcopy && referralForm.target_type === "DEPARTMENT"
+            ? referralForm.target_department_email || null
+            : null,
+        email_subject: !isPrimary && isSoftcopy ? referralForm.email_subject : "",
+        email_body: !isPrimary && isSoftcopy ? referralForm.email_body : "",
       },
       {
         onSuccess: () => {
           setShowReferralModal(false);
           setReferralForm({
-            receiving_facility: "",
+            destination_level: "",
             referral_type: "",
+            mode_of_transportation: "",
+            receiving_facility: "",
+            receiving_department: "",
+            mode_of_referral: "",
+            target_type: "",
+            target_doctor_email: "",
+            target_department_email: "",
+            email_subject: "",
+            email_body: "",
             reason_for_referral: "",
             clinical_summary: "",
           });
@@ -1039,15 +1149,14 @@ export default function AppointmentDetails() {
 
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                   <SearchableSelect
-                    label="Receiving Facility *"
-                    placeholder="Search facility"
-                    options={facilityOptions}
-                    value={referralForm.receiving_facility}
-                    isLoading={isLoadingFacilities}
+                    label="Destination Level *"
+                    placeholder="Select level"
+                    options={DESTINATION_LEVEL_OPTIONS}
+                    value={referralForm.destination_level}
                     onChange={(value) =>
                       setReferralForm({
                         ...referralForm,
-                        receiving_facility: value,
+                        destination_level: value,
                       })
                     }
                   />
@@ -1060,7 +1169,186 @@ export default function AppointmentDetails() {
                       setReferralForm({ ...referralForm, referral_type: value })
                     }
                   />
+                  {referralForm.referral_type !== "TELEMEDICINE" && (
+                    <SearchableSelect
+                      label="Mode of Transportation *"
+                      placeholder="Select transport mode"
+                      options={TRANSPORT_MODE_OPTIONS}
+                      value={referralForm.mode_of_transportation}
+                      onChange={(value) =>
+                        setReferralForm({
+                          ...referralForm,
+                          mode_of_transportation: value,
+                        })
+                      }
+                    />
+                  )}
                 </div>
+
+                {referralForm.destination_level === "PRIMARY" && (
+                  <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                    <SearchableSelect
+                      label="Search Facility (To find department) *"
+                      placeholder="Select facility"
+                      options={facilityOptions}
+                      value={referralForm.receiving_facility}
+                      isLoading={isLoadingFacilities}
+                      onChange={(value) =>
+                        setReferralForm({
+                          ...referralForm,
+                          receiving_facility: value,
+                          receiving_department: "",
+                        })
+                      }
+                    />
+                    <SearchableSelect
+                      label="Receiving Department *"
+                      placeholder="Select department"
+                      options={departmentOptions}
+                      value={referralForm.receiving_department}
+                      isLoading={isLoadingDepartments}
+                      onChange={(value) =>
+                        setReferralForm({
+                          ...referralForm,
+                          receiving_department: value,
+                        })
+                      }
+                    />
+                  </div>
+                )}
+
+                {referralForm.destination_level &&
+                  referralForm.destination_level !== "PRIMARY" && (
+                    <div className="space-y-6">
+                      <SearchableSelect
+                        label="Mode of Referral *"
+                        placeholder="Select mode"
+                        options={REFERRAL_MODE_OPTIONS}
+                        value={referralForm.mode_of_referral}
+                        onChange={(value) => {
+                          setReferralForm((current) => ({
+                            ...current,
+                            mode_of_referral: value,
+                            ...(value !== "SOFTCOPY"
+                              ? {
+                                  target_type: "" as const,
+                                  target_doctor_email: "",
+                                  target_department_email: "",
+                                  email_subject: "",
+                                  email_body: "",
+                                }
+                              : {}),
+                          }));
+                          setReferralError("");
+                        }}
+                      />
+
+                      {referralForm.mode_of_referral === "SOFTCOPY" && (
+                        <>
+                          <div>
+                            <p className="mb-2 text-xs text-[#62636C]">
+                              Refer To *
+                            </p>
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  selectReferralTargetType("DOCTOR")
+                                }
+                                className={`flex items-center justify-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors ${
+                                  referralForm.target_type === "DOCTOR"
+                                    ? "border-[#046C3F] bg-[#E8F7F0] text-[#046C3F]"
+                                    : "border-gray-300 bg-white text-gray-600 hover:bg-gray-50"
+                                }`}
+                              >
+                                <User size={16} />A Specific Doctor
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  selectReferralTargetType("DEPARTMENT")
+                                }
+                                className={`flex items-center justify-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors ${
+                                  referralForm.target_type === "DEPARTMENT"
+                                    ? "border-[#046C3F] bg-[#E8F7F0] text-[#046C3F]"
+                                    : "border-gray-300 bg-white text-gray-600 hover:bg-gray-50"
+                                }`}
+                              >
+                                <Building2 size={16} />A Department
+                              </button>
+                            </div>
+                          </div>
+
+                          {referralForm.target_type === "DOCTOR" && (
+                            <FieldShell label="Target Doctor Email *">
+                              <input
+                                type="email"
+                                value={referralForm.target_doctor_email}
+                                onChange={(e) =>
+                                  setReferralForm({
+                                    ...referralForm,
+                                    target_doctor_email: e.target.value,
+                                  })
+                                }
+                                placeholder="dr.smith@example.com"
+                                className="w-full bg-transparent text-base text-gray-700 placeholder:text-gray-400 outline-none"
+                              />
+                            </FieldShell>
+                          )}
+
+                          {referralForm.target_type === "DEPARTMENT" && (
+                            <FieldShell label="Target Department Email *">
+                              <input
+                                type="email"
+                                value={referralForm.target_department_email}
+                                onChange={(e) =>
+                                  setReferralForm({
+                                    ...referralForm,
+                                    target_department_email: e.target.value,
+                                  })
+                                }
+                                placeholder="surgery@example.com"
+                                className="w-full bg-transparent text-base text-gray-700 placeholder:text-gray-400 outline-none"
+                              />
+                            </FieldShell>
+                          )}
+
+                          {referralForm.target_type && (
+                            <>
+                              <FieldShell label="Email Subject">
+                                <input
+                                  type="text"
+                                  value={referralForm.email_subject}
+                                  onChange={(e) =>
+                                    setReferralForm({
+                                      ...referralForm,
+                                      email_subject: e.target.value,
+                                    })
+                                  }
+                                  placeholder="Emergency Surgical Transfer..."
+                                  className="w-full bg-transparent text-base text-gray-700 placeholder:text-gray-400 outline-none"
+                                />
+                              </FieldShell>
+                              <FieldShell label="Email Body" className="py-2">
+                                <textarea
+                                  value={referralForm.email_body}
+                                  onChange={(e) =>
+                                    setReferralForm({
+                                      ...referralForm,
+                                      email_body: e.target.value,
+                                    })
+                                  }
+                                  placeholder="Provide details for the receiving end..."
+                                  rows={4}
+                                  className="w-full resize-none bg-transparent text-base text-gray-700 placeholder:text-gray-400 outline-none"
+                                />
+                              </FieldShell>
+                            </>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )}
 
                 <FieldShell label="Reason for Referral *" className="py-2">
                   <textarea
