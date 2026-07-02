@@ -3,12 +3,12 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { toast } from "react-toastify";
 import {
   ArrowLeft,
   FileText,
   Activity,
   Info,
-  CheckCircle2,
   Pill,
   Loader2,
   Clock,
@@ -212,7 +212,6 @@ export default function ConsultationWorkspace() {
   const [form, setForm] = useState(INITIAL_FORM);
   const [hydratedRecordId, setHydratedRecordId] = useState<string | null>(null);
   const [formError, setFormError] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
 
   // Adjusting state during render (rather than in an effect) to sync the form
   // with whichever record just loaded, per React's "resetting state" pattern.
@@ -261,8 +260,7 @@ export default function ConsultationWorkspace() {
         { id: record.id, payload },
         {
           onSuccess: () => {
-            setSuccessMessage("Consultation note updated successfully.");
-            setTimeout(() => setSuccessMessage(""), 3500);
+            toast.success("Consultation note updated successfully.");
           },
           onError: (error) => {
             setFormError(
@@ -280,6 +278,7 @@ export default function ConsultationWorkspace() {
           };
           const id =
             created?.data?.data?.id || created?.data?.id || created?.id;
+          toast.success("Consultation note created successfully.");
           if (id) {
             router.replace(`/doctor-dashboard/consultations/${id}`);
           }
@@ -430,12 +429,6 @@ export default function ConsultationWorkspace() {
             {formError && (
               <div className="rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
                 {formError}
-              </div>
-            )}
-            {successMessage && (
-              <div className="flex items-center gap-2 rounded-lg border border-green-100 bg-green-50 px-4 py-3 text-sm text-[#046C3F]">
-                <CheckCircle2 size={16} />
-                {successMessage}
               </div>
             )}
 

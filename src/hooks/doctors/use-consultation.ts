@@ -108,8 +108,11 @@ export function useConsultationByAppointmentId(appointmentId: string) {
   return useQuery({
     queryKey: ["consultation-by-appointment", appointmentId],
     queryFn: async () => {
+      // A 404 here just means no consultation exists yet for this appointment —
+      // that's an expected outcome (not a user-facing error), so no error toast.
       const res = await api.get<any>(
         `/consultations/records/by-appointment/${appointmentId}/`,
+        { showErrorToast: false },
       );
       return res?.data?.data || res?.data || res;
     },
