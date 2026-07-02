@@ -133,6 +133,10 @@ export function usePatientReferrals(patientId: string, filters: TabFilters) {
         params.append("page_size", String(filters.page_size));
       if (filters.status && filters.status !== "All Status")
         params.append("status", filters.status.toUpperCase());
+      if (filters.direction && filters.direction !== "All Directions")
+        params.append("direction", filters.direction);
+      if (filters.start_date) params.append("start_date", filters.start_date);
+      if (filters.end_date) params.append("end_date", filters.end_date);
 
       const res = await api.get<any>(
         `/nurse/patients/${patientId}/referrals/?${params.toString()}`,

@@ -1,9 +1,20 @@
 "use client";
 
-import React, { useState } from "react";
-import { useParams } from "next/navigation";
+import React, { useEffect, useRef, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, CalendarDays, User } from "lucide-react";
+import { createPortal } from "react-dom";
+import {
+  ArrowDownLeft,
+  ArrowLeft,
+  ArrowUpRight,
+  CalendarDays,
+  Edit,
+  Eye,
+  Globe,
+  MoreHorizontal,
+  User,
+} from "lucide-react";
 import { CustomDropdown } from "@/src/components/generic/ui/CustomDropdown";
 import { ColumnDef, DataTable } from "@/src/components/generic/ui/DataTable";
 import { StatusBadge } from "@/src/components/generic/ui/TableHelpers";
@@ -17,6 +28,8 @@ import {
   usePatientPrescriptions,
   usePatientReferrals,
 } from "@/src/hooks/nurses/use-patients";
+import { useUpdateReferralStatus } from "@/src/hooks/nurses/use-referrals";
+import type { PatientReferral } from "@/src/components/nurse-dashboard/patients/type";
 
 type ProfileTab =
   | "Demographics"
@@ -420,80 +433,349 @@ function MedicationsTab({ patientId }: { patientId: string }) {
   );
 }
 
+const REFERRAL_STATUS_OPTIONS = ["All Status", "PENDING", "ACCEPTED", "REJECTED"];
+const REFERRAL_DIRECTION_OPTIONS = ["All Directions", "inbound", "outbound"];
+
+const referralStatusColors: Record<string, { bg: string; text: string }> = {
+  ACCEPTED: { bg: "#DFF3EA", text: "#039855" },
+  PENDING: { bg: "#FFF4E5", text: "#1F2937" },
+  REJECTED: { bg: "#FDE8E8", text: "#F33131" },
+};
+
+function FacilityCell({
+  name,
+  isDestination,
+}: {
+  name: string | null;
+  isDestination?: boolean;
+}) {
+  if (name) {
+    return <span className="font-medium text-gray-700">{name}</span>;
+  }
+  return (
+    <div className="inline-flex items-center gap-1.5 rounded-md border border-dashed border-gray-300 bg-gray-50 px-2 py-1 text-xs font-medium text-gray-500">
+      <Globe size={12} className="text-gray-400" />
+      <span>{isDestination ? "External Destination" : "External Origin"}</span>
+    </div>
+  );
+}
+
+function ReferralActionMenu({ row }: { row: PatientReferral }) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [coords, setCoords] = useState({ top: 0, left: 0 });
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [selectedStatus, setSelectedStatus] = useState(row.status);
+  const [errorMsg, setErrorMsg] = useState("");
+
+  const { mutate: updateStatus, isPending: isUpdating } =
+    useUpdateReferralStatus();
+
+  const toggleMenu = () => {
+    if (!open && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      const top =
+        rect.bottom + 100 > window.innerHeight
+          ? rect.top + window.scrollY - 100 - 4
+          : rect.bottom + window.scrollY + 4;
+      const left = Math.max(
+        12 + window.scrollX,
+        rect.right - 192 + window.scrollX,
+      );
+      setCoords({ top, left });
+    }
+    setOpen((c) => !c);
+  };
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(e.target as Node) &&
+        buttonRef.current &&
+        !buttonRef.current.contains(e.target as Node)
+      ) {
+        setOpen(false);
+      }
+    }
+    if (open) document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [open]);
+
+  const handleUpdateStatus = () => {
+    setErrorMsg("");
+    updateStatus(
+      { id: row.id, status: selectedStatus },
+      {
+        onSuccess: () => setShowStatusModal(false),
+        onError: (error: unknown) => {
+          const maybeError = error as {
+            response?: { data?: { errors?: { detail?: string }; message?: string } };
+          };
+          setErrorMsg(
+            maybeError?.response?.data?.errors?.detail ||
+              maybeError?.response?.data?.message ||
+              "Failed to update status. Please try again.",
+          );
+        },
+      },
+    );
+  };
+
+  const items = [
+    {
+      label: "View Detail",
+      icon: Eye,
+      onClick: () => router.push(`/doctor-dashboard/referrals/${row.id}`),
+      className: "text-gray-700",
+    },
+  ];
+
+  if (row.direction?.toLowerCase() === "inbound") {
+    items.push({
+      label: "Update Status",
+      icon: Edit,
+      onClick: () => setShowStatusModal(true),
+      className: "text-gray-700",
+    });
+  }
+
+  return (
+    <>
+      <button
+        ref={buttonRef}
+        onClick={toggleMenu}
+        className="inline-flex h-8 w-8 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900"
+      >
+        <MoreHorizontal size={18} />
+      </button>
+
+      {open &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            ref={menuRef}
+            style={{ top: coords.top, left: coords.left }}
+            className="absolute z-[999] w-48 rounded-xl border border-gray-100 bg-white py-2 shadow-[0_8px_30px_rgb(0,0,0,0.12)]"
+          >
+            {items.map((item) => {
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.label}
+                  onClick={() => {
+                    item.onClick();
+                    setOpen(false);
+                  }}
+                  className={`flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm font-medium hover:bg-gray-50 ${item.className}`}
+                >
+                  <Icon size={16} className={item.className} /> {item.label}
+                </button>
+              );
+            })}
+          </div>,
+          document.body,
+        )}
+
+      {showStatusModal &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+            <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
+              <h3 className="mb-4 text-lg font-semibold text-gray-900">
+                Update Referral Status
+              </h3>
+              <p className="mb-4 text-sm text-gray-500">
+                Change the status for referral <b>{row.referral_id}</b>.
+              </p>
+
+              {errorMsg && (
+                <div className="mb-4 rounded-lg border border-red-100 bg-red-50 p-3 text-sm text-red-600">
+                  {errorMsg}
+                </div>
+              )}
+
+              <select
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 p-2.5 text-sm focus:border-[#046C3F] focus:outline-none focus:ring-1 focus:ring-[#046C3F]"
+              >
+                {REFERRAL_STATUS_OPTIONS.filter((s) => s !== "All Status").map(
+                  (status) => (
+                    <option key={status} value={status}>
+                      {status.charAt(0) + status.slice(1).toLowerCase()}
+                    </option>
+                  ),
+                )}
+              </select>
+
+              <div className="mt-6 flex justify-end gap-3">
+                <button
+                  onClick={() => {
+                    setShowStatusModal(false);
+                    setErrorMsg("");
+                    setSelectedStatus(row.status);
+                  }}
+                  className="rounded-lg px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleUpdateStatus}
+                  disabled={isUpdating}
+                  className="rounded-lg bg-[#046C3F] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#035a34] disabled:opacity-70"
+                >
+                  {isUpdating ? "Saving..." : "Save Status"}
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
+    </>
+  );
+}
+
 function ReferralsTab({ patientId }: { patientId: string }) {
   const [filters, setFilters] = useState({
     page: 1,
     page_size: 10,
     status: "All Status",
+    direction: "All Directions",
+    start_date: "",
+    end_date: "",
   });
   const { data } = usePatientReferrals(patientId, filters);
 
-  const rows =
-    data?.results?.map((ref) => ({
-      rawId: ref.id,
-      id: ref.referral_id,
-      date: formatDate(ref.created_at),
-      clinician: ref.referred_by_name || "-",
-      facility: ref.receiving_facility_name || "-",
-      type: ref.referral_type,
-      reason: ref.reason_for_referral || "-",
-      status: ref.status,
-    })) || [];
+  const columns: ColumnDef<PatientReferral>[] = [
+    { header: "Referral ID", accessorKey: "referral_id", sortable: true },
+    {
+      header: "Direction",
+      sortable: true,
+      render: (row) => {
+        const isInbound = row.direction?.toLowerCase() === "inbound";
+        return (
+          <div
+            className={`flex w-fit items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${
+              isInbound
+                ? "bg-blue-50 text-blue-700"
+                : "bg-purple-50 text-purple-700"
+            }`}
+          >
+            {isInbound ? (
+              <ArrowDownLeft size={14} />
+            ) : (
+              <ArrowUpRight size={14} />
+            )}
+            <span className="capitalize">{row.direction || "Unknown"}</span>
+          </div>
+        );
+      },
+    },
+    {
+      header: "Type",
+      accessorKey: "referral_type",
+      sortable: true,
+      render: (row) => (
+        <span className="capitalize">
+          {row.referral_type?.toLowerCase() || "-"}
+        </span>
+      ),
+    },
+    {
+      header: "Referring Facility",
+      sortable: true,
+      render: (row) => <FacilityCell name={row.referring_facility_name} />,
+    },
+    {
+      header: "Receiving Facility",
+      sortable: true,
+      render: (row) => (
+        <FacilityCell name={row.receiving_facility_name} isDestination />
+      ),
+    },
+    {
+      header: "Referred By",
+      accessorKey: "referred_by_name",
+      sortable: true,
+    },
+    {
+      header: "Date",
+      sortable: true,
+      render: (row) => formatDate(row.created_at),
+    },
+    {
+      header: "Status",
+      sortable: true,
+      render: (row) => {
+        const colorData = referralStatusColors[row.status] || {
+          bg: "#F3F4F6",
+          text: "#374151",
+        };
+        return (
+          <StatusBadge
+            label={row.status.charAt(0) + row.status.slice(1).toLowerCase()}
+            bgColorHex={colorData.bg}
+            textColorHex={colorData.text}
+          />
+        );
+      },
+    },
+    {
+      header: "Action",
+      render: (row) => <ReferralActionMenu row={row} />,
+    },
+  ];
 
   return (
-    <GenericTable
+    <DataTable
       title="Patient Referrals"
-      data={rows}
+      data={data?.results || []}
+      columns={columns}
+      showSearch={false}
       totalPages={data?.total_pages}
-      searchPlaceholder="Search patient by Clinician or Facility..."
-      toolbar={
+      emptyMessage="No referrals found."
+      toolbarActions={
         <>
           <NurseDateRangeFilter
-            startDate=""
-            endDate=""
-            onApply={() => {}}
-            onClear={() => {}}
+            startDate={filters.start_date}
+            endDate={filters.end_date}
+            onApply={(start, end) =>
+              setFilters((prev) => ({
+                ...prev,
+                start_date: start,
+                end_date: end,
+                page: 1,
+              }))
+            }
+            onClear={() =>
+              setFilters((prev) => ({
+                ...prev,
+                start_date: "",
+                end_date: "",
+                page: 1,
+              }))
+            }
           />
           <CustomDropdown
-            options={["All Status", "Pending", "Accepted", "Rejected"]}
+            options={REFERRAL_DIRECTION_OPTIONS}
+            selected={filters.direction}
+            onSelect={(val) =>
+              setFilters((prev) => ({ ...prev, direction: val, page: 1 }))
+            }
+          />
+          <CustomDropdown
+            options={REFERRAL_STATUS_OPTIONS}
             selected={filters.status}
-            onSelect={(val) => setFilters((prev) => ({ ...prev, status: val }))}
+            onSelect={(val) =>
+              setFilters((prev) => ({ ...prev, status: val, page: 1 }))
+            }
           />
         </>
       }
-      columns={[
-        { header: "Referral ID", accessorKey: "id", sortable: true },
-        { header: "Date", accessorKey: "date", sortable: true },
-        {
-          header: "Referring Clinician",
-          accessorKey: "clinician",
-          sortable: true,
-        },
-        {
-          header: "Receiving Facility",
-          accessorKey: "facility",
-          sortable: true,
-        },
-        { header: "Referral Type", accessorKey: "type", sortable: true },
-        { header: "Reason", accessorKey: "reason", sortable: true },
-        {
-          header: "Status",
-          sortable: true,
-          render: (row) => statusBadge(row.status),
-        },
-        {
-          header: "Action",
-          sortable: false,
-          render: (row) => (
-            <Link
-              href={`/doctor-dashboard/referrals/${row.rawId}`}
-              className="text-[#046C3F] font-medium hover:underline"
-            >
-              View
-            </Link>
-          ),
-        },
-      ]}
     />
   );
 }
