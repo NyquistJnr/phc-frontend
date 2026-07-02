@@ -157,6 +157,19 @@ export default function AncVisits() {
       sortable: true,
     },
     {
+      header: "Appointment ID",
+      accessorKey: "appointment_custom_id",
+    },
+    {
+      header: "Patient Name",
+      accessorKey: "patient_name",
+      sortable: true,
+    },
+    {
+      header: "Patient ID",
+      accessorKey: "patient_display_id",
+    },
+    {
       header: "Type",
       render: (row) => {
         const colorData = attendanceColors[row.attendance_type] || {
