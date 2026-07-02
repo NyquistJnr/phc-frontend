@@ -32,6 +32,7 @@ import type {
 } from "./types";
 import LabRequestsSection from "./LabRequestsSection";
 import ReferralSection from "./ReferralSection";
+import PrescriptionsSection from "./PrescriptionsSection";
 
 const INITIAL_FORM = {
   chief_complaint: "",
@@ -653,6 +654,7 @@ export default function ConsultationWorkspace() {
         {appointmentId && (
           <div className="mt-6 space-y-6">
             <LabRequestsSection appointmentId={appointmentId} />
+            <PrescriptionsSection appointmentId={appointmentId} />
             <ReferralSection appointmentId={appointmentId} />
           </div>
         )}
