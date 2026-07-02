@@ -13,6 +13,7 @@ import {
   usePrescriptionOrderDetail,
 } from "@/src/hooks/pharmacist/use-prescriptions";
 import DispensePrescriptionModal from "./DispensePrescriptionModal";
+import type { PrescriptionOrder } from "./type";
 
 function formatDate(dateString: string) {
   if (!dateString) return "-";
@@ -34,6 +35,91 @@ const statusColors: Record<string, { bg: string; text: string }> = {
   DISPENSED: { bg: "#DFF3EA", text: "#039855" },
   CANCELLED: { bg: "#FDE8E8", text: "#F33131" },
 };
+
+function escapeHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function printPrescriptionOrder(order: PrescriptionOrder) {
+  const printWindow = window.open("", "_blank", "width=900,height=700");
+  if (!printWindow) return false;
+
+  const detailRows = [
+    ["Prescription ID", order.prescription_id],
+    ["Date Created", formatDate(order.created_at)],
+    ["Patient Name", order.patient_name],
+    ["Patient Display ID", order.patient_display_id],
+    ["Prescribed By", order.prescribed_by_name],
+    ["Priority", order.priority],
+    ["Status", order.status],
+  ];
+
+  const medicationRows = order.items
+    .map(
+      (item, index) => `
+        <tr>
+          <td>${index + 1}</td>
+          <td>${escapeHtml(item.custom_drug_name || item.medication_name)}</td>
+          <td>${escapeHtml(item.dosage || "-")}</td>
+          <td>${escapeHtml(item.frequency || "-")}</td>
+          <td>${escapeHtml(item.duration || "-")}</td>
+        </tr>`,
+    )
+    .join("");
+
+  printWindow.document.write(`
+    <!doctype html>
+    <html>
+      <head>
+        <title>${escapeHtml(order.prescription_id)} Prescription</title>
+        <style>
+          body { color: #111827; font-family: Arial, sans-serif; margin: 40px; }
+          h1 { color: #046C3F; font-size: 24px; margin-bottom: 4px; }
+          h2 { color: #046C3F; font-size: 16px; margin-top: 32px; }
+          p { color: #4B5563; margin-top: 0; }
+          table { border-collapse: collapse; margin-top: 16px; width: 100%; }
+          th, td { border: 1px solid #E5E7EB; padding: 10px; text-align: left; font-size: 14px; }
+          th { background: #F6F7FC; }
+          .details th { width: 32%; }
+        </style>
+      </head>
+      <body>
+        <h1>Prescription ${escapeHtml(order.prescription_id)}</h1>
+        <p>Generated from PHC Pharmacist Dashboard</p>
+        <table class="details">
+          <tbody>
+            ${detailRows
+              .map(
+                ([label, value]) =>
+                  `<tr><th>${escapeHtml(label)}</th><td>${escapeHtml(value)}</td></tr>`,
+              )
+              .join("")}
+          </tbody>
+        </table>
+        <h2>Medications</h2>
+        <table>
+          <thead>
+            <tr><th>#</th><th>Drug</th><th>Dosage</th><th>Frequency</th><th>Duration</th></tr>
+          </thead>
+          <tbody>
+            ${medicationRows}
+          </tbody>
+        </table>
+        <h2>Doctor's Instructions</h2>
+        <p>${escapeHtml(order.instructions || "-")}</p>
+      </body>
+    </html>
+  `);
+  printWindow.document.close();
+  printWindow.focus();
+  printWindow.print();
+  return true;
+}
 
 function ReadonlyField({
   label,
@@ -67,6 +153,7 @@ export default function PharmacistPrescriptionsDetail() {
   const prescriptionId = params.id as string;
   const [dispenseModalOpen, setDispenseModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
+  const [dispenseError, setDispenseError] = useState("");
 
   const { data: prescription, isLoading } =
     usePrescriptionOrderDetail(prescriptionId);
@@ -218,7 +305,18 @@ export default function PharmacistPrescriptionsDetail() {
             />
           </div>
           <div className="mt-12 flex max-w-[770px] flex-col gap-4 sm:flex-row sm:justify-end">
-            <button className="inline-flex h-14 items-center justify-center gap-3 rounded-lg border border-[#046C3F] px-8 text-lg font-medium text-[#046C3F] transition-colors hover:bg-[#046C3F]/5">
+            <button
+              onClick={() => {
+                const didPrint = printPrescriptionOrder(prescription);
+                if (!didPrint) {
+                  setToastMessage(
+                    "Unable to open the export window. Please allow pop-ups.",
+                  );
+                  window.setTimeout(() => setToastMessage(""), 3500);
+                }
+              }}
+              className="inline-flex h-14 items-center justify-center gap-3 rounded-lg border border-[#046C3F] px-8 text-lg font-medium text-[#046C3F] transition-colors hover:bg-[#046C3F]/5"
+            >
               <Download size={20} />
               Export File
             </button>
@@ -227,7 +325,10 @@ export default function PharmacistPrescriptionsDetail() {
                 prescription.status === "DISPENSED" ||
                 prescription.status === "CANCELLED"
               }
-              onClick={() => setDispenseModalOpen(true)}
+              onClick={() => {
+                setDispenseError("");
+                setDispenseModalOpen(true);
+              }}
               className="inline-flex h-14 items-center justify-center rounded-lg bg-[#046C3F] px-10 text-lg font-medium text-white transition-colors hover:bg-[#035a34] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Start Dispensing
@@ -240,17 +341,33 @@ export default function PharmacistPrescriptionsDetail() {
         <DispensePrescriptionModal
           order={prescription}
           isSubmitting={dispenseMutation.isPending}
+          errorMessage={dispenseError}
           onClose={() => setDispenseModalOpen(false)}
-          onConfirm={() => {
-            dispenseMutation.mutate(prescription.id, {
-              onSuccess: () => {
-                setDispenseModalOpen(false);
-                setToastMessage(
-                  `${prescription.prescription_id} dispensed successfully`,
-                );
-                window.setTimeout(() => setToastMessage(""), 3500);
+          onConfirm={(items) => {
+            setDispenseError("");
+            dispenseMutation.mutate(
+              {
+                orderId: prescription.id,
+                patientId: prescription.patient,
+                items,
               },
-            });
+              {
+                onSuccess: () => {
+                  setDispenseModalOpen(false);
+                  setToastMessage(
+                    `${prescription.prescription_id} dispensed successfully`,
+                  );
+                  window.setTimeout(() => setToastMessage(""), 3500);
+                },
+                onError: (error: unknown) => {
+                  setDispenseError(
+                    error instanceof Error
+                      ? error.message
+                      : "Failed to dispense. Please try again.",
+                  );
+                },
+              },
+            );
           }}
         />
       )}

@@ -62,17 +62,43 @@ export function usePrescriptionOrderDetail(id: string) {
   });
 }
 
+export interface DispensePrescriptionLineItem {
+  drugId: string;
+  quantity: number;
+  note?: string;
+}
+
 export function useDispensePrescriptionOrder() {
   const api = useApi();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (id: string) => {
-      return await api.post(`/prescriptions/orders/${id}/dispense/`, {});
+    mutationFn: async ({
+      orderId,
+      patientId,
+      items,
+    }: {
+      orderId: string;
+      patientId: string;
+      items: DispensePrescriptionLineItem[];
+    }) => {
+      return await Promise.all(
+        items.map((item) =>
+          api.post(`/inventory/items/${item.drugId}/dispense/`, {
+            quantity: item.quantity,
+            patient_id: patientId,
+            note: item.note,
+          }),
+        ),
+      );
     },
-    onSuccess: (_, id) => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["prescription-orders"] });
-      queryClient.invalidateQueries({ queryKey: ["prescription-detail", id] });
+      queryClient.invalidateQueries({
+        queryKey: ["prescription-detail", variables.orderId],
+      });
+      queryClient.invalidateQueries({ queryKey: ["inventory-drugs"] });
+      queryClient.invalidateQueries({ queryKey: ["inventory-stats"] });
     },
   });
 }
