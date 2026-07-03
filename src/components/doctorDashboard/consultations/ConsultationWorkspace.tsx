@@ -59,6 +59,18 @@ function getApiErrorMessage(error: unknown, fallback: string) {
   );
 }
 
+// The backend enforces one consultation per appointment. A duplicate create
+// (e.g. a resubmit before this page finished navigating to the record it
+// just made) surfaces as a field error here rather than a generic message.
+function isDuplicateAppointmentError(error: unknown) {
+  const maybeError = error as {
+    response?: { data?: { errors?: { appointment?: string[] } } };
+  };
+  return !!maybeError.response?.data?.errors?.appointment?.some((message) =>
+    message.toLowerCase().includes("already exists"),
+  );
+}
+
 function formatDate(value?: string) {
   if (!value) return "";
   return new Date(value).toLocaleString("en-GB", {
@@ -153,8 +165,11 @@ export default function ConsultationWorkspace() {
   );
 
   // Does a consultation already exist for the appointment we're about to create one for?
-  const { data: existingByAppointment, isFetched: isExistingChecked } =
-    useConsultationByAppointmentId(!isEditRoute ? selectedAppointment : "");
+  const {
+    data: existingByAppointment,
+    isFetched: isExistingChecked,
+    refetch: refetchExistingByAppointment,
+  } = useConsultationByAppointmentId(!isEditRoute ? selectedAppointment : "");
 
   // Auto-forward /new?appointment=X to the canonical /consultations/{id} once we
   // learn a record already exists — this is what turns the next save into a PATCH.
@@ -291,7 +306,25 @@ export default function ConsultationWorkspace() {
             router.replace(`/doctor-dashboard/consultations/${id}`);
           }
         },
-        onError: (error) => {
+        onError: async (error) => {
+          if (isDuplicateAppointmentError(error)) {
+            // Someone (this tab or another) already created the record —
+            // don't dead-end the user on a confusing error. Pull the
+            // canonical record; the auto-forward effect above will pick up
+            // the refreshed query data and redirect to it.
+            toast.info(
+              "This appointment already has a consultation note. Opening it now...",
+            );
+            const { data: existing } = await refetchExistingByAppointment();
+            const existingId = (existing as ConsultationRecord | undefined)
+              ?.id;
+            if (!existingId) {
+              setFormError(
+                "This appointment already has a consultation note, but it could not be opened automatically. Please refresh and try again.",
+              );
+            }
+            return;
+          }
           setFormError(
             getApiErrorMessage(error, "Failed to save consultation note."),
           );
