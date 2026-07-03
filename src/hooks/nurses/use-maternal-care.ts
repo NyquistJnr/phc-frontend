@@ -10,7 +10,24 @@ import {
   MaternalVisitFilters,
   AncVisitResult,
   PncVisitResult,
+  UpcomingFollowUpsFilters,
+  UpcomingFollowUpsResponse,
 } from "@/src/components/nurse-dashboard/maternal-care/type";
+
+type ApiEnvelope<T> = {
+  data?: T | ApiEnvelope<T>;
+};
+
+function unwrapApiData<T>(response: unknown): T {
+  const envelope = response as ApiEnvelope<T>;
+  const firstData = envelope.data;
+
+  if (firstData && typeof firstData === "object" && "data" in firstData) {
+    return (firstData as ApiEnvelope<T>).data as T;
+  }
+
+  return (firstData ?? response) as T;
+}
 
 export function useEpisodes(filters: EpisodeFilters) {
   const api = useApi();
@@ -165,6 +182,32 @@ export function useAncVisitDetails(id: string) {
       return res?.data?.data || res?.data || res;
     },
     enabled: !!id && api.isAuthenticated && !api.isLoading,
+  });
+}
+
+export function useUpcomingFollowUps(filters: UpcomingFollowUpsFilters) {
+  const api = useApi();
+
+  return useQuery<UpcomingFollowUpsResponse>({
+    queryKey: ["maternal-upcoming-follow-ups", filters],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+
+      if (filters.care_type) params.append("care_type", filters.care_type);
+      if (filters.month) params.append("month", filters.month);
+      else if (filters.days) params.append("days", String(filters.days));
+      if (filters.search) params.append("search", filters.search);
+      if (filters.page) params.append("page", String(filters.page));
+      if (filters.page_size)
+        params.append("page_size", String(filters.page_size));
+
+      const res = await api.get<unknown>(
+        `/maternal-care/follow-ups/upcoming/?${params.toString()}`,
+      );
+      return unwrapApiData<UpcomingFollowUpsResponse>(res);
+    },
+    enabled: api.isAuthenticated && !api.isLoading,
+    placeholderData: (previousData) => previousData,
   });
 }
 

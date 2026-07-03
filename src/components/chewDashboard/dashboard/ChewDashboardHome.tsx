@@ -2,22 +2,20 @@
 
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Users, ArrowRight, MoreHorizontal, CheckCircle2, Baby, Megaphone, Eye, Pencil, Upload } from "lucide-react";
+import { Users, ArrowRight, MoreHorizontal, CheckCircle2, Baby, Megaphone, Eye, Pencil, Upload, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import ChewDashboardHeader from "@/src/components/chewDashboard/generics/ChewDashboardHeader";
 import { PeriodFilterButton } from "@/src/components/doctorDashboard/generics/PeriodFilterButton";
 import Pagination from "@/src/components/adminDashboard/generics/Pagination";
+import { useUpcomingFollowUps } from "@/src/hooks/nurses/use-maternal-care";
+import type { UpcomingFollowUpTag } from "@/src/components/nurse-dashboard/maternal-care/type";
 
 // ── Types & static data ───────────────────────────────────────────────────────
 
-type FollowUpTag = "ANC Due" | "High risk" | "Postnatal" | "Urgent";
 type ReminderColor = "green" | "orange" | "red";
 type CampaignStatus = "Scheduled" | "In-Progress" | "Completed" | "Cancelled";
 
-interface FollowUpItem {
-  name: string; detail: string; date: string; tag: FollowUpTag;
-}
 interface ReminderItem {
   time: string; title: string; subtitle: string; color: ReminderColor;
 }
@@ -26,15 +24,7 @@ interface CampaignRow {
   startEnd: string; createdBy: string; status: CampaignStatus;
 }
 
-const FOLLOW_UPS: FollowUpItem[] = [
-  { name: "Blessing Nwachukwu", detail: "28 weeks · 4th antenatal visit", date: "12 Sept 2026", tag: "ANC Due" },
-  { name: "Blessing Nwachukwu", detail: "28 weeks · 4th antenatal visit", date: "12 Sept 2026", tag: "High risk" },
-  { name: "Blessing Nwachukwu", detail: "28 weeks · 4th antenatal visit", date: "12 Sept 2026", tag: "Postnatal" },
-  { name: "Blessing Nwachukwu", detail: "28 weeks · 4th antenatal visit", date: "12 Sept 2026", tag: "Urgent" },
-  { name: "Blessing Nwachukwu", detail: "28 weeks · 4th antenatal visit", date: "12 Sept 2026", tag: "ANC Due" },
-];
-
-const TAG_STYLE: Record<FollowUpTag, React.CSSProperties> = {
+const TAG_STYLE: Record<UpcomingFollowUpTag, React.CSSProperties> = {
   "ANC Due":  { background: "#E8F7F0", color: "#046C3F" },
   "High risk":{ background: "#FEF2F2", color: "#DC2626" },
   "Postnatal":{ background: "#EFF6FF", color: "#2563EB" },
@@ -162,10 +152,25 @@ function CampaignActionMenu({ onView, onEdit }: { onView: () => void; onEdit: ()
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
+function formatFollowUpDate(dateString: string) {
+  if (!dateString) return "-";
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) return dateString;
+  return date.toLocaleDateString("en-US", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
 export default function ChewDashboardHome() {
   const [page, setPage] = useState(1);
   const router = useRouter();
   const breadcrumbs = [{ label: "Dashboard", active: true }];
+
+  const { data: followUpsData, isLoading: isLoadingFollowUps } =
+    useUpcomingFollowUps({ care_type: "ANC", days: 7, page: 1, page_size: 6 });
+  const followUps = followUpsData?.results || [];
 
   return (
     <div className="flex-1 flex flex-col bg-[#F9FAFB] min-w-0">
@@ -204,23 +209,33 @@ export default function ChewDashboardHome() {
               </Link>
             </div>
             <p className="text-xs text-gray-400 mb-4">Patients to visit this week</p>
-            <div className="space-y-3">
-              {FOLLOW_UPS.map((item, i) => (
-                <div key={i} className="flex items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-800 truncate">{item.name} · ANC visit due today</p>
-                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                      <p className="text-xs text-gray-400">{item.detail}</p>
-                      <span className="text-xs text-gray-300">·</span>
-                      <p className="text-xs text-gray-400">{item.date}</p>
+            {isLoadingFollowUps ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 size={20} className="animate-spin text-[#046C3F]" />
+              </div>
+            ) : followUps.length > 0 ? (
+              <div className="space-y-3">
+                {followUps.map((item) => (
+                  <div key={item.visit_id} className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-800 truncate">{item.title}</p>
+                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                        <p className="text-xs text-gray-400">{item.subtitle}</p>
+                        <span className="text-xs text-gray-300">·</span>
+                        <p className="text-xs text-gray-400">{formatFollowUpDate(item.next_visit_date)}</p>
+                      </div>
                     </div>
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded-lg shrink-0 whitespace-nowrap" style={TAG_STYLE[item.tag]}>
+                      {item.tag}
+                    </span>
                   </div>
-                  <span className="text-xs font-semibold px-2 py-0.5 rounded-lg shrink-0 whitespace-nowrap" style={TAG_STYLE[item.tag]}>
-                    {item.tag}
-                  </span>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <p className="py-8 text-center text-xs text-gray-400">
+                No upcoming follow-ups in the next 7 days.
+              </p>
+            )}
           </div>
 
           {/* Today's reminders */}

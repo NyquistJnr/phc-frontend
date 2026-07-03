@@ -293,3 +293,45 @@ export interface EpisodeBaby {
   sex: string;
   date_of_birth: string;
 }
+
+export type UpcomingFollowUpTag =
+  | "ANC Due"
+  | "High risk"
+  | "Postnatal"
+  | "Urgent";
+
+export interface UpcomingFollowUp {
+  care_type: "ANC" | "PNC";
+  visit_id: string;
+  episode_id: string;
+  patient_id: string;
+  patient_name: string;
+  patient_display_id: string;
+  next_visit_date: string;
+  due_status: "OVERDUE" | "UPCOMING";
+  due_in_days: number;
+  upcoming_visit_number: number;
+  gestational_weeks: number | null;
+  is_high_risk: boolean;
+  tag: UpcomingFollowUpTag;
+  title: string;
+  subtitle: string;
+}
+
+export interface UpcomingFollowUpsResponse {
+  count: number;
+  total_pages: number;
+  current_page: number;
+  next: string | null;
+  previous: string | null;
+  results: UpcomingFollowUp[];
+}
+
+export interface UpcomingFollowUpsFilters {
+  care_type?: "ANC" | "PNC";
+  days?: number;
+  month?: string;
+  search?: string;
+  page?: number;
+  page_size?: number;
+}
