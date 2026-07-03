@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import DoctorHeader from "@/src/components/doctorDashboard/generics/Header";
 import { CustomDropdown } from "@/src/components/generic/ui/CustomDropdown";
+import { useDiseases } from "@/src/hooks/useDiseases";
 import {
   ConsultationPayload,
   useCreateConsultation,
@@ -212,6 +213,7 @@ export default function ConsultationWorkspace() {
   const [form, setForm] = useState(INITIAL_FORM);
   const [hydratedRecordId, setHydratedRecordId] = useState<string | null>(null);
   const [formError, setFormError] = useState("");
+  const [diagnosedDiseaseId, setDiagnosedDiseaseId] = useState("");
 
   // Adjusting state during render (rather than in an effect) to sync the form
   // with whichever record just loaded, per React's "resetting state" pattern.
@@ -227,12 +229,27 @@ export default function ConsultationWorkspace() {
       treatment_plan: record.treatment_plan || "",
       additional_notes: record.additional_notes || "",
     });
+    setDiagnosedDiseaseId(record.diagnosed_disease?.id || "");
   }
 
   const updateField = (field: FieldName, value: string) => {
     setForm((current) => ({ ...current, [field]: value }));
     setFormError("");
   };
+
+  const { data: diseasesData, isLoading: isLoadingDiseases } = useDiseases({
+    pageSize: 100,
+  });
+  const diseaseOptions = useMemo(
+    () => [
+      { label: "None", value: "" },
+      ...(diseasesData?.results || []).map((disease) => ({
+        label: `${disease.name} (${disease.severity})`,
+        value: disease.id,
+      })),
+    ],
+    [diseasesData],
+  );
 
   const { mutate: createConsultation, isPending: isCreating } =
     useCreateConsultation();
@@ -255,6 +272,7 @@ export default function ConsultationWorkspace() {
       // backend still expects the field, so send it empty for now.
       presenting_complaint: "",
       ...form,
+      diagnosed_disease: diagnosedDiseaseId || null,
     };
 
     if (hasExistingRecord && record?.id) {
@@ -468,6 +486,7 @@ export default function ConsultationWorkspace() {
                       setSelectedAppointment(match?.value || "");
                       setHydratedRecordId(null);
                       setForm(INITIAL_FORM);
+                      setDiagnosedDiseaseId("");
                     }}
                   />
                 )}
@@ -610,6 +629,26 @@ export default function ConsultationWorkspace() {
                 label="Secondary Diagnosis"
                 value={form.secondary_diagnosis}
                 onChange={(value) => updateField("secondary_diagnosis", value)}
+              />
+            </div>
+            <div className="rounded-lg border border-gray-300 bg-gray-50 px-4 py-3">
+              <p className="mb-2 text-xs text-[#62636C]">
+                Registered Disease{" "}
+                <span className="text-gray-400">
+                  (links this diagnosis to alerts &amp; outbreak tracking)
+                </span>
+              </p>
+              <CustomDropdown
+                options={diseaseOptions.map((option) => option.label)}
+                selected={
+                  diseaseOptions.find((option) => option.value === diagnosedDiseaseId)
+                    ?.label ||
+                  (isLoadingDiseases ? "Loading..." : "None")
+                }
+                onSelect={(label) => {
+                  const match = diseaseOptions.find((option) => option.label === label);
+                  setDiagnosedDiseaseId(match?.value || "");
+                }}
               />
             </div>
             <TextareaField

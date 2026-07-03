@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Building2, Building, Users, Calendar } from "lucide-react";
 import Header from "@/src/components/stateDashboard/generics/Header";
 import MetricCard from "@/src/components/adminDashboard/generics/MetricCard";
@@ -12,6 +13,8 @@ import PatientVolumeTrendCard from "@/src/components/stateDashboard/generics/Pat
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { useApi } from "@/src/hooks/use-api";
+import { useActiveAlerts } from "@/src/hooks/state/use-alerts";
+import { severityStyles, timeAgo } from "@/src/components/stateDashboard/system-monitoring/ActiveAlerts";
 
 interface ActiveAlertItemProps {
   title: string;
@@ -67,7 +70,19 @@ export default function StateDashboardHome() {
     }
   }, [get, isAuthenticated]);
 
-  const alerts: ActiveAlertItemProps[] = [];
+  const { data: alertsData } = useActiveAlerts({ page: 1, pageSize: 4 });
+  const alerts: ActiveAlertItemProps[] = (alertsData?.results || []).map((alert) => {
+    const styles = severityStyles(alert.severity);
+    return {
+      title: alert.title,
+      facility: alert.facility_name || alert.type.replaceAll("_", " "),
+      time: timeAgo(alert.detected_at),
+      borderColor: styles.border,
+      bgColor: styles.bg,
+      titleColor: styles.title,
+    };
+  });
+  const totalActiveAlerts = alertsData?.count ?? 0;
 
   return (
     <div className="flex-1 flex flex-col bg-[#F9FAFB] min-w-0 overflow-hidden">
@@ -133,8 +148,8 @@ export default function StateDashboardHome() {
           <div className="bg-white p-5 sm:p-8 rounded-2xl sm:rounded-4xl shadow-sm border border-gray-100 flex flex-col">
             <div className="flex justify-between items-start mb-2">
               <h3 className="text-lg font-bold text-[#101928]">Active Alerts</h3>
-              <span className={`px-2.5 py-1 text-[10px] font-bold rounded-full ${alerts.length > 0 ? "bg-red-100 text-red-600" : "bg-red-50 text-red-400"}`}>
-                {alerts.length} Active
+              <span className={`px-2.5 py-1 text-[10px] font-bold rounded-full ${totalActiveAlerts > 0 ? "bg-red-100 text-red-600" : "bg-red-50 text-red-400"}`}>
+                {totalActiveAlerts} Active
               </span>
             </div>
             <p className="text-xs text-gray-400 font-medium mb-5">Facility and operational warnings</p>
@@ -147,6 +162,14 @@ export default function StateDashboardHome() {
                 </div>
               )}
             </div>
+            {totalActiveAlerts > 0 && (
+              <Link
+                href="/state-dashboard/system-monitoring/alerts"
+                className="mt-4 block text-center text-xs font-semibold text-[#046C3F] hover:underline"
+              >
+                View All Alerts
+              </Link>
+            )}
           </div>
         </div>
 

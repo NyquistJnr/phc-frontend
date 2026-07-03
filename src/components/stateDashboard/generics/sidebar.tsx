@@ -56,6 +56,14 @@ const navItems = [
         name: "Audit Log",
         path: "/state-dashboard/system-monitoring/audit-log",
       },
+      {
+        name: "Active Alerts",
+        path: "/state-dashboard/system-monitoring/alerts",
+      },
+      {
+        name: "Auth Activity",
+        path: "/state-dashboard/system-monitoring/auth-activity",
+      },
       /*       {
         name: "System Logs",
         path: "/state-dashboard/system-monitoring/system-logs",
@@ -69,6 +77,10 @@ const navItems = [
       {
         name: "Alert Thresholds",
         path: "/state-dashboard/configuration/alert-thresholds",
+      },
+      {
+        name: "Disease Registry",
+        path: "/state-dashboard/configuration/disease-registry",
       },
       {
         name: "Guidelines",

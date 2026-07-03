@@ -26,6 +26,7 @@ export type ConsultationRecord = {
   examination_findings?: string;
   primary_diagnosis?: string;
   secondary_diagnosis?: string;
+  diagnosed_disease?: { id: string; name: string; severity: string } | null;
   treatment_plan?: string;
   additional_notes?: string;
   created_at?: string;

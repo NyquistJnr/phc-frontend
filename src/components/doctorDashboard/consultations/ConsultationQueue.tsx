@@ -116,7 +116,7 @@ export default function ConsultationQueue() {
       },
       {
         header: "Diagnosis",
-        render: (row) => row.primary_diagnosis || "-",
+        render: (row) => row.diagnosed_disease?.name || row.primary_diagnosis || "-",
         sortable: true,
       },
       {
