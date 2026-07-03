@@ -74,6 +74,11 @@ function formatActivityTime(timestamp: string) {
 function ActivityRow({ activity }: { activity: PharmacyActivity }) {
   const color = ACTIVITY_COLORS[activity.activity_type] || "#9CA3AF";
   const Icon = ACTIVITY_ICONS[activity.activity_type] || Pill;
+  // Some activity_types (DISPENSE, REFILL, LOW_STOCK) don't mention the drug
+  // name in their description — only OUT_OF_STOCK/ADR_REPORT do. Prefix it
+  // when it's not already there so the drug is always visible.
+  const showItemName =
+    activity.item_name && !activity.description.includes(activity.item_name);
 
   return (
     <div className="flex gap-3">
@@ -82,9 +87,16 @@ function ActivityRow({ activity }: { activity: PharmacyActivity }) {
         style={{ backgroundColor: color }}
       />
       <div>
-        <p className="flex items-center gap-2 text-base font-medium leading-6 text-[#53545C]">
-          <Icon size={15} style={{ color }} className="shrink-0" />
-          {activity.description}
+        <p className="flex items-start gap-2 text-base font-medium leading-6 text-[#53545C]">
+          <Icon size={15} style={{ color }} className="mt-0.5 shrink-0" />
+          <span>
+            {showItemName && (
+              <span className="font-semibold text-[#1F2A44]">
+                {activity.item_name}:{" "}
+              </span>
+            )}
+            {activity.description}
+          </span>
         </p>
         <p className="mt-1 text-sm text-[#1F2A44]">
           {formatActivityTime(activity.timestamp)}

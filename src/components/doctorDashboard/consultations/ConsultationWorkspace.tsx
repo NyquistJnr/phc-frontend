@@ -36,7 +36,6 @@ import PrescriptionsSection from "./PrescriptionsSection";
 
 const INITIAL_FORM = {
   chief_complaint: "",
-  presenting_complaint: "",
   history_of_present_complaint: "",
   past_medical_history: "",
   examination_findings: "",
@@ -220,7 +219,6 @@ export default function ConsultationWorkspace() {
     setHydratedRecordId(record.id);
     setForm({
       chief_complaint: record.chief_complaint || "",
-      presenting_complaint: record.presenting_complaint || "",
       history_of_present_complaint: record.history_of_present_complaint || "",
       past_medical_history: record.past_medical_history || "",
       examination_findings: record.examination_findings || "",
@@ -253,6 +251,9 @@ export default function ConsultationWorkspace() {
 
     const payload: ConsultationPayload = {
       appointment: appointmentId,
+      // Presenting Complaint is temporarily hidden from the UI but the
+      // backend still expects the field, so send it empty for now.
+      presenting_complaint: "",
       ...form,
     };
 
@@ -581,11 +582,6 @@ export default function ConsultationWorkspace() {
               label="Chief Complaint"
               value={form.chief_complaint}
               onChange={(value) => updateField("chief_complaint", value)}
-            />
-            <TextareaField
-              label="Presenting Complaint"
-              value={form.presenting_complaint}
-              onChange={(value) => updateField("presenting_complaint", value)}
             />
             <TextareaField
               label="History of Present Complaint"
