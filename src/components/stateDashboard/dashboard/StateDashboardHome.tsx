@@ -4,15 +4,12 @@ import { Building2, Building, Users, Calendar } from "lucide-react";
 import Header from "@/src/components/stateDashboard/generics/Header";
 import MetricCard from "@/src/components/adminDashboard/generics/MetricCard";
 import {
-  BarChartSkeleton,
   DonutSkeleton,
   FacilityComplianceRows,
   PeriodDropdown,
 } from "@/src/components/stateDashboard/generics/ChartSkeletons";
+import PatientVolumeTrendCard from "@/src/components/stateDashboard/generics/PatientVolumeChart";
 import { useSession } from "next-auth/react";
-
-const WEEK_BAR_HEIGHTS = [72, 55, 88, 40, 78, 60, 48];
-const WEEK_BAR_LABELS = ["Sept 10", "Sept 11", "Sept 12", "Sept 13", "Sept 14", "Sept 15", "Sept 16"];
 
 interface ActiveAlertItemProps {
   title: string;
@@ -86,13 +83,7 @@ export default function StateDashboardHome() {
 
         {/* Patient Volume Trend + Active Alerts */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
-          <div className="lg:col-span-2 bg-white p-5 sm:p-8 rounded-2xl sm:rounded-4xl shadow-sm border border-gray-100 flex flex-col min-h-80">
-            <div className="flex justify-between items-start mb-4">
-              <h3 className="text-lg font-bold text-[#101928]">Patient Volume Trend</h3>
-              <PeriodDropdown label="This Week" />
-            </div>
-            <BarChartSkeleton bars={WEEK_BAR_HEIGHTS} labels={WEEK_BAR_LABELS} />
-          </div>
+          <PatientVolumeTrendCard className="lg:col-span-2 bg-white p-5 sm:p-8 rounded-2xl sm:rounded-4xl shadow-sm border border-gray-100 flex flex-col min-h-80" />
 
           <div className="bg-white p-5 sm:p-8 rounded-2xl sm:rounded-4xl shadow-sm border border-gray-100 flex flex-col">
             <div className="flex justify-between items-start mb-2">

@@ -2,18 +2,11 @@
 
 import Header from "@/src/components/stateDashboard/generics/Header";
 import {
-  BarChartSkeleton,
   DonutSkeleton,
   FacilityComplianceRows,
   PeriodDropdown,
 } from "@/src/components/stateDashboard/generics/ChartSkeletons";
-
-// 12 monthly bars — varying heights for skeleton visual interest
-const YEAR_BAR_HEIGHTS = [55, 70, 45, 80, 60, 75, 50, 85, 65, 70, 55, 80];
-const YEAR_BAR_LABELS = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
-];
+import PatientVolumeTrendCard from "@/src/components/stateDashboard/generics/PatientVolumeChart";
 
 export default function FacilityPerformance() {
   const breadcrumbs = [
@@ -34,13 +27,7 @@ export default function FacilityPerformance() {
         </div>
 
         {/* Patient Volume Trend — full width */}
-        <div className="bg-white p-5 sm:p-8 rounded-2xl sm:rounded-4xl shadow-sm border border-gray-100 flex flex-col min-h-80">
-          <div className="flex justify-between items-start mb-4">
-            <h3 className="text-base font-bold text-[#101928]">Patient Volume Trend</h3>
-            <PeriodDropdown label="This Year" />
-          </div>
-          <BarChartSkeleton bars={YEAR_BAR_HEIGHTS} labels={YEAR_BAR_LABELS} />
-        </div>
+        <PatientVolumeTrendCard titleClassName="text-base font-bold text-[#101928]" />
 
         {/* Reporting Compliance + Facilities Compliant */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">

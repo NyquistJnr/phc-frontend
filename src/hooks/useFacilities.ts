@@ -124,6 +124,38 @@ export function useFacilities({
   });
 }
 
+export interface PatientActivityPoint {
+  date: string;
+  registered: number;
+  appointments: number;
+}
+
+export interface PatientActivityResponse {
+  start_date: string;
+  end_date: string;
+  results: PatientActivityPoint[];
+}
+
+export function usePatientActivity(startDate?: string, endDate?: string) {
+  const api = useApi();
+
+  return useQuery({
+    queryKey: ["patientActivity", startDate, endDate],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (startDate) params.append("start_date", startDate);
+      if (endDate) params.append("end_date", endDate);
+      const query = params.toString();
+
+      return await api.get<PatientActivityResponse>(
+        `/facilities/facilities/patient-activity/${query ? `?${query}` : ""}`,
+      );
+    },
+    enabled: api.isAuthenticated && !api.isLoading,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
 export function useFacilityStats() {
   const api = useApi();
 
