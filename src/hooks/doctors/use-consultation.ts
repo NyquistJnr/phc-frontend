@@ -30,6 +30,7 @@ export interface ConsultationPayload {
   examination_findings?: string;
   primary_diagnosis?: string;
   secondary_diagnosis?: string;
+  diagnosed_disease?: string | null;
   treatment_plan?: string;
   additional_notes?: string;
 }
