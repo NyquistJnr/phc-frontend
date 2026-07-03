@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import DoctorHeader from "@/src/components/doctorDashboard/generics/Header";
 import { CustomDropdown } from "@/src/components/generic/ui/CustomDropdown";
-import { useDiseases } from "@/src/hooks/useDiseases";
+import DiseasePicker from "./DiseasePicker";
 import {
   ConsultationPayload,
   useCreateConsultation,
@@ -237,20 +237,6 @@ export default function ConsultationWorkspace() {
     setFormError("");
   };
 
-  const { data: diseasesData, isLoading: isLoadingDiseases } = useDiseases({
-    pageSize: 100,
-  });
-  const diseaseOptions = useMemo(
-    () => [
-      { label: "None", value: "" },
-      ...(diseasesData?.results || []).map((disease) => ({
-        label: `${disease.name} (${disease.severity})`,
-        value: disease.id,
-      })),
-    ],
-    [diseasesData],
-  );
-
   const { mutate: createConsultation, isPending: isCreating } =
     useCreateConsultation();
   const { mutate: patchConsultation, isPending: isPatching } =
@@ -268,9 +254,11 @@ export default function ConsultationWorkspace() {
 
     const payload: ConsultationPayload = {
       appointment: appointmentId,
-      // Presenting Complaint is temporarily hidden from the UI but the
-      // backend still expects the field, so send it empty for now.
-      presenting_complaint: "",
+      // Presenting Complaint is temporarily hidden from the UI, but the
+      // backend rejects a blank value for it — mirror Chief Complaint
+      // (falling back to the previously saved value) so it's never empty.
+      presenting_complaint:
+        form.chief_complaint.trim() || record?.presenting_complaint || "N/A",
       ...form,
       diagnosed_disease: diagnosedDiseaseId || null,
     };
@@ -631,25 +619,14 @@ export default function ConsultationWorkspace() {
                 onChange={(value) => updateField("secondary_diagnosis", value)}
               />
             </div>
-            <div className="rounded-lg border border-gray-300 bg-gray-50 px-4 py-3">
+            <div>
               <p className="mb-2 text-xs text-[#62636C]">
                 Registered Disease{" "}
                 <span className="text-gray-400">
                   (links this diagnosis to alerts &amp; outbreak tracking)
                 </span>
               </p>
-              <CustomDropdown
-                options={diseaseOptions.map((option) => option.label)}
-                selected={
-                  diseaseOptions.find((option) => option.value === diagnosedDiseaseId)
-                    ?.label ||
-                  (isLoadingDiseases ? "Loading..." : "None")
-                }
-                onSelect={(label) => {
-                  const match = diseaseOptions.find((option) => option.label === label);
-                  setDiagnosedDiseaseId(match?.value || "");
-                }}
-              />
+              <DiseasePicker value={diagnosedDiseaseId} onChange={setDiagnosedDiseaseId} />
             </div>
             <TextareaField
               label="Treatment Plan"
