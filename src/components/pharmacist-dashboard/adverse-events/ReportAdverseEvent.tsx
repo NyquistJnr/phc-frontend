@@ -362,7 +362,13 @@ export default function ReportAdverseEvent() {
 
     createAdverseEvent(payload, {
       onSuccess: (created) => {
-        router.push(`/pharmacist-dashboard/adverse-events/${created.id}`);
+        // The create response doesn't reliably include an id — fall back to
+        // the list rather than risk landing on /adverse-events/undefined.
+        if (created?.id) {
+          router.push(`/pharmacist-dashboard/adverse-events/${created.id}`);
+        } else {
+          router.push("/pharmacist-dashboard/adverse-events");
+        }
       },
       onError: (error: unknown) => {
         setFormError(

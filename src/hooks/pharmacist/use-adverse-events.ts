@@ -72,7 +72,7 @@ export function useAdverseEventDetail(id: string) {
       const res = await api.get<unknown>(`/adverse-events/reports/${id}/`);
       return unwrapApiData<AdverseEventReport>(res);
     },
-    enabled: !!id && api.isAuthenticated && !api.isLoading,
+    enabled: !!id && id !== "undefined" && api.isAuthenticated && !api.isLoading,
   });
 }
 
