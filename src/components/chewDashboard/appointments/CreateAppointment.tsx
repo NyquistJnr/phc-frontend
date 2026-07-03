@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Activity,
   CalendarDays,
@@ -28,6 +28,7 @@ import {
   useSearchPatients,
   useFacilityStaff,
 } from "@/src/hooks/nurses/use-appointments";
+import { usePatientDetails } from "@/src/hooks/nurses/use-patients";
 import {
   useStates,
   useLgas,
@@ -226,10 +227,14 @@ function SuccessToast({ onClose }: { onClose: () => void }) {
 
 export default function NewAppointments() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const prefillPatientId = searchParams.get("patientId") || "";
+
   const [form, setForm] = useState<AppointmentFormState>(INITIAL_FORM);
   const [patientMode, setPatientMode] = useState<"existing" | "new">(
     "existing",
   );
+  const [isPatientLocked, setIsPatientLocked] = useState(!!prefillPatientId);
   const [appointmentMode, setAppointmentMode] = useState<"scheduled" | "walkin">("scheduled");
   const [showVitals, setShowVitals] = useState(false);
   const [formError, setFormError] = useState("");
@@ -247,6 +252,8 @@ export default function NewAppointments() {
     useSearchPatients(patientSearchTerm);
   const { data: staffList = [], isFetching: isLoadingStaff } =
     useFacilityStaff(staffSearchTerm);
+  const { data: prefillPatientData, isLoading: isLoadingPrefillPatient } =
+    usePatientDetails(prefillPatientId);
 
   const { mutate: createAppointment, isPending: isCreating } =
     useCreateAppointment();
@@ -310,6 +317,18 @@ export default function NewAppointments() {
       setForm((current) => ({ ...current, newWard: value }));
     }
   };
+
+  useEffect(() => {
+    if (!prefillPatientData) return;
+    setForm((current) => ({
+      ...current,
+      patientId: prefillPatientData.id,
+      patientDisplayId: prefillPatientData.profile?.patient_id || "",
+      patientName:
+        `${prefillPatientData.first_name} ${prefillPatientData.last_name}`.trim(),
+    }));
+    setSelectedPatientData(prefillPatientData);
+  }, [prefillPatientData]);
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -716,34 +735,58 @@ export default function NewAppointments() {
                 <>
                   <div ref={patientRef} className="relative z-10">
                     <FieldShell label="Patient Name">
-                      <div className="flex items-center gap-3">
-                        <Search size={24} className="shrink-0 text-gray-900" />
-                        <input
-                          value={form.patientName}
-                          onChange={(e) => {
-                            handleChange("patientName", e.target.value);
-                            if (form.patientId) {
+                      {isPatientLocked ? (
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="truncate text-base text-gray-700">
+                            {isLoadingPrefillPatient
+                              ? "Loading patient..."
+                              : form.patientName}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsPatientLocked(false);
                               handleChange("patientId", "");
                               handleChange("patientDisplayId", "");
+                              handleChange("patientName", "");
                               handleChange("visitType", "");
                               setSelectedPatientData(null);
-                            }
-                            setShowPatientDropdown(true);
-                          }}
-                          onFocus={() => setShowPatientDropdown(true)}
-                          placeholder="Search patient by name"
-                          className="w-full bg-transparent text-base text-gray-700 outline-none placeholder:text-gray-400"
-                        />
-                        {isLoadingPatients && (
-                          <Loader2
-                            size={20}
-                            className="animate-spin text-gray-400"
+                            }}
+                            className="shrink-0 text-sm font-medium text-[#046C3F] hover:underline"
+                          >
+                            Change
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-3">
+                          <Search size={24} className="shrink-0 text-gray-900" />
+                          <input
+                            value={form.patientName}
+                            onChange={(e) => {
+                              handleChange("patientName", e.target.value);
+                              if (form.patientId) {
+                                handleChange("patientId", "");
+                                handleChange("patientDisplayId", "");
+                                handleChange("visitType", "");
+                                setSelectedPatientData(null);
+                              }
+                              setShowPatientDropdown(true);
+                            }}
+                            onFocus={() => setShowPatientDropdown(true)}
+                            placeholder="Search patient by name"
+                            className="w-full bg-transparent text-base text-gray-700 outline-none placeholder:text-gray-400"
                           />
-                        )}
-                      </div>
+                          {isLoadingPatients && (
+                            <Loader2
+                              size={20}
+                              className="animate-spin text-gray-400"
+                            />
+                          )}
+                        </div>
+                      )}
                     </FieldShell>
 
-                    {showPatientDropdown && (
+                    {!isPatientLocked && showPatientDropdown && (
                       <div className="absolute left-0 right-0 top-full mt-2 max-h-60 overflow-y-auto rounded-lg border border-gray-300 bg-white p-2 shadow-lg">
                         {patientsList.length > 0 ? (
                           patientsList.map((patient: any) => (

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { createPortal } from "react-dom";
-import { MoreHorizontal, Eye, Edit, Plus } from "lucide-react";
+import { MoreHorizontal, Eye, Edit, Plus, CalendarPlus } from "lucide-react";
 import { ColumnDef, DataTable } from "@/src/components/generic/ui/DataTable";
 import { StatusBadge } from "@/src/components/generic/ui/TableHelpers";
 import { CustomDropdown } from "@/src/components/generic/ui/CustomDropdown";
@@ -70,6 +70,12 @@ function PatientActionMenu({ row }: { row: Patient }) {
       label: "Edit Patient",
       icon: Edit,
       onClick: () => router.push(`/chew-dashboard/patients/${row.id}/edit`),
+    },
+    {
+      label: "New Appointment",
+      icon: CalendarPlus,
+      onClick: () =>
+        router.push(`/chew-dashboard/appointments/new?patientId=${row.id}`),
     },
   ];
 
