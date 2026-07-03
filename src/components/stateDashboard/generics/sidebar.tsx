@@ -78,6 +78,10 @@ const navItems = [
         name: "AI Configuration",
         path: "/state-dashboard/configuration/ai-configuration",
       },
+      {
+        name: "ANC/PNC Schedule",
+        path: "/state-dashboard/configuration/anc-pnc-schedule",
+      },
     ],
   },
 ];

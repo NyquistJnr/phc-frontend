@@ -1,3 +1,32 @@
+export type ScheduleRuleType = "ONCE" | "RECURRING" | "VARIABLE_SEQUENCE";
+
+export interface VisitTasksMap {
+  [visitNumber: string]: string[];
+}
+
+export interface ScheduleRule {
+  rule_type: ScheduleRuleType;
+  interval_days?: number;
+  intervals_sequence?: number[];
+  visit_tasks?: VisitTasksMap;
+}
+
+export interface GlobalScheduleRule extends ScheduleRule {
+  id: string;
+  care_type: "ANC" | "PNC";
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface GlobalScheduleRulesResponse {
+  count: number;
+  total_pages: number;
+  current_page: number;
+  next: string | null;
+  previous: string | null;
+  results: GlobalScheduleRule[];
+}
+
 export interface EpisodeResult {
   id: string;
   episode_id: string;
@@ -13,6 +42,10 @@ export interface EpisodeResult {
   partner_name: string;
   partner_phone: string;
   created_at: string;
+  // Per-patient schedule override — null/absent means "use the facility's
+  // global standard for this care type" (see ScheduleRule / global-rules).
+  custom_anc_schedule?: ScheduleRule | null;
+  custom_pnc_schedule?: ScheduleRule | null;
 }
 
 export interface EpisodesResponse {
@@ -292,4 +325,46 @@ export interface EpisodeBaby {
   full_name: string;
   sex: string;
   date_of_birth: string;
+}
+
+export type UpcomingFollowUpTag =
+  | "ANC Due"
+  | "High risk"
+  | "Postnatal"
+  | "Urgent";
+
+export interface UpcomingFollowUp {
+  care_type: "ANC" | "PNC";
+  visit_id: string;
+  episode_id: string;
+  patient_id: string;
+  patient_name: string;
+  patient_display_id: string;
+  next_visit_date: string;
+  due_status: "OVERDUE" | "UPCOMING";
+  due_in_days: number;
+  upcoming_visit_number: number;
+  gestational_weeks: number | null;
+  is_high_risk: boolean;
+  tag: UpcomingFollowUpTag;
+  title: string;
+  subtitle: string;
+}
+
+export interface UpcomingFollowUpsResponse {
+  count: number;
+  total_pages: number;
+  current_page: number;
+  next: string | null;
+  previous: string | null;
+  results: UpcomingFollowUp[];
+}
+
+export interface UpcomingFollowUpsFilters {
+  care_type?: "ANC" | "PNC";
+  days?: number;
+  month?: string;
+  search?: string;
+  page?: number;
+  page_size?: number;
 }

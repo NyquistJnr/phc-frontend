@@ -8,6 +8,7 @@ import NurseDashboardHeader from "@/src/components/nurse-dashboard/generics/Nurs
 import { useEpisodeDetails } from "@/src/hooks/nurses/use-maternal-care";
 import { AncVisitList } from "./AncVisitList";
 import { PncVisitList } from "./PncVisitList";
+import ScheduleOverrideCard from "./ScheduleOverrideCard";
 import { CareTab } from "./type";
 
 export default function MaternalCareEpisodeDetails() {
@@ -89,6 +90,19 @@ export default function MaternalCareEpisodeDetails() {
             Postnatal Care
           </button>
         </div>
+
+        {episode && (
+          <ScheduleOverrideCard
+            key={tab}
+            episodeId={episodeId}
+            careType={tab === "anc" ? "ANC" : "PNC"}
+            currentSchedule={
+              tab === "anc"
+                ? episode.custom_anc_schedule
+                : episode.custom_pnc_schedule
+            }
+          />
+        )}
 
         {tab === "anc" ? (
           <AncVisitList episodeId={episodeId} />
