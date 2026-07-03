@@ -36,6 +36,10 @@ const statusColors: Record<string, { bg: string; text: string }> = {
   CANCELLED: { bg: "#FDE8E8", text: "#F33131" },
 };
 
+function isAlreadyFinalizedError(message: string) {
+  return /already/i.test(message);
+}
+
 function escapeHtml(value: string) {
   return value
     .replaceAll("&", "&amp;")
@@ -153,12 +157,20 @@ export default function PharmacistPrescriptionsDetail() {
   const params = useParams();
   const prescriptionId = params.id as string;
   const [dispenseModalOpen, setDispenseModalOpen] = useState(false);
-  const [toastMessage, setToastMessage] = useState("");
+  const [toast, setToast] = useState<{
+    title: string;
+    description: string;
+  } | null>(null);
   const [dispenseError, setDispenseError] = useState("");
 
-  const { data: prescription, isLoading } =
+  const { data: prescription, isLoading, refetch: refetchPrescription } =
     usePrescriptionOrderDetail(prescriptionId);
   const dispenseMutation = useDispensePrescriptionOrder();
+
+  const showToast = (title: string, description: string) => {
+    setToast({ title, description });
+    window.setTimeout(() => setToast(null), 3500);
+  };
 
   if (isLoading) {
     return (
@@ -314,10 +326,10 @@ export default function PharmacistPrescriptionsDetail() {
               onClick={() => {
                 const didPrint = printPrescriptionOrder(prescription);
                 if (!didPrint) {
-                  setToastMessage(
+                  showToast(
+                    "Export Failed",
                     "Unable to open the export window. Please allow pop-ups.",
                   );
-                  window.setTimeout(() => setToastMessage(""), 3500);
                 }
               }}
               className="inline-flex h-14 items-center justify-center gap-3 rounded-lg border border-[#046C3F] px-8 text-lg font-medium text-[#046C3F] transition-colors hover:bg-[#046C3F]/5"
@@ -326,10 +338,7 @@ export default function PharmacistPrescriptionsDetail() {
               Export File
             </button>
             <button
-              disabled={
-                prescription.status === "DISPENSED" ||
-                prescription.status === "CANCELLED"
-              }
+              disabled={prescription.status !== "PENDING"}
               onClick={() => {
                 setDispenseError("");
                 setDispenseModalOpen(true);
@@ -353,24 +362,34 @@ export default function PharmacistPrescriptionsDetail() {
             dispenseMutation.mutate(prescription.id, {
               onSuccess: () => {
                 setDispenseModalOpen(false);
-                setToastMessage(
+                showToast(
+                  "Dispense Successful",
                   `${prescription.prescription_id} dispensed successfully`,
                 );
-                window.setTimeout(() => setToastMessage(""), 3500);
               },
               onError: (error: unknown) => {
-                setDispenseError(
+                const message =
                   error instanceof Error
                     ? error.message
-                    : "Failed to dispense. Please try again.",
-                );
+                    : "Failed to dispense. Please try again.";
+
+                if (isAlreadyFinalizedError(message)) {
+                  // Stale local state — someone else dispensed/cancelled it
+                  // elsewhere. Sync up instead of treating it as a scary error.
+                  setDispenseModalOpen(false);
+                  refetchPrescription();
+                  showToast("Already Finalized", message);
+                  return;
+                }
+
+                setDispenseError(message);
               },
             });
           }}
         />
       )}
 
-      {toastMessage && (
+      {toast && (
         <div className="fixed bottom-8 right-8 z-50 flex w-[min(390px,calc(100vw-2rem))] items-center gap-4 rounded border border-gray-200 bg-white px-5 py-3 shadow-sm">
           <span className="h-12 w-1 rounded-full bg-[#039855]" />
           <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border border-[#A8E6C4] bg-[#E8F7F0] text-[#039855]">
@@ -378,13 +397,13 @@ export default function PharmacistPrescriptionsDetail() {
           </span>
           <div className="flex-1">
             <p className="text-sm font-semibold text-gray-900">
-              Dispense Successful
+              {toast.title}
             </p>
-            <p className="text-sm text-gray-600">{toastMessage}</p>
+            <p className="text-sm text-gray-600">{toast.description}</p>
           </div>
           <button
             type="button"
-            onClick={() => setToastMessage("")}
+            onClick={() => setToast(null)}
             className="border-l border-gray-100 pl-4 text-gray-900 hover:text-gray-600"
           >
             <X size={18} />

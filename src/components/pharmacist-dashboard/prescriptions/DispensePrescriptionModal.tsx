@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { Loader2, Pill, X } from "lucide-react";
 import type { PrescriptionOrder } from "./type";
 
@@ -16,8 +17,26 @@ export default function DispensePrescriptionModal({
   onClose: () => void;
   onConfirm: () => void;
 }) {
-  const isTerminal =
-    order.status === "DISPENSED" || order.status === "CANCELLED";
+  // Only PENDING prescriptions can be dispensed — PARTIAL is a schema
+  // leftover nothing in the backend sets, so it's treated as non-dispensable too.
+  const canDispense = order.status === "PENDING";
+
+  // A ref (not state) so a second click is blocked synchronously, before
+  // isSubmitting has had a chance to re-render — there's no server-side
+  // idempotency guard, so a fast double-click could double-deduct stock.
+  const hasSubmittedRef = useRef(false);
+
+  useEffect(() => {
+    if (errorMessage) {
+      hasSubmittedRef.current = false;
+    }
+  }, [errorMessage]);
+
+  const handleConfirm = () => {
+    if (hasSubmittedRef.current || isSubmitting || !canDispense) return;
+    hasSubmittedRef.current = true;
+    onConfirm();
+  };
 
   return (
     <div className="fixed inset-0 z-[100] overflow-y-auto bg-black/40 backdrop-blur-sm">
@@ -121,8 +140,8 @@ export default function DispensePrescriptionModal({
             </button>
             <button
               type="button"
-              onClick={onConfirm}
-              disabled={isSubmitting || isTerminal}
+              onClick={handleConfirm}
+              disabled={isSubmitting || !canDispense}
               className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-[#046C3F] px-8 font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isSubmitting && <Loader2 size={18} className="animate-spin" />}

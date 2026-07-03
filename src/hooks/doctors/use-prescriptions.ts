@@ -13,16 +13,17 @@ export interface PrescriptionFilters {
 }
 
 export interface PrescriptionItemPayload {
-  drug: string;
+  inventory_item?: string;
   custom_drug_name?: string;
   quantity: number;
   dosage: string;
   frequency: string;
   duration: string;
+  route?: string;
+  special_instructions?: string;
 }
 
 export interface CreatePrescriptionPayload {
-  patient: string;
   appointment: string;
   priority: "NORMAL" | string;
   instructions: string;

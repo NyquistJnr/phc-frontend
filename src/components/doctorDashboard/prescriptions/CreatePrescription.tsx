@@ -613,7 +613,6 @@ export default function CreatePrescription() {
     }
 
     const payload: any = {
-      patient: selectedAptObj.patient,
       appointment: form.appointmentId,
       priority: form.priority,
       instructions: form.instructions,

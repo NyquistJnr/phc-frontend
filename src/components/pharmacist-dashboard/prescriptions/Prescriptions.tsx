@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { createPortal } from "react-dom";
 import { Eye, MoreHorizontal, Pill, X } from "lucide-react";
 
@@ -17,6 +18,10 @@ import {
 } from "@/src/hooks/pharmacist/use-prescriptions";
 import { PrescriptionOrder } from "./type";
 import DispensePrescriptionModal from "./DispensePrescriptionModal";
+
+function isAlreadyFinalizedError(message: string) {
+  return /already/i.test(message);
+}
 
 const STATUS_OPTIONS = [
   "All Status",
@@ -113,15 +118,17 @@ function ActionMenu({
             >
               <Eye size={18} /> View Details
             </button>
-            <button
-              onClick={() => {
-                onDispense(row);
-                setOpen(false);
-              }}
-              className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50"
-            >
-              <Pill size={18} /> Dispense
-            </button>
+            {row.status === "PENDING" && (
+              <button
+                onClick={() => {
+                  onDispense(row);
+                  setOpen(false);
+                }}
+                className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50"
+              >
+                <Pill size={18} /> Dispense
+              </button>
+            )}
           </div>,
           document.body,
         )}
@@ -136,20 +143,31 @@ export default function Prescriptions() {
 
   const page = Number(searchParams.get("page")) || 1;
   const pageSize = Number(searchParams.get("page_size")) || 10;
-  const statusFilter = searchParams.get("status") || "All Status";
+  // Default to the outstanding-work queue (PENDING); pharmacists can switch
+  // to "All Status" (or another status) explicitly via the filter.
+  const statusFilter = searchParams.get("status") || "PENDING";
   const start_date = searchParams.get("start_date") || "";
   const end_date = searchParams.get("end_date") || "";
 
   const initialSearch = searchParams.get("search") || "";
   const [localSearch, setLocalSearch] = useState(initialSearch);
 
+  const queryClient = useQueryClient();
   const [dispenseModalOpen, setDispenseModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<PrescriptionOrder | null>(
     null,
   );
-  const [toastMessage, setToastMessage] = useState("");
+  const [toast, setToast] = useState<{
+    title: string;
+    description: string;
+  } | null>(null);
   const [dispenseError, setDispenseError] = useState("");
   const dispenseMutation = useDispensePrescriptionOrder();
+
+  const showToast = (title: string, description: string) => {
+    setToast({ title, description });
+    window.setTimeout(() => setToast(null), 3500);
+  };
 
   useEffect(() => {
     const currentSearch = searchParams.get("search") || "";
@@ -179,7 +197,9 @@ export default function Prescriptions() {
   const updateUrlParams = useCallback(
     (key: string, value: string) => {
       const params = new URLSearchParams(searchParams.toString());
-      if (value && value !== "All Status") {
+      // "All Status" is kept as an explicit URL value (not deleted) so it
+      // doesn't collapse back to the PENDING default on the next render.
+      if (value) {
         params.set(key, value);
       } else {
         params.delete(key);
@@ -326,17 +346,29 @@ export default function Prescriptions() {
               dispenseMutation.mutate(selectedOrder.id, {
                 onSuccess: () => {
                   setDispenseModalOpen(false);
-                  setToastMessage(
+                  showToast(
+                    "Dispense Successful",
                     `${selectedOrder.prescription_id} dispensed successfully`,
                   );
-                  window.setTimeout(() => setToastMessage(""), 3500);
                 },
                 onError: (error: unknown) => {
-                  setDispenseError(
+                  const message =
                     error instanceof Error
                       ? error.message
-                      : "Failed to dispense. Please try again.",
-                  );
+                      : "Failed to dispense. Please try again.";
+
+                  if (isAlreadyFinalizedError(message)) {
+                    // Stale local state — someone else dispensed/cancelled it
+                    // elsewhere. Sync the list instead of scaring the pharmacist.
+                    setDispenseModalOpen(false);
+                    queryClient.invalidateQueries({
+                      queryKey: ["prescription-orders"],
+                    });
+                    showToast("Already Finalized", message);
+                    return;
+                  }
+
+                  setDispenseError(message);
                 },
               });
             }}
@@ -344,7 +376,7 @@ export default function Prescriptions() {
         )
       )}
 
-      {toastMessage && (
+      {toast && (
         <div className="fixed bottom-8 right-8 z-50 flex w-[min(390px,calc(100vw-2rem))] items-center gap-4 rounded border border-gray-200 bg-white px-5 py-3 shadow-sm">
           <span className="h-12 w-1 rounded-full bg-[#039855]" />
           <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border border-[#A8E6C4] bg-[#E8F7F0] text-[#039855]">
@@ -352,13 +384,13 @@ export default function Prescriptions() {
           </span>
           <div className="flex-1">
             <p className="text-sm font-semibold text-gray-900">
-              Dispense Successful
+              {toast.title}
             </p>
-            <p className="text-sm text-gray-600">{toastMessage}</p>
+            <p className="text-sm text-gray-600">{toast.description}</p>
           </div>
           <button
             type="button"
-            onClick={() => setToastMessage("")}
+            onClick={() => setToast(null)}
             className="border-l border-gray-100 pl-4 text-gray-900 hover:text-gray-600"
           >
             <X size={18} />
