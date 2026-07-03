@@ -618,7 +618,7 @@ export default function EditPatient() {
                     className="w-full resize-none bg-transparent text-base text-gray-700 outline-none"
                   />
                 </FieldShell>
-                <FieldShell label="Additional Notes">
+                <FieldShell label="Additional Notes (Optional)">
                   <textarea
                     value={form.notes || ""}
                     onChange={(e) => handleChange("notes", e.target.value)}
@@ -636,38 +636,57 @@ export default function EditPatient() {
                 placeholder="Select status"
                 options={INSURANCE_STATUS}
                 value={form.insurance_status || ""}
-                onChange={(value) => handleChange("insurance_status", value)}
+                onChange={(value) => {
+                  setFormError("");
+                  setForm((current) => ({
+                    ...current,
+                    insurance_status: value,
+                    // No active cover means these are irrelevant — clear them
+                    // rather than leaving stale values hidden from view.
+                    ...(value !== "ACTIVE"
+                      ? {
+                          insurance_provider: "",
+                          insurance_package: "",
+                          coverage_status: "",
+                        }
+                      : {}),
+                  }));
+                }}
               />
-              <FieldShell label="Insurance Provider">
-                <input
-                  value={form.insurance_provider || ""}
-                  onChange={(e) =>
-                    handleChange("insurance_provider", e.target.value)
-                  }
-                  placeholder="e.g. Hygeia, Reliance"
-                  className="w-full bg-transparent text-base text-gray-700 outline-none"
-                />
-              </FieldShell>
-              <FieldShell label="Insurance Package">
-                <input
-                  value={form.insurance_package || ""}
-                  onChange={(e) =>
-                    handleChange("insurance_package", e.target.value)
-                  }
-                  placeholder="Package name"
-                  className="w-full bg-transparent text-base text-gray-700 outline-none"
-                />
-              </FieldShell>
-              <FieldShell label="Coverage Status">
-                <input
-                  value={form.coverage_status || ""}
-                  onChange={(e) =>
-                    handleChange("coverage_status", e.target.value)
-                  }
-                  placeholder="e.g. Full, Partial"
-                  className="w-full bg-transparent text-base text-gray-700 outline-none"
-                />
-              </FieldShell>
+              {form.insurance_status === "ACTIVE" && (
+                <>
+                  <FieldShell label="Insurance Provider">
+                    <input
+                      value={form.insurance_provider || ""}
+                      onChange={(e) =>
+                        handleChange("insurance_provider", e.target.value)
+                      }
+                      placeholder="e.g. Hygeia, Reliance"
+                      className="w-full bg-transparent text-base text-gray-700 outline-none"
+                    />
+                  </FieldShell>
+                  <FieldShell label="Insurance Package">
+                    <input
+                      value={form.insurance_package || ""}
+                      onChange={(e) =>
+                        handleChange("insurance_package", e.target.value)
+                      }
+                      placeholder="Package name"
+                      className="w-full bg-transparent text-base text-gray-700 outline-none"
+                    />
+                  </FieldShell>
+                  <FieldShell label="Coverage Status">
+                    <input
+                      value={form.coverage_status || ""}
+                      onChange={(e) =>
+                        handleChange("coverage_status", e.target.value)
+                      }
+                      placeholder="e.g. Full, Partial"
+                      className="w-full bg-transparent text-base text-gray-700 outline-none"
+                    />
+                  </FieldShell>
+                </>
+              )}
             </div>
 
             <div className="mt-10 flex flex-col items-stretch gap-4 border-t border-gray-100 pt-4 sm:flex-row sm:items-center">
