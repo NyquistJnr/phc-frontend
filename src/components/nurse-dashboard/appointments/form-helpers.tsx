@@ -37,6 +37,7 @@ export function SelectField({
   isLoading = false,
   onChange,
   onSearchChange,
+  disabled = false,
 }: {
   label: string;
   placeholder: string;
@@ -46,6 +47,7 @@ export function SelectField({
   isLoading?: boolean;
   onChange: (value: string) => void;
   onSearchChange?: (term: string) => void;
+  disabled?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -84,8 +86,9 @@ export function SelectField({
     <div className="relative" ref={ref}>
       <button
         type="button"
+        disabled={disabled}
         onClick={() => setOpen((current) => !current)}
-        className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-left focus:border-[#046C3F] focus:outline-none focus:ring-1 focus:ring-[#046C3F]"
+        className={`w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-left focus:border-[#046C3F] focus:outline-none focus:ring-1 focus:ring-[#046C3F] ${disabled ? "cursor-not-allowed bg-gray-50 opacity-60" : ""}`}
       >
         <span className="mb-1 block text-xs text-[#62636C]">{label}</span>
         <span className="flex items-center justify-between gap-3 text-base">
@@ -103,7 +106,7 @@ export function SelectField({
         </span>
       </button>
 
-      {open && (
+      {open && !disabled && (
         <div className="absolute left-0 right-0 top-full z-50 mt-2 rounded-lg border border-gray-300 bg-white p-4 shadow-sm">
           {searchable && (
             <div className="relative mb-3 flex items-center">

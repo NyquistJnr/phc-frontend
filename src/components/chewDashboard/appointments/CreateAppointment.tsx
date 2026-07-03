@@ -28,6 +28,11 @@ import {
   useSearchPatients,
   useFacilityStaff,
 } from "@/src/hooks/nurses/use-appointments";
+import {
+  useStates,
+  useLgas,
+  useWards,
+} from "@/src/hooks/general/use-locations";
 
 export type AppointmentFormState = {
   patientName: string;
@@ -78,6 +83,7 @@ export type AppointmentFormState = {
   newSex: string;
   newDateOfBirth: string;
   newPhoneNumber: string;
+  newState: string;
   newLga: string;
   newWard: string;
   newBloodGroup: string;
@@ -177,6 +183,7 @@ const INITIAL_FORM: AppointmentFormState = {
   newSex: "",
   newDateOfBirth: "",
   newPhoneNumber: "",
+  newState: "",
   newLga: "",
   newWard: "",
   newBloodGroup: "",
@@ -255,12 +262,53 @@ export default function NewAppointments() {
     value: staff.id,
   }));
 
+  const { data: statesList = [], isLoading: isLoadingStates } = useStates();
+  const { data: lgasList = [], isLoading: isLoadingLgas } = useLgas(
+    form.newState || "",
+  );
+  const { data: wardsList = [], isLoading: isLoadingWards } = useWards(
+    form.newState || "",
+    form.newLga || "",
+  );
+
+  const stateOptions = statesList.map((state: string) => ({
+    label: state,
+    value: state,
+  }));
+  const lgaOptions = lgasList.map((lga: string) => ({
+    label: lga,
+    value: lga,
+  }));
+  const wardOptions = wardsList.map((ward: string) => ({
+    label: ward,
+    value: ward,
+  }));
+
   const handleChange = <K extends keyof AppointmentFormState>(
     field: K,
     value: AppointmentFormState[K],
   ) => {
     setForm((current) => ({ ...current, [field]: value }));
     setFormError("");
+  };
+
+  const handleNewPatientLocationChange = (
+    field: "newState" | "newLga" | "newWard",
+    value: string,
+  ) => {
+    setFormError("");
+    if (field === "newState") {
+      setForm((current) => ({
+        ...current,
+        newState: value,
+        newLga: "",
+        newWard: "",
+      }));
+    } else if (field === "newLga") {
+      setForm((current) => ({ ...current, newLga: value, newWard: "" }));
+    } else {
+      setForm((current) => ({ ...current, newWard: value }));
+    }
   };
 
   useEffect(() => {
@@ -403,6 +451,7 @@ export default function NewAppointments() {
               date_of_birth: form.newDateOfBirth,
               ...(form.newMiddleName && { middle_name: form.newMiddleName }),
               ...(form.newPhoneNumber && { phone_number: form.newPhoneNumber }),
+              ...(form.newState && { state: form.newState }),
               ...(form.newLga && { lga: form.newLga }),
               ...(form.newWard && { ward: form.newWard }),
               ...(form.newBloodGroup && { blood_group: form.newBloodGroup }),
@@ -460,6 +509,7 @@ export default function NewAppointments() {
               date_of_birth: form.newDateOfBirth,
               ...(form.newMiddleName && { middle_name: form.newMiddleName }),
               ...(form.newPhoneNumber && { phone_number: form.newPhoneNumber }),
+              ...(form.newState && { state: form.newState }),
               ...(form.newLga && { lga: form.newLga }),
               ...(form.newWard && { ward: form.newWard }),
               ...(form.newBloodGroup && { blood_group: form.newBloodGroup }),
@@ -524,6 +574,7 @@ export default function NewAppointments() {
         payload.date_of_birth = form.newDateOfBirth;
         if (form.newMiddleName) payload.middle_name = form.newMiddleName;
         if (form.newPhoneNumber) payload.phone_number = form.newPhoneNumber;
+        if (form.newState) payload.state = form.newState;
         if (form.newLga) payload.lga = form.newLga;
         if (form.newWard) payload.ward = form.newWard;
         if (form.newBloodGroup) payload.blood_group = form.newBloodGroup;
@@ -813,23 +864,57 @@ export default function NewAppointments() {
                     />
                   </FieldShell>
 
-                  <FieldShell label="LGA (Optional)">
-                    <input
-                      value={form.newLga}
-                      onChange={(e) => handleChange("newLga", e.target.value)}
-                      placeholder="Local Government Area"
-                      className="w-full bg-transparent text-base text-gray-700 outline-none placeholder:text-gray-400"
-                    />
-                  </FieldShell>
+                  <SelectField
+                    label="State (Optional)"
+                    placeholder={
+                      isLoadingStates ? "Loading..." : "Select state"
+                    }
+                    options={stateOptions}
+                    value={form.newState}
+                    searchable
+                    isLoading={isLoadingStates}
+                    onChange={(value) =>
+                      handleNewPatientLocationChange("newState", value)
+                    }
+                  />
 
-                  <FieldShell label="Ward (Optional)">
-                    <input
-                      value={form.newWard}
-                      onChange={(e) => handleChange("newWard", e.target.value)}
-                      placeholder="Ward"
-                      className="w-full bg-transparent text-base text-gray-700 outline-none placeholder:text-gray-400"
-                    />
-                  </FieldShell>
+                  <SelectField
+                    label="LGA (Optional)"
+                    placeholder={
+                      !form.newState
+                        ? "Select state first"
+                        : isLoadingLgas
+                          ? "Loading..."
+                          : "Select LGA"
+                    }
+                    options={lgaOptions}
+                    value={form.newLga}
+                    searchable
+                    isLoading={isLoadingLgas}
+                    disabled={!form.newState}
+                    onChange={(value) =>
+                      handleNewPatientLocationChange("newLga", value)
+                    }
+                  />
+
+                  <SelectField
+                    label="Ward (Optional)"
+                    placeholder={
+                      !form.newLga
+                        ? "Select LGA first"
+                        : isLoadingWards
+                          ? "Loading..."
+                          : "Select Ward"
+                    }
+                    options={wardOptions}
+                    value={form.newWard}
+                    searchable
+                    isLoading={isLoadingWards}
+                    disabled={!form.newLga}
+                    onChange={(value) =>
+                      handleNewPatientLocationChange("newWard", value)
+                    }
+                  />
 
                   <SelectField
                     label="Blood Group (Optional)"
