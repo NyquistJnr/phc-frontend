@@ -60,10 +60,16 @@ export function useInventoryDrugs(filters: InventoryFilters) {
     queryKey: ["inventory-drugs", filters],
     queryFn: async () => {
       const params = new URLSearchParams();
-      params.append(
-        "inventory_category",
-        filters.inventory_category || PHARMACY_INVENTORY_CATEGORY,
-      );
+      // undefined => caller didn't specify, default to DRUG only (existing
+      // behavior other callers rely on, e.g. the adverse-event drug picker).
+      // "" (explicit empty string) => caller wants every category, no filter.
+      // any other string => passed through as-is (supports comma-joined
+      // multi-category filters like "DRUG,CONSUMABLE").
+      if (filters.inventory_category === undefined) {
+        params.append("inventory_category", PHARMACY_INVENTORY_CATEGORY);
+      } else if (filters.inventory_category) {
+        params.append("inventory_category", filters.inventory_category);
+      }
       if (filters.drug_classification) {
         params.append("drug_classification", filters.drug_classification);
       }
