@@ -12,6 +12,9 @@ import {
   PncVisitResult,
   UpcomingFollowUpsFilters,
   UpcomingFollowUpsResponse,
+  ScheduleRule,
+  GlobalScheduleRule,
+  GlobalScheduleRulesResponse,
 } from "@/src/components/nurse-dashboard/maternal-care/type";
 
 type ApiEnvelope<T> = {
@@ -85,6 +88,34 @@ export function useUpdateEpisodeStatus() {
       queryClient.invalidateQueries({
         queryKey: ["maternal-episode", variables.id],
       });
+    },
+  });
+}
+
+export function useUpdateEpisodeSchedule() {
+  const api = useApi();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      payload,
+    }: {
+      id: string;
+      payload: {
+        custom_anc_schedule?: ScheduleRule | null;
+        custom_pnc_schedule?: ScheduleRule | null;
+      };
+    }) => {
+      const res = await api.patch<unknown>(
+        `/maternal-care/episodes/${id}/`,
+        payload,
+      );
+      return unwrapApiData<EpisodeResult>(res);
+    },
+    onSuccess: (data, variables) => {
+      queryClient.setQueryData(["maternal-episode", variables.id], data);
+      queryClient.invalidateQueries({ queryKey: ["maternal-episodes"] });
     },
   });
 }
@@ -221,5 +252,79 @@ export function usePncVisitDetails(id: string) {
       return res?.data?.data || res?.data || res;
     },
     enabled: !!id && api.isAuthenticated && !api.isLoading,
+  });
+}
+
+// ── Facility-wide standard ANC/PNC schedules (state admin) ─────────────────
+// One rule per care_type (ANC or PNC), enforced unique server-side. A
+// patient's episode-level custom_anc_schedule/custom_pnc_schedule (see
+// useUpdateEpisodeSchedule above) takes priority over these when set.
+
+export function useGlobalScheduleRules() {
+  const api = useApi();
+
+  return useQuery<GlobalScheduleRulesResponse>({
+    queryKey: ["maternal-global-rules"],
+    queryFn: async () => {
+      const res = await api.get<unknown>("/maternal-care/global-rules/");
+      return unwrapApiData<GlobalScheduleRulesResponse>(res);
+    },
+    enabled: api.isAuthenticated && !api.isLoading,
+  });
+}
+
+export function useCreateGlobalScheduleRule() {
+  const api = useApi();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload: ScheduleRule & { care_type: "ANC" | "PNC" }) => {
+      const res = await api.post<unknown>(
+        "/maternal-care/global-rules/",
+        payload,
+      );
+      return unwrapApiData<GlobalScheduleRule>(res);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["maternal-global-rules"] });
+    },
+  });
+}
+
+export function useUpdateGlobalScheduleRule() {
+  const api = useApi();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      payload,
+    }: {
+      id: string;
+      payload: ScheduleRule;
+    }) => {
+      const res = await api.patch<unknown>(
+        `/maternal-care/global-rules/${id}/`,
+        payload,
+      );
+      return unwrapApiData<GlobalScheduleRule>(res);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["maternal-global-rules"] });
+    },
+  });
+}
+
+export function useDeleteGlobalScheduleRule() {
+  const api = useApi();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      return await api.delete(`/maternal-care/global-rules/${id}/`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["maternal-global-rules"] });
+    },
   });
 }

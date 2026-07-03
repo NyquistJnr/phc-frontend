@@ -1,3 +1,32 @@
+export type ScheduleRuleType = "ONCE" | "RECURRING" | "VARIABLE_SEQUENCE";
+
+export interface VisitTasksMap {
+  [visitNumber: string]: string[];
+}
+
+export interface ScheduleRule {
+  rule_type: ScheduleRuleType;
+  interval_days?: number;
+  intervals_sequence?: number[];
+  visit_tasks?: VisitTasksMap;
+}
+
+export interface GlobalScheduleRule extends ScheduleRule {
+  id: string;
+  care_type: "ANC" | "PNC";
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface GlobalScheduleRulesResponse {
+  count: number;
+  total_pages: number;
+  current_page: number;
+  next: string | null;
+  previous: string | null;
+  results: GlobalScheduleRule[];
+}
+
 export interface EpisodeResult {
   id: string;
   episode_id: string;
@@ -13,6 +42,10 @@ export interface EpisodeResult {
   partner_name: string;
   partner_phone: string;
   created_at: string;
+  // Per-patient schedule override — null/absent means "use the facility's
+  // global standard for this care type" (see ScheduleRule / global-rules).
+  custom_anc_schedule?: ScheduleRule | null;
+  custom_pnc_schedule?: ScheduleRule | null;
 }
 
 export interface EpisodesResponse {
