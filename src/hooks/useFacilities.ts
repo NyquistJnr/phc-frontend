@@ -40,6 +40,7 @@ export interface FacilityStats {
   total_facilities: number;
   active_facilities: number;
   suspended_facilities: number;
+  total_registered_patients: number;
 }
 
 export interface UseFacilitiesParams {
@@ -156,13 +157,20 @@ export function usePatientActivity(startDate?: string, endDate?: string) {
   });
 }
 
-export function useFacilityStats() {
+export function useFacilityStats(startDate?: string, endDate?: string) {
   const api = useApi();
 
   return useQuery({
-    queryKey: ["facilityStats"],
+    queryKey: ["facilityStats", startDate, endDate],
     queryFn: async () => {
-      return await api.get<FacilityStats>(`/facilities/facilities/stats/`);
+      const params = new URLSearchParams();
+      if (startDate) params.append("start_date", startDate);
+      if (endDate) params.append("end_date", endDate);
+      const query = params.toString();
+
+      return await api.get<FacilityStats>(
+        `/facilities/facilities/stats/${query ? `?${query}` : ""}`,
+      );
     },
     enabled: api.isAuthenticated && !api.isLoading,
     staleTime: 5 * 60 * 1000,
