@@ -10,6 +10,8 @@ import {
 } from "@/src/components/stateDashboard/generics/ChartSkeletons";
 import PatientVolumeTrendCard from "@/src/components/stateDashboard/generics/PatientVolumeChart";
 import { useSession } from "next-auth/react";
+import { useEffect, useState } from "react";
+import { useApi } from "@/src/hooks/use-api";
 
 interface ActiveAlertItemProps {
   title: string;
@@ -18,6 +20,13 @@ interface ActiveAlertItemProps {
   borderColor: string;
   bgColor: string;
   titleColor: string;
+}
+
+interface FacilityStats {
+  total_facilities: number;
+  active_facilities: number;
+  total_patients: number;
+  // The API returns more fields, but we only need these for now.
 }
 
 function ActiveAlertItem({ title, facility, time, borderColor, bgColor, titleColor }: ActiveAlertItemProps) {
@@ -36,6 +45,27 @@ export default function StateDashboardHome() {
   const breadcrumbs = [{ label: "", active: true }];
   const { data: session } = useSession();
   const firstName = session?.user?.first_name || "User";
+  const { get, isAuthenticated } = useApi();
+  const [stats, setStats] = useState<FacilityStats | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        setLoading(true);
+        const data = await get<FacilityStats>("/facilities/facilities/stats/");
+        setStats(data);
+      } catch (error) {
+        console.error("Failed to fetch facility stats", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (isAuthenticated) {
+      fetchStats();
+    }
+  }, [get, isAuthenticated]);
 
   const alerts: ActiveAlertItemProps[] = [];
 
@@ -76,9 +106,24 @@ export default function StateDashboardHome() {
 
         {/* Top Metric Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-          <MetricCard icon={Building2} title="Total Facilities" value="0" colorClass="bg-[#046C3F]" />
-          <MetricCard icon={Building} title="Active Facilities" value="0" colorClass="bg-white border border-gray-100" />
-          <MetricCard icon={Users} title="Total Registered Patients" value="0" colorClass="bg-white border border-gray-100" />
+          <MetricCard 
+            icon={Building2} 
+            title="Total Facilities" 
+            value={loading ? "..." : (stats?.total_facilities ?? 0).toString()} 
+            colorClass="bg-[#046C3F]" 
+          />
+          <MetricCard 
+            icon={Building} 
+            title="Active Facilities" 
+            value={loading ? "..." : (stats?.active_facilities ?? 0).toString()} 
+            colorClass="bg-white border border-gray-100" 
+          />
+          <MetricCard 
+            icon={Users} 
+            title="Total Registered Patients" 
+            value={loading ? "..." : (stats?.total_patients ?? 0).toString()} 
+            colorClass="bg-white border border-gray-100" 
+          />
         </div>
 
         {/* Patient Volume Trend + Active Alerts */}
