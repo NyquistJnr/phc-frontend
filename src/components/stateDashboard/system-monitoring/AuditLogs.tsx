@@ -1,62 +1,50 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Search, UploadCloud, Loader2, Calendar } from "lucide-react";
 import Header from "@/src/components/stateDashboard/generics/Header";
 import DataTable, { Column } from "@/src/components/adminDashboard/generics/DataTable";
 import Pagination from "@/src/components/adminDashboard/generics/Pagination";
 import FilterDropdown from "@/src/components/adminDashboard/generics/FilterDropdown";
 import CustomDateFilter from "@/src/components/adminDashboard/generics/Date";
-
-interface AuditLogRow {
-  [key: string]: unknown;
-  id: string;
-  user: string;
-  action: string;
-  module: string;
-  timestamp: string;
-  ip_address: string;
-  status: string;
-}
-
-// TODO: replace with real API data when state-dashboard audit log endpoint is ready
-const DUMMY_LOGS: AuditLogRow[] = [
-  { id: "1",  user: "Dr. Adaeze Nwosu",        action: "User Login",                       module: "Authentication",  timestamp: "2026-03-08 08:42:15", ip_address: "192.168.1.14", status: "Success"  },
-  { id: "2",  user: "System Admin",             action: "Password Reset: Chioma Eze",        module: "Security",        timestamp: "2026-03-08 08:31:02", ip_address: "192.168.1.1",  status: "Warning"  },
-  { id: "3",  user: "Fatima Bello",             action: "Role Changed: Nurse → Doctor",      module: "User Management", timestamp: "2026-03-08 08:15:44", ip_address: "192.168.1.1",  status: "Info"     },
-  { id: "4",  user: "Unknown (IP: 10.0.0.45)",  action: "Failed Login Attempt",              module: "Authentication",  timestamp: "2026-03-08 07:58:33", ip_address: "192.168.1.18", status: "Critical" },
-  { id: "5",  user: "System Admin",             action: "System Settings Updated",           module: "System",          timestamp: "2026-03-08 07:44:00", ip_address: "192.168.1.1",  status: "Info"     },
-  { id: "6",  user: "Emeka Okafor",             action: "User Login",                        module: "Authentication",  timestamp: "2026-03-08 07:58:33", ip_address: "192.168.1.1",  status: "Success"  },
-  { id: "7",  user: "System Admin",             action: "System Settings Updated",           module: "System",          timestamp: "2026-03-08 07:44:00", ip_address: "192.168.1.1",  status: "Info"     },
-  { id: "8",  user: "Unknown (IP: 10.0.0.45)",  action: "Failed Login Attempt",              module: "Authentication",  timestamp: "2026-03-08 07:44:00", ip_address: "192.168.1.1",  status: "Warning"  },
-  { id: "9",  user: "System Admin",             action: "System Settings Updated",           module: "System",          timestamp: "2026-03-08 07:44:00", ip_address: "192.168.1.1",  status: "Info"     },
-  { id: "10", user: "Dr John .A",               action: "User Login",                        module: "Authentication",  timestamp: "2026-03-08 07:44:00", ip_address: "192.168.1.1",  status: "Success"  },
-];
-
-const getStatusStyles = (status: string) => {
-  switch (status.toLowerCase()) {
-    case "success":  return "bg-[#D2F1DF] text-[#046C3F]";
-    case "info":     return "bg-[#E0F2FE] text-[#0284C7]";
-    case "warning":  return "bg-[#FFF5EB] text-[#F97316]";
-    case "critical": return "bg-[#FEE2E2] text-[#DC2626]";
-    default:         return "bg-gray-100 text-gray-600";
-  }
-};
+import { useAuditLogs, AuditLog } from "@/src/hooks/useAuditLogs";
 
 const ITEMS_PER_PAGE = 10;
 
+const formatTimestamp = (isoString: string) => {
+  if (!isoString) return "";
+  const date = new Date(isoString);
+  return date.toISOString().replace("T", " ").substring(0, 19);
+};
+
+const getStatusStyles = (action: string) => {
+  const normalizedAction = action?.toUpperCase();
+  switch (normalizedAction) {
+    case "CREATE":
+    case "LOGIN":
+      return { label: "Success", classes: "bg-[#D2F1DF] text-[#046C3F]" };
+    case "UPDATE":
+      return { label: "Info", classes: "bg-[#E0F2FE] text-[#0284C7]" };
+    case "DELETE":
+    case "SUSPEND":
+    case "FAILED_LOGIN":
+      return { label: "Critical", classes: "bg-[#FEE2E2] text-[#DC2626]" };
+    default:
+      return { label: "Normal", classes: "bg-gray-100 text-gray-600" };
+  }
+};
+
 export default function AuditLogs() {
-  const [searchInput, setSearchInput]     = useState("");
+  const [searchInput, setSearchInput]         = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [moduleFilter, setModuleFilter]   = useState("All");
-  const [statusFilter, setStatusFilter]   = useState("All");
-  const [currentPage, setCurrentPage]     = useState(1);
-  const [dateFilterOpen, setDateFilterOpen] = useState(false);
-  const [startDate, setStartDate]         = useState<string | undefined>();
-  const [endDate, setEndDate]             = useState<string | undefined>();
+  const [moduleFilter, setModuleFilter]       = useState("All");
+  const [actionFilter, setActionFilter]       = useState("All");
+  const [currentPage, setCurrentPage]         = useState(1);
+  const [dateFilterOpen, setDateFilterOpen]   = useState(false);
+  const [startDate, setStartDate]             = useState<string | undefined>();
+  const [endDate, setEndDate]                 = useState<string | undefined>();
 
   const dateFilterRef = useRef<HTMLDivElement>(null);
-  const isLoading = false;
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -76,47 +64,50 @@ export default function AuditLogs() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [dateFilterOpen]);
 
-  const filteredLogs = useMemo(() => {
-    return DUMMY_LOGS.filter((log) => {
-      const matchSearch =
-        !debouncedSearch ||
-        log.user.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
-        log.action.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
-        log.module.toLowerCase().includes(debouncedSearch.toLowerCase());
-      const matchModule = moduleFilter === "All" || log.module === moduleFilter;
-      const matchStatus = statusFilter === "All" || log.status === statusFilter;
-      const matchDate = (() => {
-        if (!startDate) return true;
-        const logDate = log.timestamp.substring(0, 10);
-        return logDate >= startDate && logDate <= (endDate ?? startDate);
-      })();
-      return matchSearch && matchModule && matchStatus && matchDate;
-    });
-  }, [debouncedSearch, moduleFilter, statusFilter, startDate, endDate]);
+  const { data, isLoading } = useAuditLogs({
+    page: currentPage,
+    pageSize: ITEMS_PER_PAGE,
+    module: moduleFilter === "All" ? undefined : moduleFilter,
+    action: actionFilter === "All" ? undefined : actionFilter,
+    search: debouncedSearch || undefined,
+    startDate,
+    endDate,
+  });
 
-  const totalPages = Math.max(1, Math.ceil(filteredLogs.length / ITEMS_PER_PAGE));
-  const pagedLogs  = filteredLogs.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE,
-  );
+  const logs = data?.results || [];
+  const totalPages = data?.total_pages || 1;
 
-  const columns: Column<AuditLogRow>[] = [
-    { key: "user",       label: "User",       sortable: true },
-    { key: "action",     label: "Action",     sortable: true },
-    { key: "module",     label: "Module",     sortable: true },
-    { key: "timestamp",  label: "Timestamp",  sortable: true, className: "font-mono text-sm" },
+  const columns: Column<AuditLog>[] = [
+    {
+      key: "actor_name",
+      label: "User",
+      sortable: true,
+      render: (row) => row.actor_name || "Unknown User",
+    },
+    { key: "action", label: "Action", sortable: true },
+    { key: "module", label: "Module", sortable: true },
+    {
+      key: "timestamp",
+      label: "Timestamp",
+      sortable: true,
+      className: "font-mono text-sm",
+      render: (row) => formatTimestamp(row.timestamp),
+    },
     { key: "ip_address", label: "IP Address", sortable: true },
     {
       key: "status",
       label: "Status",
       sortable: true,
-      render: (row) => (
-        <span
-          className={`inline-block px-3 py-1 rounded-full text-[11px] font-bold ${getStatusStyles(row.status)}`}
-        >
-          {row.status}
-        </span>
-      ),
+      render: (row) => {
+        const config = getStatusStyles(row.action);
+        return (
+          <span
+            className={`inline-block px-3 py-1 rounded-full text-[11px] font-bold ${config.classes}`}
+          >
+            {config.label}
+          </span>
+        );
+      },
     },
   ];
 
@@ -173,10 +164,10 @@ export default function AuditLogs() {
               />
 
               <FilterDropdown
-                label="All Status"
-                options={["All", "Success", "Info", "Warning", "Critical"]}
-                selected={statusFilter}
-                onChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}
+                label="All Actions"
+                options={["All", "CREATE", "UPDATE", "DELETE", "LOGIN", "SUSPEND"]}
+                selected={actionFilter}
+                onChange={(v) => { setActionFilter(v); setCurrentPage(1); }}
               />
 
               {/* Date Range Picker */}
@@ -228,7 +219,7 @@ export default function AuditLogs() {
             <>
               <DataTable
                 columns={columns}
-                data={pagedLogs}
+                data={logs}
                 emptyMessage={
                   debouncedSearch
                     ? "No logs match your search criteria."

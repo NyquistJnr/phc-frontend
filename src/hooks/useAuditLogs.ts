@@ -31,6 +31,8 @@ export interface UseAuditLogsParams {
   module?: string;
   action?: string;
   search?: string;
+  startDate?: string;
+  endDate?: string;
 }
 
 export function useAuditLogs({
@@ -39,11 +41,22 @@ export function useAuditLogs({
   module,
   action,
   search,
+  startDate,
+  endDate,
 }: UseAuditLogsParams = {}) {
   const api = useApi();
 
   return useQuery({
-    queryKey: ["auditLogs", page, pageSize, module, action, search],
+    queryKey: [
+      "auditLogs",
+      page,
+      pageSize,
+      module,
+      action,
+      search,
+      startDate,
+      endDate,
+    ],
 
     queryFn: async () => {
       const params = new URLSearchParams({
@@ -54,6 +67,8 @@ export function useAuditLogs({
       if (module && module !== "All") params.append("module", module);
       if (action && action !== "All") params.append("action", action);
       if (search) params.append("search", search);
+      if (startDate) params.append("start_date", startDate);
+      if (endDate) params.append("end_date", endDate);
 
       return await api.get<AuditLogsResponse>(
         `/system/audit-logs/?${params.toString()}`,
