@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useEffect, useCallback, useRef, useState } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { createPortal } from "react-dom";
 import {
+  Check,
+  ChevronDown,
   Download,
   Eye,
   MoreHorizontal,
@@ -27,6 +29,14 @@ import { DrugStockItem } from "./type";
 
 const STATUS_OPTIONS = ["All Status", "IN_STOCK", "LOW_STOCK", "OUT_OF_STOCK"];
 const PAGE_SIZES = ["10", "50", "100"];
+
+const INVENTORY_CATEGORY_OPTIONS = [
+  { label: "Drug / Medication", value: "DRUG" },
+  { label: "Lab Equipment", value: "LAB_EQUIPMENT" },
+  { label: "Consumable", value: "CONSUMABLE" },
+];
+
+const DEFAULT_INVENTORY_CATEGORIES = ["DRUG", "CONSUMABLE"];
 
 function getStatusLabel(status?: string) {
   switch (status) {
@@ -114,6 +124,93 @@ function printDrugStockItem(item: DrugStockItem) {
   printWindow.focus();
   printWindow.print();
   return true;
+}
+
+function CategoryFilterDropdown({
+  options,
+  selected,
+  onChange,
+}: {
+  options: { label: string; value: string }[];
+  selected: string[];
+  onChange: (values: string[]) => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (ref.current && !ref.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const toggleValue = (value: string) => {
+    if (selected.includes(value)) {
+      onChange(selected.filter((v) => v !== value));
+    } else {
+      onChange([...selected, value]);
+    }
+  };
+
+  const label =
+    selected.length === 0 || selected.length === options.length
+      ? "All Categories"
+      : options
+          .filter((option) => selected.includes(option.value))
+          .map((option) => option.label)
+          .join(", ");
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setIsOpen((current) => !current)}
+        className="flex w-full items-center justify-between gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-all hover:bg-gray-50 focus:border-[#0a6c38] focus:outline-none focus:ring-2 focus:ring-[#0a6c38]/20 sm:w-auto sm:min-w-[180px]"
+      >
+        <span className="truncate">{label}</span>
+        <ChevronDown
+          size={16}
+          className={`text-gray-400 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+        />
+      </button>
+      {isOpen && (
+        <div className="absolute right-0 z-10 mt-2 w-56 overflow-hidden rounded-xl border border-gray-100 bg-white shadow-lg">
+          <div className="py-1">
+            {options.map((option) => {
+              const checked = selected.includes(option.value);
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => toggleValue(option.value)}
+                  className={`flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm transition-colors ${
+                    checked
+                      ? "bg-[#e6f4ea] font-medium text-[#0a6c38]"
+                      : "text-gray-700 hover:bg-gray-50"
+                  }`}
+                >
+                  <span
+                    className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
+                      checked
+                        ? "border-[#046C3F] bg-[#046C3F]"
+                        : "border-gray-300"
+                    }`}
+                  >
+                    {checked && <Check size={11} className="text-white" />}
+                  </span>
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function InventoryActionMenu({
@@ -217,6 +314,9 @@ export default function DrugStockListing() {
   const initialSearch = searchParams.get("search") || "";
   const [localSearch, setLocalSearch] = useState(initialSearch);
   const [toastMessage, setToastMessage] = useState("");
+  const [categories, setCategories] = useState<string[]>(
+    DEFAULT_INVENTORY_CATEGORIES,
+  );
 
   useEffect(() => {
     const currentSearch = searchParams.get("search") || "";
@@ -242,6 +342,11 @@ export default function DrugStockListing() {
     search: searchParams.get("search") || undefined,
     start_date,
     end_date,
+    inventory_category:
+      categories.length === 0 ||
+      categories.length === INVENTORY_CATEGORY_OPTIONS.length
+        ? ""
+        : categories.join(","),
   });
 
   const updateUrlParams = useCallback(
@@ -413,6 +518,12 @@ export default function DrugStockListing() {
                 options={STATUS_OPTIONS}
                 selected={statusFilter}
                 onSelect={(val) => updateUrlParams("status", val)}
+              />
+
+              <CategoryFilterDropdown
+                options={INVENTORY_CATEGORY_OPTIONS}
+                selected={categories}
+                onChange={setCategories}
               />
 
               <CustomDropdown
