@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { usePathname, useSearchParams } from "next/navigation";
 import { ChevronRight, Loader2, Pill, Plus } from "lucide-react";
 import { usePrescriptions } from "@/src/hooks/doctors/use-prescriptions";
 import type {
@@ -126,6 +127,10 @@ export default function PrescriptionsSection({
 }: {
   appointmentId: string;
 }) {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const returnToUrl = pathname + (searchParams.toString() ? `?${searchParams.toString()}` : "");
+
   const { data, isLoading } = usePrescriptions({
     appointment_id: appointmentId,
     page_size: 20,
@@ -155,7 +160,7 @@ export default function PrescriptionsSection({
           </div>
         </div>
         <Link
-          href={`/doctor-dashboard/prescriptions/new?appointment=${appointmentId}`}
+          href={`/doctor-dashboard/prescriptions/new?appointment=${appointmentId}&returnTo=${encodeURIComponent(returnToUrl)}`}
           className="flex items-center gap-2 rounded-lg border border-[#046C3F] px-4 py-2 text-sm font-medium text-[#046C3F] transition-colors hover:bg-[#F0FAF5]"
         >
           <Plus size={16} /> New Prescription

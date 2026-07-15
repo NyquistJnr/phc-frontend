@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useState, useEffect, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Pill,
   Loader2,
@@ -494,7 +494,13 @@ function SuccessToast({ onClose }: { onClose: () => void }) {
 // --- Main Form Component ---
 export default function CreatePrescription() {
   const router = useRouter();
-  const [form, setForm] = useState<PrescriptionFormState>(INITIAL_FORM);
+  const searchParams = useSearchParams();
+  const returnTo = searchParams.get("returnTo");
+  const appointmentIdFromUrl = searchParams.get("appointment") || "";
+  const [form, setForm] = useState<PrescriptionFormState>(() => ({
+    ...INITIAL_FORM,
+    appointmentId: appointmentIdFromUrl,
+  }));
   const [formError, setFormError] = useState("");
   const [toastVisible, setToastVisible] = useState(false);
 
@@ -643,11 +649,15 @@ export default function CreatePrescription() {
         const createdId =
           response?.data?.data?.id || response?.data?.id || response?.id;
         setTimeout(() => {
-          router.push(
-            createdId
-              ? `/doctor-dashboard/prescriptions/${createdId}`
-              : "/doctor-dashboard/prescriptions",
-          );
+          if (returnTo) {
+            router.push(returnTo);
+          } else {
+            router.push(
+              createdId
+                ? `/doctor-dashboard/prescriptions/${createdId}`
+                : "/doctor-dashboard/prescriptions",
+            );
+          }
         }, 2000);
       },
       onError: (error: any) => {
@@ -660,7 +670,13 @@ export default function CreatePrescription() {
     });
   };
 
-  const handleCancel = () => router.push("/doctor-dashboard/prescriptions");
+  const handleCancel = () => {
+    if (returnTo) {
+      router.push(returnTo);
+    } else {
+      router.push("/doctor-dashboard/prescriptions");
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#F6F7FC]">

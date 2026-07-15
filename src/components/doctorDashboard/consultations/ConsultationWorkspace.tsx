@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams, usePathname } from "next/navigation";
 import { toast } from "react-toastify";
 import {
   ArrowLeft,
@@ -121,6 +121,7 @@ export default function ConsultationWorkspace() {
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
+  const pathname = usePathname();
 
   const routeId = (params?.id as string) || "";
   const appointmentQueryParam = searchParams.get("appointment") || "";
@@ -429,7 +430,7 @@ export default function ConsultationWorkspace() {
 
           {appointmentId && (
             <Link
-              href={`/doctor-dashboard/prescriptions/new?appointment=${appointmentId}`}
+              href={`/doctor-dashboard/prescriptions/new?appointment=${appointmentId}&returnTo=${encodeURIComponent(pathname + (searchParams.toString() ? `?${searchParams.toString()}` : ''))}`}
               className="inline-flex items-center gap-2 rounded border border-purple-100 bg-white px-3 py-2 text-xs font-medium text-purple-700 shadow-sm transition-colors hover:bg-purple-50"
             >
               <Pill size={14} />
