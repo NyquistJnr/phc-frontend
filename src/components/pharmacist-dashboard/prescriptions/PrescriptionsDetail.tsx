@@ -73,6 +73,7 @@ function printPrescriptionOrder(order: PrescriptionOrder) {
           <td>${escapeHtml(item.dosage || "-")}</td>
           <td>${escapeHtml(item.frequency || "-")}</td>
           <td>${escapeHtml(item.duration || "-")}</td>
+          <td>${escapeHtml(item.special_instructions || "-")}</td>
         </tr>`,
     )
     .join("");
@@ -109,7 +110,7 @@ function printPrescriptionOrder(order: PrescriptionOrder) {
         <h2>Medications</h2>
         <table>
           <thead>
-            <tr><th>#</th><th>Drug</th><th>Qty</th><th>Dosage</th><th>Frequency</th><th>Duration</th></tr>
+            <tr><th>#</th><th>Drug</th><th>Qty</th><th>Dosage</th><th>Frequency</th><th>Duration</th><th>Special Instructions</th></tr>
           </thead>
           <tbody>
             ${medicationRows}
