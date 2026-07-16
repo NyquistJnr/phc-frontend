@@ -31,6 +31,7 @@ import { ColumnDef, DataTable } from "@/src/components/generic/ui/DataTable";
 import { StatusBadge } from "@/src/components/generic/ui/TableHelpers";
 import { CustomDropdown } from "@/src/components/generic/ui/CustomDropdown";
 import DateRangeFilter from "@/src/components/generic/ui/DateRangeFilter";
+import LabDateRangeFilter from "@/src/components/lab-dashboard/generics/LabDateRangeFilter";
 import LabBackButton from "@/src/components/lab-dashboard/generics/LabBackButton";
 import LabDashboardHeader from "@/src/components/lab-dashboard/generics/LabDashboardHeader";
 import { SelectField as SystemSelectField } from "@/src/components/nurse-dashboard/appointments/form-helpers";
@@ -1630,15 +1631,29 @@ export default function Inventory() {
               Monitor lab supplies, low stock and expiry
             </p>
           </div>
-          <button
-            onClick={() => {
-              setFormError("");
-              setMode("add");
-            }}
-            className="flex h-11 items-center justify-center gap-3 rounded-xl bg-[#046C3F] px-10 text-base font-medium text-white"
-          >
-            <Heart size={21} /> Add New Item
-          </button>
+          <div className="flex flex-wrap items-center gap-4">
+            <LabDateRangeFilter
+              startDate={startDate}
+              endDate={endDate}
+              onApply={(start, end) => {
+                setStartDate(start);
+                setEndDate(end);
+              }}
+              onClear={() => {
+                setStartDate("");
+                setEndDate("");
+              }}
+            />
+            <button
+              onClick={() => {
+                setFormError("");
+                setMode("add");
+              }}
+              className="flex h-11 items-center justify-center gap-3 rounded-xl bg-[#046C3F] px-10 text-base font-medium text-white"
+            >
+              <Heart size={21} /> Add New Item
+            </button>
+          </div>
         </div>
 
         <div className="mb-6 grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
@@ -1657,19 +1672,6 @@ export default function Inventory() {
           viewAllLink="/lab-dashboard/lab-inventory/all"
           toolbarActions={
             <>
-              <DateRangeFilter
-                startDate={startDate}
-                endDate={endDate}
-                label="Last Updated"
-                onApply={(start, end) => {
-                  setStartDate(start);
-                  setEndDate(end);
-                }}
-                onClear={() => {
-                  setStartDate("");
-                  setEndDate("");
-                }}
-              />
               <CustomDropdown
                 options={STATUS_OPTIONS}
                 selected={status}
