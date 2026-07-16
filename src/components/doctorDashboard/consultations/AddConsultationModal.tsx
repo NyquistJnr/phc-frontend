@@ -81,7 +81,7 @@ export default function AddConsultationModal({
 
   return (
     <div
-      className="fixed inset-0 z-[100] overflow-y-auto bg-black/40 backdrop-blur-sm"
+      className="fixed inset-0 z-[10000] overflow-y-auto bg-black/40 backdrop-blur-sm"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}

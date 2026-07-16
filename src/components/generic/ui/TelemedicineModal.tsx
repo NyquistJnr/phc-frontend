@@ -75,7 +75,7 @@ export default function TelemedicineModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
       <div className="w-full max-w-2xl rounded-2xl bg-white shadow-xl relative flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="flex items-start justify-between border-b border-gray-100 p-6 pb-4 shrink-0">
