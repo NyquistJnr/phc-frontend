@@ -669,7 +669,7 @@ export default function AppointmentDetails() {
               </button>
             ) : (
               <button
-                onClick={() => setShowReferralModal(true)}
+                onClick={() => router.push(`/doctor-dashboard/referrals/new?appointment=${id}`)}
                 className="flex items-center gap-2 rounded-lg bg-white border border-[#046C3F] px-4 py-2 text-sm font-medium text-[#046C3F] transition-colors hover:bg-[#E6F4EA]"
               >
                 <Send size={16} /> Refer Patient

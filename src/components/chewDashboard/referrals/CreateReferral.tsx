@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Building2,
   ChevronDown,
@@ -233,8 +233,17 @@ function SearchableSelect({
 
 export default function CreateReferral() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const appointmentParam = searchParams.get("appointment");
+
   const [form, setForm] = useState<ReferralFormState>(INITIAL_FORM);
   const [formError, setFormError] = useState("");
+
+  useEffect(() => {
+    if (appointmentParam) {
+      setForm((prev) => ({ ...prev, appointment: appointmentParam }));
+    }
+  }, [appointmentParam]);
 
   const { data: appointmentsData, isLoading: isLoadingAppointments } =
     useAppointments({ page_size: 100 });
@@ -293,7 +302,11 @@ export default function CreateReferral() {
   const handleCancel = () => {
     setForm(INITIAL_FORM);
     setFormError("");
-    router.push("/chew-dashboard/referrals");
+    if (appointmentParam) {
+      router.push(`/chew-dashboard/appointments/${appointmentParam}`);
+    } else {
+      router.push("/chew-dashboard/referrals");
+    }
   };
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
@@ -373,7 +386,11 @@ export default function CreateReferral() {
     createReferral(payload, {
       onSuccess: () => {
         setForm(INITIAL_FORM);
-        router.push("/chew-dashboard/referrals");
+        if (appointmentParam) {
+          router.push(`/chew-dashboard/appointments/${appointmentParam}`);
+        } else {
+          router.push("/chew-dashboard/referrals");
+        }
       },
       onError: (error) => {
         setFormError(
