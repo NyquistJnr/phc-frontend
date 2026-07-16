@@ -11,7 +11,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import DoctorHeader from "@/src/components/doctorDashboard/generics/Header";
-import { PeriodFilterButton } from "@/src/components/doctorDashboard/generics/PeriodFilterButton";
+import NurseDateRangeFilter from "@/src/components/nurse-dashboard/generics/NurseDateRangeFilter";
+import { useState } from "react";
 import DashboardStatCard from "@/src/components/generic/dashboard/DashboardStatCard";
 import { StatusBadge } from "@/src/components/generic/ui/TableHelpers";
 import {
@@ -184,7 +185,13 @@ function ActionButton({
 
 export default function DoctorDashboardHome() {
   const breadcrumbs = [{ label: "", active: true }];
-  const { data: statsData } = useDoctorStats({});
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
+  const { data: statsData } = useDoctorStats({
+    start_date: startDate,
+    end_date: endDate,
+  });
   const { data: alertsData } = useDoctorAlerts();
   const { data: pendingLabsData } = useDoctorPendingLabs({
     page: 1,
@@ -385,7 +392,18 @@ export default function DoctorDashboardHome() {
 
       <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 pt-4 pb-10 space-y-6">
         <div className="flex justify-end">
-          <PeriodFilterButton label="This Week" />
+          <NurseDateRangeFilter
+            startDate={startDate}
+            endDate={endDate}
+            onApply={(start, end) => {
+              setStartDate(start);
+              setEndDate(end);
+            }}
+            onClear={() => {
+              setStartDate("");
+              setEndDate("");
+            }}
+          />
         </div>
 
         {/* Stat cards */}

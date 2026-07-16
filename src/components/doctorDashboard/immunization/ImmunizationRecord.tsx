@@ -459,8 +459,8 @@ export default function ImmunizationRegister() {
 
   // Mappings
   const patientsList = patientsData?.results || [];
-  const vaccineOptions = (vaccinesData?.results || []).map((item) => ({
-    label: `${item.name} (${item.item_type})`,
+  const vaccineOptions = (vaccinesData?.results || []).map((item: any) => ({
+    label: `${item.name} (${item.item_type}) - ${item.total_stock} in stock`,
     value: item.id,
   }));
   const stateOptions = statesList.map((s: string) => ({ label: s, value: s }));
