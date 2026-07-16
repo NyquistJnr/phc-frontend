@@ -172,6 +172,10 @@ export interface DeliveryResult {
   birth_status: string;
   complications: string;
   sex: string;
+  birth_weight?: string;
+  apgar_score_1min?: string;
+  apgar_score_5min?: string;
+  notes?: string;
 }
 
 export interface DeliveriesResponse {
