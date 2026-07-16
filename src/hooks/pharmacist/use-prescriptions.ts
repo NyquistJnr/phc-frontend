@@ -62,19 +62,25 @@ export function usePrescriptionOrderDetail(id: string) {
   });
 }
 
+export type DispensePayload = {
+  items: { id: string | number; quantity: number }[];
+  force_complete: boolean;
+};
+
 export function useDispensePrescriptionOrder() {
   const api = useApi();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async ({ id, payload }: { id: string; payload?: DispensePayload }) => {
       const res = await api.post<unknown>(
         `/prescriptions/orders/${id}/dispense/`,
+        payload,
       );
       return unwrapApiData<PrescriptionOrder>(res);
     },
-    onSuccess: (data, id) => {
-      queryClient.setQueryData(["prescription-detail", id], data);
+    onSuccess: (data, variables) => {
+      queryClient.setQueryData(["prescription-detail", variables.id], data);
       queryClient.invalidateQueries({ queryKey: ["prescription-orders"] });
       queryClient.invalidateQueries({ queryKey: ["inventory-drugs"] });
       queryClient.invalidateQueries({ queryKey: ["inventory-stats"] });

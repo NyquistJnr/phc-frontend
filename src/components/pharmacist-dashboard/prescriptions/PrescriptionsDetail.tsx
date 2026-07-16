@@ -357,34 +357,37 @@ export default function PharmacistPrescriptionsDetail() {
           isSubmitting={dispenseMutation.isPending}
           errorMessage={dispenseError}
           onClose={() => setDispenseModalOpen(false)}
-          onConfirm={() => {
+          onConfirm={(payload) => {
             setDispenseError("");
-            dispenseMutation.mutate(prescription.id, {
-              onSuccess: () => {
-                setDispenseModalOpen(false);
-                showToast(
-                  "Dispense Successful",
-                  `${prescription.prescription_id} dispensed successfully`,
-                );
-              },
-              onError: (error: unknown) => {
-                const message =
-                  error instanceof Error
-                    ? error.message
-                    : "Failed to dispense. Please try again.";
-
-                if (isAlreadyFinalizedError(message)) {
-                  // Stale local state — someone else dispensed/cancelled it
-                  // elsewhere. Sync up instead of treating it as a scary error.
+            dispenseMutation.mutate(
+              { id: prescription.id, payload },
+              {
+                onSuccess: () => {
                   setDispenseModalOpen(false);
-                  refetchPrescription();
-                  showToast("Already Finalized", message);
-                  return;
-                }
+                  showToast(
+                    "Dispense Successful",
+                    `${prescription.prescription_id} dispensed successfully`,
+                  );
+                },
+                onError: (error: unknown) => {
+                  const message =
+                    error instanceof Error
+                      ? error.message
+                      : "Failed to dispense. Please try again.";
 
-                setDispenseError(message);
-              },
-            });
+                  if (isAlreadyFinalizedError(message)) {
+                    // Stale local state — someone else dispensed/cancelled it
+                    // elsewhere. Sync up instead of treating it as a scary error.
+                    setDispenseModalOpen(false);
+                    refetchPrescription();
+                    showToast("Already Finalized", message);
+                    return;
+                  }
+
+                  setDispenseError(message);
+                },
+              }
+            );
           }}
         />
       )}

@@ -341,11 +341,13 @@ export default function Prescriptions() {
             isSubmitting={dispenseMutation.isPending}
             errorMessage={dispenseError}
             onClose={() => setDispenseModalOpen(false)}
-            onConfirm={() => {
+            onConfirm={(payload) => {
               setDispenseError("");
-              dispenseMutation.mutate(selectedOrder.id, {
-                onSuccess: () => {
-                  setDispenseModalOpen(false);
+              dispenseMutation.mutate(
+                { id: selectedOrder.id, payload },
+                {
+                  onSuccess: () => {
+                    setDispenseModalOpen(false);
                   showToast(
                     "Dispense Successful",
                     `${selectedOrder.prescription_id} dispensed successfully`,
