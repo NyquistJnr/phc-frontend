@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useParams, useRouter } from "next/navigation";
-import { FileText, User, Activity, ArrowRightLeft, Mail } from "lucide-react";
+import { FileText, User, Activity, ArrowRightLeft, Mail, Video, ExternalLink, Users } from "lucide-react";
 
 import DoctorHeader from "@/src/components/doctorDashboard/generics/Header";
 import NurseBackButton from "@/src/components/nurse-dashboard/generics/NurseBackButton";
@@ -253,6 +253,75 @@ export default function ReferralDetailPage() {
                   </p>
                 </div>
               </div>
+            </div>
+          )}
+
+          {referral.telemedicine_session && (
+            <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
+              <div className="mb-5 flex items-center gap-2 border-b border-gray-100 pb-3 text-lg font-semibold text-gray-800">
+                <Video size={20} className="text-[#046C3F]" /> Telemedicine Session
+              </div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 mb-6">
+                <DetailItem label="Session ID" value={referral.telemedicine_session.session_id} />
+                <DetailItem label="Session Status" value={
+                  <span className="capitalize font-semibold text-purple-600">{referral.telemedicine_session.status}</span>
+                } />
+              </div>
+              
+              <div className="mb-6 flex flex-wrap gap-4">
+                <button
+                  onClick={() => window.open(referral.telemedicine_session?.host_join_url, "_blank")}
+                  className="flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-purple-700"
+                >
+                  <ExternalLink size={16} />
+                  Join as Host
+                </button>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(referral.telemedicine_session?.patient_join_url || "");
+                    alert("Patient join link copied to clipboard!");
+                  }}
+                  className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                >
+                  <ExternalLink size={16} />
+                  Copy Patient Link
+                </button>
+              </div>
+
+              {referral.telemedicine_session.participants && referral.telemedicine_session.participants.length > 0 && (
+                <div>
+                  <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-700">
+                    <Users size={16} /> Participants
+                  </h4>
+                  <div className="overflow-hidden rounded-lg border border-gray-200">
+                    <table className="w-full text-left text-sm text-gray-600">
+                      <thead className="bg-gray-50 text-xs uppercase text-gray-500">
+                        <tr>
+                          <th className="px-4 py-3">Name</th>
+                          <th className="px-4 py-3">Role</th>
+                          <th className="px-4 py-3">Host</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {referral.telemedicine_session.participants.map((p, idx) => (
+                          <tr key={idx} className="bg-white">
+                            <td className="px-4 py-3 font-medium text-gray-900">
+                              {p.name}
+                              <div className="font-normal text-gray-500 text-xs">{p.email}</div>
+                            </td>
+                            <td className="px-4 py-3 capitalize">{p.role}</td>
+                            <td className="px-4 py-3">
+                              {p.is_host ? (
+                                <span className="inline-flex rounded-full bg-purple-50 px-2 text-xs font-semibold text-purple-700">Host</span>
+                              ) : "No"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

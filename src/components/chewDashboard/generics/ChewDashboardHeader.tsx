@@ -18,13 +18,15 @@ export default function ChewDashboardHeader({
   breadcrumbs = [],
 }: ChewDashboardHeaderProps) {
   return (
-    <DashboardHeader
-      title={title}
-      breadcrumbs={breadcrumbs.map(({ label, href }) => ({ label, href }))}
-      notificationHref="/chew-dashboard/notifications"
-      profileHref="/chew-dashboard/profile"
-      fallbackName="CHEW"
-      fallbackRole="CHEW"
-    />
+    <div className="flex flex-col sticky top-0 z-[9999] w-full">
+      <DashboardHeader
+        title={title}
+        breadcrumbs={breadcrumbs.map(({ label, href }) => ({ label, href }))}
+        notificationHref="/chew-dashboard/notifications"
+        profileHref="/chew-dashboard/profile"
+        fallbackName="CHEW"
+        fallbackRole="CHEW"
+      />
+    </div>
   );
 }

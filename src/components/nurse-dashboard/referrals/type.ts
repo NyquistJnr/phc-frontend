@@ -1,4 +1,4 @@
-export type ReferralStatus = "PENDING" | "ACCEPTED" | "REJECTED";
+export type ReferralStatus = "PENDING" | "ACCEPTED" | "REJECTED" | "CALL_CREATED" | "COMPLETED";
 export type ReferralDirection = "inbound" | "outbound";
 
 export interface ReferralResult {
@@ -28,6 +28,20 @@ export interface ReferralResult {
   target_department_email?: string | null;
   email_subject?: string;
   email_body?: string;
+
+  telemedicine_session?: {
+    session_id: string;
+    host_join_url: string;
+    patient_join_url: string;
+    status: string;
+    participants?: {
+      role: string;
+      name: string;
+      email: string;
+      is_host: boolean;
+      join_url: string;
+    }[];
+  } | null;
 }
 
 export interface ReferralsResponse {

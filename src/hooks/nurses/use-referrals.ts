@@ -97,3 +97,62 @@ export function useDepartments(facilityId: string) {
     enabled: !!facilityId && api.isAuthenticated && !api.isLoading,
   });
 }
+
+export interface CreateTelemedicinePayload {
+  title?: string;
+  duration_minutes?: number;
+  scheduled_for?: string;
+  host_name?: string;
+  host_email?: string;
+  medical_data?: {
+    [key: string]: string;
+  };
+  additional_participants?: {
+    name: string;
+    email: string;
+    role?: string;
+    is_host?: boolean;
+  }[];
+}
+
+export interface TelemedicineSessionResponse {
+  id: string;
+  join_url: string;
+  participants: {
+    role: string;
+    name: string;
+    email: string;
+    is_host: boolean;
+    join_url: string;
+  }[];
+}
+
+export function useCreateTelemedicineSession() {
+  const api = useApi();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ referralId, payload }: { referralId: string; payload: CreateTelemedicinePayload }) => {
+      return await api.post(`/referrals/records/${referralId}/create-telemedicine-session/`, payload);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["referrals"] });
+      queryClient.invalidateQueries({ queryKey: ["referral", variables.referralId] });
+    },
+  });
+}
+
+export function useEndTelemedicineSession() {
+  const api = useApi();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (referralId: string) => {
+      return await api.post(`/referrals/records/${referralId}/end-telemedicine-session/`, {});
+    },
+    onSuccess: (_, referralId) => {
+      queryClient.invalidateQueries({ queryKey: ["referrals"] });
+      queryClient.invalidateQueries({ queryKey: ["referral", referralId] });
+    },
+  });
+}

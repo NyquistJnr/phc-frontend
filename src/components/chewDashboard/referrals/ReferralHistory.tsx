@@ -10,7 +10,12 @@ import {
   ArrowDownLeft,
   ArrowUpRight,
   Globe,
+  Video,
+  VideoOff,
+  ExternalLink,
 } from "lucide-react";
+
+import TelemedicineModal from "@/src/components/generic/ui/TelemedicineModal";
 
 import { CustomDropdown } from "@/src/components/generic/ui/CustomDropdown";
 import { DataTable, ColumnDef } from "@/src/components/generic/ui/DataTable";
@@ -20,13 +25,14 @@ import ChewDateRangeFilter from "@/src/components/chewDashboard/generics/ChewDat
 import {
   useReferrals,
   useUpdateReferralStatus,
+  useEndTelemedicineSession,
 } from "@/src/hooks/nurses/use-referrals";
 import {
   ReferralResult,
   ReferralStatus,
 } from "@/src/components/nurse-dashboard/referrals/type";
 
-const STATUS_OPTIONS = ["All Status", "PENDING", "ACCEPTED", "REJECTED"];
+const STATUS_OPTIONS = ["All Status", "PENDING", "ACCEPTED", "REJECTED", "CALL_CREATED", "COMPLETED"];
 const DIRECTION_OPTIONS = ["All Directions", "inbound", "outbound"];
 const PAGE_SIZES = ["10", "50", "100"];
 
@@ -34,6 +40,8 @@ const statusColors: Record<string, { bg: string; text: string }> = {
   ACCEPTED: { bg: "#DFF3EA", text: "#039855" },
   PENDING: { bg: "#FFF4E5", text: "#1F2937" },
   REJECTED: { bg: "#FDE8E8", text: "#F33131" },
+  CALL_CREATED: { bg: "#E0F2FE", text: "#0284C7" },
+  COMPLETED: { bg: "#DCFCE7", text: "#16A34A" },
 };
 
 type ApiErrorShape = {
@@ -85,11 +93,13 @@ function ReferralActionMenu({ row }: { row: ReferralResult }) {
   const menuRef = useRef<HTMLDivElement>(null);
 
   const [showStatusModal, setShowStatusModal] = useState(false);
+  const [showTelemedicineModal, setShowTelemedicineModal] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState(row.status);
   const [errorMsg, setErrorMsg] = useState("");
 
   const { mutate: updateStatus, isPending: isUpdating } =
     useUpdateReferralStatus();
+  const { mutate: endSession } = useEndTelemedicineSession();
 
   const toggleMenu = () => {
     if (!open && buttonRef.current) {
@@ -159,6 +169,32 @@ function ReferralActionMenu({ row }: { row: ReferralResult }) {
       icon: Edit,
       onClick: () => setShowStatusModal(true),
       className: "text-gray-700",
+    });
+  }
+
+  if (row.telemedicine_session && row.status !== "COMPLETED") {
+    items.push({
+      label: "Join Meeting",
+      icon: ExternalLink,
+      onClick: () => window.open(row.telemedicine_session?.host_join_url, "_blank"),
+      className: "text-purple-700",
+    });
+    items.push({
+      label: "End Meeting",
+      icon: VideoOff,
+      onClick: () => {
+        if (confirm("Are you sure you want to end this telemedicine session?")) {
+          endSession(row.id);
+        }
+      },
+      className: "text-red-600",
+    });
+  } else if (!row.telemedicine_session && (row.status === "PENDING" || row.status === "ACCEPTED")) {
+    items.push({
+      label: "Create Meeting",
+      icon: Video,
+      onClick: () => setShowTelemedicineModal(true),
+      className: "text-purple-700",
     });
   }
 
@@ -256,6 +292,14 @@ function ReferralActionMenu({ row }: { row: ReferralResult }) {
           </div>,
           document.body,
         )}
+
+      {showTelemedicineModal && (
+        <TelemedicineModal
+          referralId={row.id}
+          referralDisplayId={row.referral_id}
+          onClose={() => setShowTelemedicineModal(false)}
+        />
+      )}
     </>
   );
 }
