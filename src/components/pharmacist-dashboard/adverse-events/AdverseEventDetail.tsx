@@ -8,6 +8,7 @@ import {
   Search,
   Trash2,
   User,
+  MessageSquare,
 } from "lucide-react";
 
 import PharmacistDashboardHeader from "@/src/components/pharmacist-dashboard/generics/PharmacistDashboardHeader";
@@ -90,6 +91,8 @@ export default function AdverseEventDetail() {
 
   const [toastMessage, setToastMessage] = useState("");
   const [statusError, setStatusError] = useState("");
+  const [statusTransition, setStatusTransition] = useState<AdverseEventStatus | null>(null);
+  const [transitionComment, setTransitionComment] = useState("");
 
   const { data: event, isLoading } = useAdverseEventDetail(eventId);
   const { mutate: updateEvent, isPending: isUpdatingStatus } =
@@ -102,13 +105,35 @@ export default function AdverseEventDetail() {
     window.setTimeout(() => setToastMessage(""), 3000);
   };
 
-  const handleStatusChange = (status: AdverseEventStatus) => {
+  const openTransitionModal = (status: AdverseEventStatus) => {
     if (!event || status === event.status) return;
+    setStatusTransition(status);
+    setTransitionComment("");
     setStatusError("");
+  };
+
+  const confirmStatusChange = () => {
+    if (!event || !statusTransition) return;
+    setStatusError("");
+    
+    let payloadCommentField = "";
+    if (statusTransition === "REPORTED") payloadCommentField = "reported_comment";
+    else if (statusTransition === "UNDER_REVIEW") payloadCommentField = "under_review_comment";
+    else if (statusTransition === "RESOLVED") payloadCommentField = "resolved_comment";
+    else if (statusTransition === "CLOSED") payloadCommentField = "closed_comment";
+
+    const payload: any = { status: statusTransition };
+    if (payloadCommentField && transitionComment.trim()) {
+       payload[payloadCommentField] = transitionComment.trim();
+    }
+
     updateEvent(
-      { id: event.id, payload: { status } },
+      { id: event.id, payload },
       {
-        onSuccess: () => showToast(`Status updated to ${status.replace(/_/g, " ")}`),
+        onSuccess: () => {
+          showToast(`Status updated to ${statusTransition.replace(/_/g, " ")}`);
+          setStatusTransition(null);
+        },
         onError: (error: unknown) => {
           setStatusError(
             error instanceof Error
@@ -182,6 +207,14 @@ export default function AdverseEventDetail() {
   }
 
   const severityColor = SEVERITY_COLORS[event.severity] || SEVERITY_COLORS.MILD;
+
+  const timelineStages = [
+    { status: "REPORTED", label: "Reported", comment: event.reported_comment },
+    { status: "UNDER_REVIEW", label: "Under Review", comment: event.under_review_comment },
+    { status: "RESOLVED", label: "Resolved", comment: event.resolved_comment },
+    { status: "CLOSED", label: "Closed", comment: event.closed_comment },
+  ];
+  const currentStatusIndex = timelineStages.findIndex(s => s.status === event.status);
 
   return (
     <div className="min-h-screen bg-[#F6F7FC] pb-12">
@@ -277,9 +310,50 @@ export default function AdverseEventDetail() {
 
           <hr className="my-10 max-w-[770px] border-gray-100" />
 
-          <div className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">
-            Status
-          </div>
+            <div className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">
+              Event Timeline & Comments
+            </div>
+            <div className="max-w-[770px] space-y-4">
+              {timelineStages.map((stage, idx) => {
+                const isActive = idx === currentStatusIndex;
+                const isPast = idx < currentStatusIndex;
+                const hasComment = !!stage.comment;
+                
+                if (!isActive && !isPast && !hasComment) return null;
+
+                const color = STATUS_COLORS[stage.status];
+
+                return (
+                  <div key={stage.status} className="flex gap-4">
+                    <div className="flex flex-col items-center">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-4 border-white shadow-sm" style={{ backgroundColor: color.bg }}>
+                        <div className="h-3 w-3 rounded-full" style={{ backgroundColor: color.text }}></div>
+                      </div>
+                      {idx !== currentStatusIndex && (
+                        <div className="my-1 h-full w-0.5 bg-gray-200"></div>
+                      )}
+                    </div>
+                    <div className="flex-1 rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
+                      <div className="mb-2 font-semibold text-gray-900">{stage.label}</div>
+                      {stage.comment ? (
+                        <div className="flex items-start gap-2 text-gray-600">
+                          <MessageSquare size={16} className="mt-0.5 shrink-0 text-gray-400" />
+                          <span className="text-sm italic">&quot;{stage.comment}&quot;</span>
+                        </div>
+                      ) : (
+                        <div className="text-sm text-gray-400">No comments provided.</div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <hr className="my-10 max-w-[770px] border-gray-100" />
+
+            <div className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">
+              Update Status
+            </div>
           {statusError && (
             <div className="mb-4 max-w-[770px] rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
               {statusError}
@@ -294,7 +368,7 @@ export default function AdverseEventDetail() {
                   key={option.value}
                   type="button"
                   disabled={isUpdatingStatus || active}
-                  onClick={() => handleStatusChange(option.value)}
+                  onClick={() => openTransitionModal(option.value)}
                   className="rounded-full border px-4 py-2 text-sm font-medium transition-colors disabled:cursor-default"
                   style={
                     active
@@ -310,9 +384,6 @@ export default function AdverseEventDetail() {
                         }
                   }
                 >
-                  {isUpdatingStatus && !active ? (
-                    <Loader2 size={14} className="mr-1 inline animate-spin" />
-                  ) : null}
                   {option.label}
                 </button>
               );
@@ -336,6 +407,43 @@ export default function AdverseEventDetail() {
           </div>
         </section>
       </div>
+
+      {statusTransition && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+            <h2 className="mb-2 text-xl font-semibold text-gray-900">
+              Update Status to {statusTransition.replace(/_/g, " ")}
+            </h2>
+            <p className="mb-6 text-sm text-gray-500">
+              You can optionally provide a comment for this status change. It will be recorded in the event timeline.
+            </p>
+            <textarea
+              value={transitionComment}
+              onChange={(e) => setTransitionComment(e.target.value)}
+              placeholder="Add an optional comment..."
+              rows={4}
+              className="mb-6 w-full resize-none rounded-lg border border-gray-300 p-3 text-sm outline-none focus:border-[#046C3F] focus:ring-1 focus:ring-[#046C3F]"
+            />
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setStatusTransition(null)}
+                disabled={isUpdatingStatus}
+                className="rounded-lg px-5 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmStatusChange}
+                disabled={isUpdatingStatus}
+                className="flex items-center gap-2 rounded-lg bg-[#046C3F] px-5 py-2.5 text-sm font-medium text-white hover:bg-[#035a34] disabled:opacity-50"
+              >
+                {isUpdatingStatus && <Loader2 size={16} className="animate-spin" />}
+                {isUpdatingStatus ? "Updating..." : "Update Status"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {toastMessage && (
         <div className="fixed bottom-8 right-8 z-50 flex w-[min(390px,calc(100vw-2rem))] items-center gap-4 rounded border border-gray-200 bg-white px-5 py-3 shadow-sm">

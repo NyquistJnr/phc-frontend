@@ -298,6 +298,7 @@ export default function ReportAdverseEvent() {
   const [reactionType, setReactionType] = useState("");
   const [severity, setSeverity] = useState<AdverseEventSeverity | "">("");
   const [detailedSymptoms, setDetailedSymptoms] = useState("");
+  const [reportedComment, setReportedComment] = useState("");
 
   const { data: patientsData, isFetching: isLoadingPatients } = usePatients({
     search: patientSearchTerm,
@@ -356,6 +357,7 @@ export default function ReportAdverseEvent() {
       reaction_type: reactionType.trim(),
       severity,
       detailed_symptoms: detailedSymptoms.trim(),
+      ...(reportedComment.trim() && { reported_comment: reportedComment.trim() }),
       ...(stopDate && { stop_date: stopDate }),
       ...(reportedById && { reported_by: reportedById }),
     };
@@ -542,6 +544,18 @@ export default function ReportAdverseEvent() {
                   }}
                   placeholder="Describe the reaction in detail..."
                   rows={4}
+                  className="w-full resize-none bg-transparent text-base text-gray-700 outline-none placeholder:text-gray-400"
+                />
+              </FieldShell>
+            </div>
+
+            <div className="mt-6">
+              <FieldShell label="Reported Comment (Optional)">
+                <textarea
+                  value={reportedComment}
+                  onChange={(e) => setReportedComment(e.target.value)}
+                  placeholder="Any additional comments upon reporting..."
+                  rows={3}
                   className="w-full resize-none bg-transparent text-base text-gray-700 outline-none placeholder:text-gray-400"
                 />
               </FieldShell>

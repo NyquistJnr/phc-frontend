@@ -29,6 +29,10 @@ export interface AdverseEventReport {
   detailed_symptoms: string;
   status: AdverseEventStatus;
   created_at: string;
+  reported_comment: string | null;
+  under_review_comment: string | null;
+  resolved_comment: string | null;
+  closed_comment: string | null;
   // Detail-endpoint-only fields
   patient_age?: number;
   patient_sex?: string;
@@ -63,6 +67,7 @@ export interface CreateAdverseEventPayload {
   reaction_type: string;
   severity: AdverseEventSeverity;
   detailed_symptoms: string;
+  reported_comment?: string;
   // Only send when filing on behalf of someone else — otherwise the backend
   // auto-fills it from the logged-in user's token.
   reported_by?: string;
@@ -70,4 +75,8 @@ export interface CreateAdverseEventPayload {
 
 export type UpdateAdverseEventPayload = Partial<CreateAdverseEventPayload> & {
   status?: AdverseEventStatus;
+  reported_comment?: string;
+  under_review_comment?: string;
+  resolved_comment?: string;
+  closed_comment?: string;
 };
