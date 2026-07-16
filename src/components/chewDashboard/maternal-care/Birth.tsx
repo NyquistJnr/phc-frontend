@@ -20,10 +20,13 @@ import ChewBackButton from "@/src/components/chewDashboard/generics/ChewBackButt
 import { useRecordDelivery } from "@/src/hooks/nurses/use-anc-pnc";
 
 const INITIAL_BABY = {
-  first_name: "Cherry",
-  last_name: "Doe",
-  sex: "F",
-  weight_kg: "3.2",
+  first_name: "",
+  last_name: "",
+  sex: "",
+  weight_kg: "",
+  delivery_mode: "",
+  birth_status: "",
+  complications: "",
 };
 
 const INITIAL_FORM = {
@@ -34,6 +37,19 @@ const INITIAL_FORM = {
 const SEX_OPTIONS = [
   { label: "Female", value: "F" },
   { label: "Male", value: "M" },
+];
+
+const DELIVERY_MODE_OPTIONS = [
+  { label: "Spontaneous Vaginal Delivery (SVD)", value: "SVD" },
+  { label: "Caesarean Section (C-Section)", value: "C-Section" },
+  { label: "Assisted Vaginal Delivery", value: "Assisted Vaginal Delivery" },
+  { label: "Other", value: "Other" },
+];
+
+const BIRTH_STATUS_OPTIONS = [
+  { label: "Alive", value: "ALIVE" },
+  { label: "Admitted", value: "ADMITTED" },
+  { label: "Dead", value: "DEAD" },
 ];
 
 function FieldShell({
@@ -234,11 +250,16 @@ export default function RecordDeliveryForm() {
     }
 
     const hasEmptyBabyFields = form.babies.some(
-      (b) => !b.first_name || !b.last_name || !b.sex || !b.weight_kg,
+      (b) =>
+        !b.first_name ||
+        !b.last_name ||
+        !b.sex ||
+        !b.delivery_mode ||
+        !b.birth_status
     );
 
     if (hasEmptyBabyFields) {
-      setFormError("Please complete all newborn fields (Name, Sex, Weight).");
+      setFormError("Please complete all required newborn fields (Name, Sex, Delivery Mode, Birth Status).");
       return;
     }
 
@@ -392,7 +413,7 @@ export default function RecordDeliveryForm() {
                         }
                       />
 
-                      <FieldShell label="Weight (kg) *">
+                      <FieldShell label="Weight (kg)">
                         <input
                           type="number"
                           step="0.01"
@@ -402,6 +423,38 @@ export default function RecordDeliveryForm() {
                           }
                           placeholder="e.g. 3.2"
                           className="w-full bg-transparent text-base text-gray-700 outline-none placeholder:text-gray-400"
+                        />
+                      </FieldShell>
+
+                      <SelectField
+                        label="Delivery Mode *"
+                        options={DELIVERY_MODE_OPTIONS}
+                        value={baby.delivery_mode}
+                        onChange={(value) =>
+                          handleBabyChange(index, "delivery_mode", value)
+                        }
+                      />
+
+                      <SelectField
+                        label="Birth Status *"
+                        options={BIRTH_STATUS_OPTIONS}
+                        value={baby.birth_status}
+                        onChange={(value) =>
+                          handleBabyChange(index, "birth_status", value)
+                        }
+                      />
+                    </div>
+                    
+                    <div className="mt-6">
+                      <FieldShell label="Complications">
+                        <textarea
+                          rows={2}
+                          value={baby.complications}
+                          onChange={(e) =>
+                            handleBabyChange(index, "complications", e.target.value)
+                          }
+                          placeholder="Note any complications here..."
+                          className="w-full resize-none bg-transparent pt-1 text-base text-gray-700 outline-none placeholder:text-gray-400"
                         />
                       </FieldShell>
                     </div>
