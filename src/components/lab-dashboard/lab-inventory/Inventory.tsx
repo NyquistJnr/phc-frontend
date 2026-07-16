@@ -375,7 +375,6 @@ function StatCard({
         <span
           className={`flex items-center gap-1 text-xs ${active ? "text-white" : "text-gray-300"}`}
         >
-          This Week <ChevronDown size={14} />
         </span>
       </div>
       <p className={`mb-3 text-sm ${active ? "text-white" : "text-gray-400"}`}>
@@ -1283,7 +1282,10 @@ export default function Inventory() {
     [page, pageSize, search, status, categories, startDate, endDate],
   );
 
-  const { data: statsData } = useComprehensiveInventoryStats({});
+  const { data: statsData } = useComprehensiveInventoryStats({
+    start_date: startDate,
+    end_date: endDate,
+  });
   const { data: itemsData, isLoading: isLoadingItems } =
     useInventoryItems(inventoryFilters);
   const createItemMutation = useCreateInventoryItem();

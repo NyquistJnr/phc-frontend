@@ -13,7 +13,7 @@ import {
 } from "@/src/components/lab-dashboard/home/types";
 import { useAdvancedLabRequests } from "@/src/hooks/laboratory/use-laboratory";
 import LabActionMenu from "./LabActionMenu";
-import { labBadgeColors } from "./labData";
+import { labBadgeColors, printLabRequest } from "./labData";
 
 const priorityOptions = ["All Priority", "NORMAL", "URGENT"];
 const statusOptions = [
@@ -144,8 +144,12 @@ export default function LabRequests() {
             label: "Export",
             icon: FileUp,
             onClick: () => {
-              setToast("Export started");
-              setTimeout(() => setToast(null), 2500);
+              const didPrint = printLabRequest(row);
+              if (!didPrint) setToast("Unable to open the print window.");
+              else {
+                setToast("Export started");
+                setTimeout(() => setToast(null), 2500);
+              }
             },
           },
         ];

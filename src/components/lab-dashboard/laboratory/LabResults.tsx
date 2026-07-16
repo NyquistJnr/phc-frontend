@@ -13,7 +13,7 @@ import {
   useLabTests,
 } from "@/src/hooks/laboratory/use-laboratory";
 import LabActionMenu from "./LabActionMenu";
-import { labBadgeColors } from "./labData";
+import { labBadgeColors, printLabResult } from "./labData";
 import {
   EnrichedLabTest,
   buildLabTestContextMap,
@@ -143,8 +143,12 @@ export default function LabResults() {
                 label: "Export Result",
                 icon: FileUp,
                 onClick: () => {
-                  setToast("Export started");
-                  setTimeout(() => setToast(null), 2500);
+                  const didPrint = printLabResult(row);
+                  if (!didPrint) setToast("Unable to open the print window.");
+                  else {
+                    setToast("Export started");
+                    setTimeout(() => setToast(null), 2500);
+                  }
                 },
               },
             ]}
