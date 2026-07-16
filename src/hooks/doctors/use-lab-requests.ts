@@ -83,7 +83,8 @@ export function useCreateLabRequest() {
       return await api.post("/laboratory/requests/", payload);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["doctor-lab-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["doctorLabRequests"] });
+      queryClient.invalidateQueries({ queryKey: ["doctorPendingLabs"] });
     },
   });
 }

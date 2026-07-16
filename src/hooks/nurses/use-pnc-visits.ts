@@ -8,6 +8,7 @@ export interface PncVisitsListFilters {
   start_date?: string;
   end_date?: string;
   outcome?: string;
+  search?: string;
 }
 
 export function useAllPncVisits(filters: PncVisitsListFilters) {
@@ -23,6 +24,7 @@ export function useAllPncVisits(filters: PncVisitsListFilters) {
         params.append("page_size", String(filters.page_size));
       if (filters.start_date) params.append("start_date", filters.start_date);
       if (filters.end_date) params.append("end_date", filters.end_date);
+      if (filters.search) params.append("search", filters.search);
 
       if (filters.outcome && filters.outcome !== "All Outcomes") {
         params.append("outcome", filters.outcome.toUpperCase());

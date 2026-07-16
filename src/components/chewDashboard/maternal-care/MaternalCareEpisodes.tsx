@@ -5,7 +5,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
-import { Plus, Eye, Edit, Ban, MoreHorizontal } from "lucide-react";
+import { Plus, Eye, Edit, MoreHorizontal } from "lucide-react";
 import { createPortal } from "react-dom";
 
 import ChewDashboardHeader from "@/src/components/chewDashboard/generics/ChewDashboardHeader";
@@ -16,7 +16,6 @@ import { StatusBadge } from "@/src/components/generic/ui/TableHelpers";
 
 import {
   useEpisodes,
-  useDeleteEpisode,
   useUpdateEpisodeStatus,
 } from "@/src/hooks/nurses/use-maternal-care";
 import { EpisodeResult } from "./type";
@@ -44,11 +43,9 @@ function EpisodeActionMenu({ row }: { row: EpisodeResult }) {
   const buttonRef = React.useRef<HTMLButtonElement>(null);
   const menuRef = React.useRef<HTMLDivElement>(null);
 
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState(row.status);
 
-  const { mutate: deleteEpisode, isPending: isDeleting } = useDeleteEpisode();
   const { mutate: updateStatus, isPending: isUpdating } =
     useUpdateEpisodeStatus();
 
@@ -85,12 +82,6 @@ function EpisodeActionMenu({ row }: { row: EpisodeResult }) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [open]);
 
-  const handleDelete = () => {
-    deleteEpisode(row.id, {
-      onSuccess: () => setShowDeleteModal(false),
-    });
-  };
-
   const handleUpdateStatus = () => {
     updateStatus(
       { id: row.id, status: selectedStatus },
@@ -110,12 +101,6 @@ function EpisodeActionMenu({ row }: { row: EpisodeResult }) {
       icon: Edit,
       onClick: () => setShowStatusModal(true),
       className: "text-gray-700",
-    },
-    {
-      label: "Delete",
-      icon: Ban,
-      onClick: () => setShowDeleteModal(true),
-      className: "text-red-600",
     },
   ];
 
@@ -199,36 +184,6 @@ function EpisodeActionMenu({ row }: { row: EpisodeResult }) {
           document.body,
         )}
 
-      {showDeleteModal &&
-        createPortal(
-          <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-            <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
-              <h3 className="mb-2 text-lg font-semibold text-gray-900">
-                Delete Episode
-              </h3>
-              <p className="mb-6 text-sm text-gray-500">
-                Are you sure you want to delete episode <b>{row.episode_id}</b>{" "}
-                for <b>{row.patient_name}</b>? This action cannot be undone.
-              </p>
-              <div className="flex justify-end gap-3">
-                <button
-                  onClick={() => setShowDeleteModal(false)}
-                  className="rounded-lg px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleDelete}
-                  disabled={isDeleting}
-                  className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-70"
-                >
-                  {isDeleting ? "Deleting..." : "Yes, Delete"}
-                </button>
-              </div>
-            </div>
-          </div>,
-          document.body,
-        )}
     </>
   );
 }

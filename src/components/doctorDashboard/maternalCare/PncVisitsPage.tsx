@@ -135,6 +135,7 @@ export default function PncVisits() {
     outcome: outcomeFilter,
     start_date,
     end_date,
+    search: searchParams.get("search") || undefined,
   });
 
   const updateUrlParams = useCallback(
@@ -230,7 +231,15 @@ export default function PncVisits() {
           title="Patient Visits"
           data={data?.results || []}
           columns={columns}
-          showSearch={false}
+          showSearch={true}
+          searchPlaceholder="Search by patient name or ID"
+          onSearch={(val) => {
+            const params = new URLSearchParams(searchParams.toString());
+            if (val) params.set("search", val);
+            else params.delete("search");
+            params.set("page", "1");
+            router.push(`${pathname}?${params.toString()}`, { scroll: false });
+          }}
           totalPages={data?.total_pages}
           emptyMessage={
             isLoading

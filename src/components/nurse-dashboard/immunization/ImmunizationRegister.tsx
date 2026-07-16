@@ -66,6 +66,14 @@ const SEX_OPTIONS = [
   { label: "Female", value: "F" },
 ];
 
+const ROUTE_OPTIONS = [
+  { label: "Oral", value: "Oral" },
+  { label: "Intramuscular", value: "Intramuscular" },
+  { label: "Subcutaneous", value: "Subcutaneous" },
+  { label: "Intradermal", value: "Intradermal" },
+  { label: "Intranasal", value: "Intranasal" },
+];
+
 function FieldShell({
   label,
   children,
@@ -848,16 +856,13 @@ export default function ImmunizationRegister() {
                 onChange={(val) => handleChange("ward", val)}
               />
 
-              <FieldShell label="Route of Administration (Optional)">
-                <input
-                  value={form.routeOfAdministration}
-                  onChange={(e) =>
-                    handleChange("routeOfAdministration", e.target.value)
-                  }
-                  placeholder="e.g. Oral, Intramuscular"
-                  className="w-full bg-transparent text-base outline-none placeholder:text-gray-400"
-                />
-              </FieldShell>
+              <SelectField
+                label="Route of Administration (Optional)"
+                placeholder="Select Route"
+                options={ROUTE_OPTIONS}
+                value={form.routeOfAdministration}
+                onChange={(val) => handleChange("routeOfAdministration", val)}
+              />
 
               <MultiSelectField
                 label="Vaccines Given"

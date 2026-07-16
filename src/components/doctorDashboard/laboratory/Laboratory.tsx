@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Eye, MoreHorizontal, Plus, RefreshCcw, Upload } from "lucide-react";
+import { Eye, MoreHorizontal, Plus, Upload } from "lucide-react";
 
 import DoctorHeader from "@/src/components/doctorDashboard/generics/Header";
 import NurseDateRangeFilter from "@/src/components/nurse-dashboard/generics/NurseDateRangeFilter";
@@ -14,7 +14,6 @@ import { StatusBadge } from "@/src/components/generic/ui/TableHelpers";
 
 import {
   useDoctorLabRequests,
-  useRequestDoctorLabRepeat,
 } from "@/src/hooks/doctors/use-doctors";
 import type {
   PaginatedResponse,
@@ -39,7 +38,6 @@ const statusColors: Record<string, { bg: string; text: string }> = {
 
 function LabActionMenu({ row }: { row: LabRequestRecord }) {
   const router = useRouter();
-  const repeatRequest = useRequestDoctorLabRepeat();
   const [open, setOpen] = useState(false);
   const [coords, setCoords] = useState({ top: 0, left: 0 });
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -71,18 +69,76 @@ function LabActionMenu({ row }: { row: LabRequestRecord }) {
     setOpen((current) => !current);
   };
 
-  const handleRepeat = () => {
-    const testNames = row.tests
-      ?.map((t) => t.test_name)
-      .filter(Boolean)
-      .join(", ");
-    repeatRequest.mutate(
-      {
-        labRequestId: row.id,
-        notes: `Repeat ${testNames || "tests"} for ${row.patient_name}`,
-      },
-      { onSettled: () => setOpen(false) },
-    );
+  const handleExport = () => {
+    setOpen(false);
+    
+    const printWindow = window.open('', '', 'width=800,height=600');
+    if (!printWindow) return;
+
+    const htmlContent = `
+      <html>
+        <head>
+          <title>Lab Result - ${row.patient_name}</title>
+          <style>
+            body { font-family: system-ui, sans-serif; padding: 40px; color: #333; }
+            h1 { color: #046C3F; border-bottom: 2px solid #046C3F; padding-bottom: 10px; }
+            .header-info { margin-bottom: 30px; }
+            .header-info p { margin: 5px 0; }
+            table { border-collapse: collapse; margin-top: 20px; width: 100%; }
+            th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+            th { background-color: #f8f9fa; }
+            .footer { margin-top: 50px; text-align: center; font-size: 12px; color: #666; }
+          </style>
+        </head>
+        <body>
+          <h1>Laboratory Test Result</h1>
+          
+          <div class="header-info">
+            <p><strong>Patient Name:</strong> ${row.patient_name}</p>
+            <p><strong>Patient ID:</strong> ${row.patient_display_id || 'N/A'}</p>
+            <p><strong>Request ID:</strong> ${row.request_id || 'N/A'}</p>
+            <p><strong>Date:</strong> ${new Date(row.created_at).toLocaleDateString()}</p>
+            <p><strong>Status:</strong> ${row.status}</p>
+            <p><strong>Requested By:</strong> ${row.requested_by_name || 'N/A'}</p>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Test Name</th>
+                <th>Sample Type</th>
+                <th>Result</th>
+                <th>Unit</th>
+                <th>Interpretation</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${(row.tests || []).map(test => `
+                <tr>
+                  <td>${test.test_name || '-'}</td>
+                  <td>${test.sample_type || '-'}</td>
+                  <td>${test.result_value || 'Pending'}</td>
+                  <td>${test.result_unit || '-'}</td>
+                  <td>${test.result_interpretation || '-'}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          
+          <div class="footer">
+            <p>This is a computer generated document.</p>
+          </div>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 250);
   };
 
   return (
@@ -114,14 +170,7 @@ function LabActionMenu({ row }: { row: LabRequestRecord }) {
               View Detail
             </button>
             <button
-              onClick={handleRepeat}
-              className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              <RefreshCcw size={16} className="text-gray-500" />
-              Request repeat
-            </button>
-            <button
-              onClick={() => setOpen(false)}
+              onClick={handleExport}
               className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
               <Upload size={16} className="text-gray-500" />

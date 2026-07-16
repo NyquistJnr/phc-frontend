@@ -8,6 +8,7 @@ export interface AncVisitsListFilters {
   start_date?: string;
   end_date?: string;
   attendance_type?: string;
+  search?: string;
 }
 
 export function useAllAncVisits(filters: AncVisitsListFilters) {
@@ -23,6 +24,7 @@ export function useAllAncVisits(filters: AncVisitsListFilters) {
         params.append("page_size", String(filters.page_size));
       if (filters.start_date) params.append("start_date", filters.start_date);
       if (filters.end_date) params.append("end_date", filters.end_date);
+      if (filters.search) params.append("search", filters.search);
 
       if (filters.attendance_type && filters.attendance_type !== "All Types") {
         params.append("attendance_type", filters.attendance_type.toUpperCase());
