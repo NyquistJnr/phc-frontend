@@ -17,6 +17,7 @@ import {
   X,
   Shapes,
   Blocks,
+  Baby,
 } from "lucide-react";
 import { useSidebar } from "@/src/components/adminDashboard/generics/sidebar";
 
@@ -42,6 +43,11 @@ const navItems = [
     name: "PNC",
     icon: Blocks,
     path: "/chew-dashboard/maternal-followups/pnc",
+  },
+  {
+    name: "Delivery",
+    icon: Baby,
+    path: "/chew-dashboard/maternal-followups/delivery",
   },
   {
     name: "Appointments",

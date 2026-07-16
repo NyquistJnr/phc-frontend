@@ -15,6 +15,9 @@ import {
   ScheduleRule,
   GlobalScheduleRule,
   GlobalScheduleRulesResponse,
+  DeliveryResult,
+  DeliveriesResponse,
+  DeliveryFilters,
 } from "@/src/components/nurse-dashboard/maternal-care/type";
 
 type ApiEnvelope<T> = {
@@ -210,6 +213,44 @@ export function useAncVisitDetails(id: string) {
     queryKey: ["anc-visit", id],
     queryFn: async () => {
       const res = await api.get<any>(`/maternal-care/anc-visits/${id}/`);
+      return res?.data?.data || res?.data || res;
+    },
+    enabled: !!id && api.isAuthenticated && !api.isLoading,
+  });
+}
+
+export function useDeliveries(filters: DeliveryFilters) {
+  const api = useApi();
+
+  return useQuery<DeliveriesResponse>({
+    queryKey: ["deliveries", filters],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+
+      if (filters.episode_id) params.append("episode_id", filters.episode_id);
+      if (filters.page) params.append("page", String(filters.page));
+      if (filters.page_size)
+        params.append("page_size", String(filters.page_size));
+      if (filters.start_date) params.append("start_date", filters.start_date);
+      if (filters.end_date) params.append("end_date", filters.end_date);
+
+      const res = await api.get<any>(
+        `/maternal-care/deliveries/?${params.toString()}`,
+      );
+      return res?.data?.data || res?.data || res;
+    },
+    enabled: api.isAuthenticated && !api.isLoading,
+    placeholderData: (previousData) => previousData,
+  });
+}
+
+export function useDeliveryDetails(id: string) {
+  const api = useApi();
+
+  return useQuery<DeliveryResult>({
+    queryKey: ["delivery", id],
+    queryFn: async () => {
+      const res = await api.get<any>(`/maternal-care/deliveries/${id}/`);
       return res?.data?.data || res?.data || res;
     },
     enabled: !!id && api.isAuthenticated && !api.isLoading,

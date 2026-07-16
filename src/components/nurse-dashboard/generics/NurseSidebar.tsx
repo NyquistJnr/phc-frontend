@@ -49,6 +49,11 @@ const navItems = [
     path: "/nurse-dashboard/maternal-care/pnc",
   },
   {
+    name: "Delivery",
+    icon: Baby,
+    path: "/nurse-dashboard/maternal-care/delivery",
+  },
+  {
     name: "Immunization",
     icon: Syringe,
     path: "/nurse-dashboard/immunization",

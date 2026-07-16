@@ -156,6 +156,41 @@ export interface PncVisitsResponse {
   results: PncVisitResult[];
 }
 
+export interface DeliveryResult {
+  id: string;
+  episode_uuid: string;
+  episode_id: string;
+  patient_id: string;
+  child_id: string;
+  child_name: string;
+  mother_id: string;
+  mother_name: string;
+  mother_patient_id: string;
+  month: string;
+  delivery_date: string;
+  delivery_mode: string;
+  birth_status: string;
+  complications: string;
+  sex: string;
+}
+
+export interface DeliveriesResponse {
+  count: number;
+  total_pages?: number;
+  current_page?: number;
+  next: string | null;
+  previous: string | null;
+  results: DeliveryResult[];
+}
+
+export interface DeliveryFilters {
+  episode_id?: string;
+  page?: number;
+  page_size?: number;
+  start_date?: string;
+  end_date?: string;
+}
+
 export interface MaternalVisitFilters {
   episode_id: string;
   page?: number;
@@ -166,7 +201,7 @@ export interface MaternalVisitFilters {
   outcome?: string;
 }
 
-export type CareTab = "anc" | "pnc";
+export type CareTab = "anc" | "delivery" | "pnc";
 export type Mode = "list" | "ancForm" | "pncForm";
 export type MaternalForm = Record<string, string>;
 
