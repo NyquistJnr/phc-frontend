@@ -13,11 +13,13 @@ export interface HealthPromotion {
   start_date: string;
   end_date: string;
   assigned_to: string[];
+  assigned_to_names?: { id: string; name: string }[];
   description: string;
   status: string;
   created_at: string;
   updated_at: string;
   created_by: string;
+  created_by_name?: string;
 }
 
 export interface PostActivityReport {
@@ -35,12 +37,14 @@ export interface PostActivityReport {
   created_at: string;
   updated_at: string;
   created_by: string;
-  
+
   // Frontend virtual properties, populated if backend supports expanding relations
   promotion_title?: string;
   promotion_type?: string;
   promotion_start_date?: string;
   promotion_end_date?: string;
+  health_promotion_promotion_id?: string;
+  promotion_id?: string;
 }
 
 export interface HealthPromotionFilters {
@@ -62,15 +66,18 @@ export function useHealthPromotions(filters: HealthPromotionFilters) {
       const params = new URLSearchParams();
 
       if (filters.page) params.append("page", String(filters.page));
-      if (filters.page_size) params.append("page_size", String(filters.page_size));
-      if (filters.status && filters.status !== "All Status") params.append("status", filters.status);
-      if (filters.type && filters.type !== "All Type") params.append("type", filters.type);
+      if (filters.page_size)
+        params.append("page_size", String(filters.page_size));
+      if (filters.status && filters.status !== "All Status")
+        params.append("status", filters.status);
+      if (filters.type && filters.type !== "All Type")
+        params.append("type", filters.type);
       if (filters.search) params.append("search", filters.search);
       if (filters.start_date) params.append("start_date", filters.start_date);
       if (filters.end_date) params.append("end_date", filters.end_date);
 
       return await api.get<PaginatedResponse<HealthPromotion>>(
-        `/nurse/health-promotions/?${params.toString()}`
+        `/nurse/health-promotions/?${params.toString()}`,
       );
     },
     enabled: api.isAuthenticated && !api.isLoading,
@@ -109,12 +116,20 @@ export function useUpdateHealthPromotion() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, payload }: { id: string; payload: Partial<HealthPromotion> }) => {
+    mutationFn: async ({
+      id,
+      payload,
+    }: {
+      id: string;
+      payload: Partial<HealthPromotion>;
+    }) => {
       return await api.patch(`/nurse/health-promotions/${id}/`, payload);
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["health-promotions"] });
-      queryClient.invalidateQueries({ queryKey: ["health-promotion", variables.id] });
+      queryClient.invalidateQueries({
+        queryKey: ["health-promotion", variables.id],
+      });
     },
   });
 }
@@ -144,15 +159,18 @@ export function usePostActivities(filters: HealthPromotionFilters) {
       const params = new URLSearchParams();
 
       if (filters.page) params.append("page", String(filters.page));
-      if (filters.page_size) params.append("page_size", String(filters.page_size));
-      if (filters.status && filters.status !== "All Status") params.append("status", filters.status);
-      if (filters.type && filters.type !== "All Type") params.append("type", filters.type);
+      if (filters.page_size)
+        params.append("page_size", String(filters.page_size));
+      if (filters.status && filters.status !== "All Status")
+        params.append("status", filters.status);
+      if (filters.type && filters.type !== "All Type")
+        params.append("type", filters.type);
       if (filters.search) params.append("search", filters.search);
       if (filters.start_date) params.append("start_date", filters.start_date);
       if (filters.end_date) params.append("end_date", filters.end_date);
 
       return await api.get<PaginatedResponse<PostActivityReport>>(
-        `/nurse/post-activities/?${params.toString()}`
+        `/nurse/post-activities/?${params.toString()}`,
       );
     },
     enabled: api.isAuthenticated && !api.isLoading,
@@ -191,12 +209,20 @@ export function useUpdatePostActivity() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, payload }: { id: string; payload: Partial<PostActivityReport> }) => {
+    mutationFn: async ({
+      id,
+      payload,
+    }: {
+      id: string;
+      payload: Partial<PostActivityReport>;
+    }) => {
       return await api.patch(`/nurse/post-activities/${id}/`, payload);
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["post-activities"] });
-      queryClient.invalidateQueries({ queryKey: ["post-activity", variables.id] });
+      queryClient.invalidateQueries({
+        queryKey: ["post-activity", variables.id],
+      });
     },
   });
 }
@@ -223,13 +249,14 @@ export function useFacilityStaffForPromotion(searchTerm: string = "") {
   return useQuery({
     queryKey: ["facility-staff", "role-staff", searchTerm],
     queryFn: async () => {
-      const searchParam = searchTerm ? `&search=${encodeURIComponent(searchTerm)}` : "";
+      const searchParam = searchTerm
+        ? `&search=${encodeURIComponent(searchTerm)}`
+        : "";
       const res = await api.get<PaginatedResponse<any>>(
-        `/users/facility-users/?is_active=true&role=STAFF&page=1&page_size=10${searchParam}`
+        `/users/facility-users/?is_active=true&role=STAFF&page=1&page_size=10${searchParam}`,
       );
       return res.results || [];
     },
     enabled: api.isAuthenticated && !api.isLoading,
   });
 }
-

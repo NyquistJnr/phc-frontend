@@ -21,6 +21,8 @@ import { PeriodFilterButton } from "@/src/components/doctorDashboard/generics/Pe
 import Pagination from "@/src/components/adminDashboard/generics/Pagination";
 import { useUpcomingFollowUps } from "@/src/hooks/nurses/use-maternal-care";
 import type { UpcomingFollowUpTag } from "@/src/components/nurse-dashboard/maternal-care/type";
+import { useChewStats, useHealthPromotionsToday } from "@/src/hooks/nurses/use-chew-analytics";
+import { useHealthPromotions } from "@/src/hooks/nurses/use-health-promotions";
 
 // ── Types & static data ───────────────────────────────────────────────────────
 
@@ -50,116 +52,12 @@ const TAG_STYLE: Record<UpcomingFollowUpTag, React.CSSProperties> = {
   Urgent: { background: "#FFFBEB", color: "#B45309" },
 };
 
-const REMINDERS: ReminderItem[] = [
-  {
-    time: "11:00 AM",
-    title: "Outreach scheduled",
-    subtitle: "Hypertension screening",
-    color: "green",
-  },
-  {
-    time: "11:00 AM",
-    title: "Outreach scheduled",
-    subtitle: "Hypertension screening",
-    color: "orange",
-  },
-  {
-    time: "11:00 AM",
-    title: "Outreach scheduled",
-    subtitle: "Hypertension screening",
-    color: "red",
-  },
-  {
-    time: "11:00 AM",
-    title: "Outreach scheduled",
-    subtitle: "Hypertension screening",
-    color: "green",
-  },
-  {
-    time: "11:00 AM",
-    title: "Outreach scheduled",
-    subtitle: "Hypertension screening",
-    color: "orange",
-  },
-];
-
-const REMINDER_COLOR: Record<ReminderColor, string> = {
-  green: "#046C3F",
-  orange: "#F59E0B",
-  red: "#DC2626",
-};
-
-const CAMPAIGNS: CampaignRow[] = [
-  {
-    id: "CAM-PLT-000234",
-    title: "Malaria Preven...",
-    type: "Awareness",
-    participants: "1,383",
-    startEnd: "12 Mar-14 Mar 2026",
-    createdBy: "Chinaza Odoh",
-    status: "Scheduled",
-  },
-  {
-    id: "CAM-PLT-000234",
-    title: "Polio Immuniza...",
-    type: "Vaccination Drive",
-    participants: "837",
-    startEnd: "12 Mar-14 Mar 2026",
-    createdBy: "Festus Ayo",
-    status: "In-Progress",
-  },
-  {
-    id: "CAM-PLT-000234",
-    title: "Maternal Nutrit...",
-    type: "Screening",
-    participants: "2,037",
-    startEnd: "12 Mar-14 Mar 2026",
-    createdBy: "Jennifer Ani",
-    status: "Completed",
-  },
-  {
-    id: "CAM-PLT-000234",
-    title: "Hypertension s...",
-    type: "Education",
-    participants: "287",
-    startEnd: "12 Mar-14 Mar 2026",
-    createdBy: "Abubaka Adam",
-    status: "Cancelled",
-  },
-  {
-    id: "CAM-PLT-000234",
-    title: "HIV/AIDs Educ...",
-    type: "Education",
-    participants: "746",
-    startEnd: "12 Mar-14 Mar 2026",
-    createdBy: "Abubaka Adam",
-    status: "In-Progress",
-  },
-  {
-    id: "CAM-PLT-000234",
-    title: "HIV/AIDs Educ...",
-    type: "Education",
-    participants: "3,937",
-    startEnd: "12 Mar-14 Mar 2026",
-    createdBy: "Abubaka Adam",
-    status: "Scheduled",
-  },
-  {
-    id: "CAM-PLT-000234",
-    title: "HIV/AIDs Educ...",
-    type: "Education",
-    participants: "109",
-    startEnd: "12 Mar-14 Mar 2026",
-    createdBy: "Abubaka Adam",
-    status: "Cancelled",
-  },
-];
-
-const STATUS_STYLE: Record<CampaignStatus, React.CSSProperties> = {
-  Scheduled: { background: "#EFF6FF", color: "#2563EB" },
-  "In-Progress": { background: "#E8F7F0", color: "#046C3F" },
-  Completed: { background: "#F0FDF4", color: "#15803D" },
-  Cancelled: { background: "#FEF2F2", color: "#DC2626" },
+const STATUS_STYLE: Record<string, React.CSSProperties> = {
+  SCHEDULED: { background: "#EFF6FF", color: "#2563EB" },
+  "IN_PROGRESS": { background: "#E8F7F0", color: "#046C3F" },
+  COMPLETED: { background: "#F0FDF4", color: "#15803D" },
+  CANCELLED: { background: "#FEF2F2", color: "#DC2626" },
+  DRAFT: { background: "#F3F4F6", color: "#6B7280" }
 };
 
 const TABLE_HEADERS = [
@@ -180,11 +78,13 @@ function StatCard({
   value,
   icon,
   featured,
+  onChange,
 }: {
   label: string;
   value: string;
   icon?: React.ReactNode;
   featured?: boolean;
+  onChange?: (start?: string, end?: string) => void;
 }) {
   return (
     <div
@@ -209,6 +109,7 @@ function StatCard({
         <PeriodFilterButton
           label="This Week"
           textColor={featured ? "rgba(255,255,255,0.85)" : undefined}
+          onChange={onChange}
         />
       </div>
       <div>
@@ -374,6 +275,14 @@ export default function ChewDashboardHome() {
     });
   const followUps = followUpsData?.results || [];
 
+  const [statsStartDate, setStatsStartDate] = useState<string | undefined>();
+  const [statsEndDate, setStatsEndDate] = useState<string | undefined>();
+  const { data: chewStats } = useChewStats(statsStartDate, statsEndDate);
+  
+  const { data: todayPromotions } = useHealthPromotionsToday();
+  const { data: promotionsData, isLoading: isLoadingPromotions } = useHealthPromotions({ page, page_size: 10 });
+  const promotions = promotionsData?.results || [];
+
   return (
     <div className="flex-1 flex flex-col bg-[#F9FAFB] min-w-0">
       <ChewDashboardHeader title="Dashboard" breadcrumbs={breadcrumbs} />
@@ -399,24 +308,28 @@ export default function ChewDashboardHome() {
         >
           <StatCard
             label="New Registrations"
-            value="1,384"
+            value={chewStats?.new_registrations?.toLocaleString() || "0"}
             featured
             icon={<Users size={18} color="#fff" />}
+            onChange={(start, end) => { setStatsStartDate(start); setStatsEndDate(end); }}
           />
           <StatCard
             label="Community Visits"
-            value="135"
+            value={chewStats?.community_visits?.toLocaleString() || "0"}
             icon={<CheckCircle2 size={18} color="#6B7280" />}
+            onChange={(start, end) => { setStatsStartDate(start); setStatsEndDate(end); }}
           />
           <StatCard
             label="Maternal Follow-ups"
-            value="346"
+            value={chewStats?.maternal_follow_ups?.toLocaleString() || "0"}
             icon={<Baby size={18} color="#6B7280" />}
+            onChange={(start, end) => { setStatsStartDate(start); setStatsEndDate(end); }}
           />
           <StatCard
             label="Health Promotion"
-            value="3,843"
+            value={chewStats?.health_promotions?.toLocaleString() || "0"}
             icon={<Megaphone size={18} color="#6B7280" />}
+            onChange={(start, end) => { setStatsStartDate(start); setStatsEndDate(end); }}
           />
         </div>
 
@@ -489,21 +402,29 @@ export default function ChewDashboardHome() {
               Today&apos;s reminders
             </h2>
             <div className="space-y-2">
-              {REMINDERS.map((r, i) => (
-                <div
-                  key={i}
-                  className="flex gap-3 pl-3 py-2.5 rounded-lg bg-gray-50/60"
-                  style={{ borderLeft: `3px solid ${REMINDER_COLOR[r.color]}` }}
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-gray-500">
-                      {r.time}
-                    </p>
-                    <p className="text-sm font-bold text-gray-800">{r.title}</p>
-                    <p className="text-xs text-gray-400">{r.subtitle}</p>
+              {todayPromotions?.map((p: any, i: number) => {
+                const colorKey = i % 3 === 0 ? "green" : i % 3 === 1 ? "orange" : "red";
+                const date = new Date(p.date_and_time);
+                const time = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                return (
+                  <div
+                    key={i}
+                    className="flex gap-3 pl-3 py-2.5 rounded-lg bg-gray-50/60 border-l-[3px]"
+                    style={{ borderColor: colorKey === "green" ? "#046C3F" : colorKey === "orange" ? "#F59E0B" : "#DC2626" }}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-gray-500">
+                        {time}
+                      </p>
+                      <p className="text-sm font-bold text-gray-800">{p.title}</p>
+                      <p className="text-xs text-gray-400">{p.type} • {p.assigned_staffs?.join(", ") || "Unassigned"}</p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
+              {(!todayPromotions || todayPromotions.length === 0) && (
+                <p className="text-xs text-gray-400 text-center py-4">No reminders for today</p>
+              )}
             </div>
           </div>
         </div>
@@ -536,10 +457,17 @@ export default function ChewDashboardHome() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {CAMPAIGNS.map((row, i) => (
+                {isLoadingPromotions ? (
+                  <tr>
+                    <td colSpan={8} className="px-5 py-8 text-center text-gray-400 text-sm">
+                      <Loader2 size={20} className="animate-spin text-[#046C3F] mx-auto mb-2" />
+                      Loading activities...
+                    </td>
+                  </tr>
+                ) : promotions.map((row: any, i: number) => (
                   <tr key={i} className="hover:bg-gray-50/60 transition-colors">
                     <td className="px-5 py-3 text-sm text-gray-600 font-medium">
-                      {row.id}
+                      {row.promotion_id || row.id?.substring(0,8)}
                     </td>
                     <td className="px-5 py-3 text-sm text-gray-700">
                       {row.title}
@@ -548,18 +476,18 @@ export default function ChewDashboardHome() {
                       {row.type}
                     </td>
                     <td className="px-5 py-3 text-sm text-gray-500">
-                      {row.participants}
+                      {row.expected_participants}
                     </td>
                     <td className="px-5 py-3 text-sm text-gray-500 whitespace-nowrap">
-                      {row.startEnd}
+                      {new Date(row.start_date).toLocaleDateString()} - {new Date(row.end_date).toLocaleDateString()}
                     </td>
                     <td className="px-5 py-3 text-sm text-gray-500">
-                      {row.createdBy}
+                      {row.created_by_name || "System"}
                     </td>
                     <td className="px-5 py-3">
                       <span
                         className="px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap"
-                        style={STATUS_STYLE[row.status]}
+                        style={STATUS_STYLE[row.status] || { background: "#F3F4F6", color: "#6B7280" }}
                       >
                         {row.status}
                       </span>
@@ -568,12 +496,12 @@ export default function ChewDashboardHome() {
                       <CampaignActionMenu
                         onView={() =>
                           router.push(
-                            "/chew-dashboard/health-promotion?view=view-activity",
+                            `/chew-dashboard/health-promotion?view=view-activity&id=${row.id}`,
                           )
                         }
                         onEdit={() =>
                           router.push(
-                            "/chew-dashboard/health-promotion?view=edit-activity",
+                            `/chew-dashboard/health-promotion?view=edit-activity&id=${row.id}`,
                           )
                         }
                       />
@@ -585,7 +513,7 @@ export default function ChewDashboardHome() {
           </div>
           <Pagination
             currentPage={page}
-            totalPages={68}
+            totalPages={Math.max(1, Math.ceil((promotionsData?.count || 0) / 10))}
             onPageChange={setPage}
           />
         </div>

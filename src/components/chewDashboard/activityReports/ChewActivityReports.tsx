@@ -10,6 +10,8 @@ import {
 import ChewDashboardHeader from "@/src/components/chewDashboard/generics/ChewDashboardHeader";
 import { PeriodFilterButton } from "@/src/components/doctorDashboard/generics/PeriodFilterButton";
 import Pagination from "@/src/components/adminDashboard/generics/Pagination";
+import { useChewActivityReportsStats, useChewActivityReports } from "@/src/hooks/nurses/use-chew-analytics";
+import { Loader2 } from "lucide-react";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -25,27 +27,18 @@ interface ActivityRow {
 const TYPE_OPTIONS   = ["Patient Registration", "Maternal Follow-up", "Appointment", "Health Promotion", "Post Activity"];
 const STATUS_OPTIONS = ["Completed", "Pending", "Approved", "Submitted"];
 
-const ACTIVITIES: ActivityRow[] = [
-  { id: "PAT-PLT-000234", type: "Patient Registration", description: "New patient registered",  date: "14 Mar 2026", performedBy: "Nurse Agnes", status: "Completed" },
-  { id: "PAT-PLT-000234", type: "Maternal Follow-up",   description: "ANC visit completed",     date: "14 Mar 2026", performedBy: "Amara Ezeh",  status: "Pending"   },
-  { id: "CAM-PLT-000234", type: "Health Promotion",     description: "Malaria awareness talk",  date: "14 Mar 2026", performedBy: "Dolapo Ayo",  status: "Approved"  },
-  { id: "CAM-PLT-000234", type: "Post Activity",        description: "Malaria awareness talk",  date: "14 Mar 2026", performedBy: "Hakeem Ade",  status: "Submitted" },
-  { id: "PAT-PLT-000234", type: "Appointment",          description: "Appointment created",     date: "14 Mar 2026", performedBy: "Nurse Agnes", status: "Submitted" },
-  { id: "PAT-PLT-000234", type: "Patient Registration", description: "New patient registered",  date: "14 Mar 2026", performedBy: "Nurse Agnes", status: "Completed" },
-  { id: "PAT-PLT-000234", type: "Patient Registration", description: "New patient registered",  date: "14 Mar 2026", performedBy: "Nurse Agnes", status: "Pending"   },
-  { id: "PAT-PLT-000234", type: "Patient Registration", description: "New patient registered",  date: "14 Mar 2026", performedBy: "Nurse Agnes", status: "Approved"  },
-  { id: "PAT-PLT-000234", type: "Patient Registration", description: "New patient registered",  date: "14 Mar 2026", performedBy: "Nurse Agnes", status: "Approved"  },
-  { id: "PAT-PLT-000234", type: "Patient Registration", description: "New patient registered",  date: "14 Mar 2026", performedBy: "Nurse Agnes", status: "Approved"  },
-];
+const ACTIVITIES: ActivityRow[] = [];
 
-const STATUS_STYLES: Record<ActivityStatus, { bg: string; color: string }> = {
+const STATUS_STYLES: Record<string, { bg: string; color: string }> = {
   Completed: { bg: "#ECFDF5", color: "#059669" },
   Pending:   { bg: "#FEF9C3", color: "#B45309" },
   Approved:  { bg: "#D1FAE5", color: "#046C3F" },
   Submitted: { bg: "#DBEAFE", color: "#2563EB" },
+  COMPLETED: { bg: "#ECFDF5", color: "#059669" },
+  SCHEDULED: { bg: "#EFF6FF", color: "#2563EB" },
+  IN_PROGRESS: { bg: "#E8F7F0", color: "#046C3F" },
+  CANCELLED: { bg: "#FEF2F2", color: "#DC2626" },
 };
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function calcCoords(rect: DOMRect, w: number, estimatedH: number, rightAlign = false) {
   const spaceBelow = window.innerHeight - rect.bottom - 8;
@@ -59,12 +52,10 @@ function calcCoords(rect: DOMRect, w: number, estimatedH: number, rightAlign = f
   return { top, left, maxH };
 }
 
-// ── Status badge ──────────────────────────────────────────────────────────────
-
-function StatusBadge({ status }: { status: ActivityStatus }) {
-  const { bg, color } = STATUS_STYLES[status];
+function StatusBadge({ status }: { status: string }) {
+  const style = STATUS_STYLES[status] || { bg: "#F3F4F6", color: "#6B7280" };
   return (
-    <span style={{ background: bg, color, borderRadius: 9999, padding: "3px 10px", fontSize: 12, fontWeight: 600, whiteSpace: "nowrap" }}>
+    <span style={{ background: style.bg, color: style.color, borderRadius: 9999, padding: "3px 10px", fontSize: 12, fontWeight: 600, whiteSpace: "nowrap" }}>
       {status}
     </span>
   );
@@ -455,6 +446,21 @@ export default function ChewActivityReports() {
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
   const [showApptModal,    setShowApptModal]    = useState(false);
   const [showPostModal,    setShowPostModal]    = useState(false);
+  
+  const [search,           setSearch]           = useState("");
+  const [startDate,        setStartDate]        = useState<string | undefined>();
+  const [endDate,          setEndDate]          = useState<string | undefined>();
+
+  const { data: statsData } = useChewActivityReportsStats(startDate, endDate);
+  const { data: activitiesData, isLoading: isLoadingActivities } = useChewActivityReports({
+    page,
+    page_size: 10,
+    search: search || undefined,
+    start_date: startDate,
+    end_date: endDate,
+    activity_type: selectedTypes[0] || undefined,
+  });
+  const activities = activitiesData?.results || [];
 
   return (
     <>
@@ -473,10 +479,10 @@ export default function ChewActivityReports() {
         {/* Stat cards */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1rem" }}>
           {[
-            { label: "Total activities",    value: "67",    featured: true,  icon: <BarChart2 size={16} color="#fff" /> },
-            { label: "Patients reached",    value: "2,344", featured: false, icon: <Users size={16} color="#6B7280" /> },
-            { label: "Maternal Follow-ups", value: "435",   featured: false, icon: <Heart size={16} color="#6B7280" /> },
-            { label: "Community visits",    value: "376",   featured: false, icon: <Megaphone size={16} color="#6B7280" /> },
+            { label: "Total activities",    value: statsData?.total_activities?.toLocaleString() || "0",    featured: true,  icon: <BarChart2 size={16} color="#fff" /> },
+            { label: "Patients reached",    value: statsData?.patients_reached?.toLocaleString() || "0",    featured: false, icon: <Users size={16} color="#6B7280" /> },
+            { label: "Maternal Follow-ups", value: statsData?.maternal_follow_ups?.toLocaleString() || "0", featured: false, icon: <Heart size={16} color="#6B7280" /> },
+            { label: "Community visits",    value: statsData?.community_visits?.toLocaleString() || "0",    featured: false, icon: <Megaphone size={16} color="#6B7280" /> },
           ].map(({ label, value, featured, icon }) => (
             <div key={label} className="rounded-2xl border border-gray-100 shadow-sm px-5 py-4"
               style={{ background: featured ? "#046C3F" : "#fff" }}>
@@ -486,7 +492,7 @@ export default function ChewActivityReports() {
                   display: "flex", alignItems: "center", justifyContent: "center" }}>
                   {icon}
                 </div>
-                <PeriodFilterButton label="This Week" textColor={featured ? "#fff" : undefined} />
+                <PeriodFilterButton label="This Week" textColor={featured ? "#fff" : undefined} onChange={(s, e) => { setStartDate(s); setEndDate(e); }} />
               </div>
               <p className="text-xs font-medium mb-1"
                 style={{ color: featured ? "rgba(255,255,255,0.75)" : "#9CA3AF" }}>{label}</p>
@@ -504,9 +510,10 @@ export default function ChewActivityReports() {
               <div className="relative">
                 <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input placeholder="Search by Activity title or ID..."
+                  value={search} onChange={e => setSearch(e.target.value)}
                   className="pl-8 pr-3 py-1.5 text-xs border border-gray-200 rounded-lg outline-none focus:ring-1 focus:ring-[#046C3F] w-60" />
               </div>
-              <PeriodFilterButton label="Date Range" />
+              <PeriodFilterButton label="Date Range" onChange={(s, e) => { setStartDate(s); setEndDate(e); }} />
               <CheckboxFilterDropdown label="All Type"   options={TYPE_OPTIONS}
                 selected={selectedTypes}    onChange={setSelectedTypes} />
               <CheckboxFilterDropdown label="All Status" options={STATUS_OPTIONS}
@@ -528,13 +535,20 @@ export default function ChewActivityReports() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {ACTIVITIES.map((row, i) => (
+                {isLoadingActivities ? (
+                  <tr>
+                    <td colSpan={7} className="px-5 py-8 text-center text-gray-400 text-sm">
+                      <Loader2 size={20} className="animate-spin text-[#046C3F] mx-auto mb-2" />
+                      Loading activities...
+                    </td>
+                  </tr>
+                ) : activities.map((row: any, i: number) => (
                   <tr key={i} className="hover:bg-gray-50/60 transition-colors">
-                    <td className="px-5 py-3 text-sm text-gray-600 font-medium whitespace-nowrap">{row.id}</td>
-                    <td className="px-5 py-3 text-sm text-gray-700">{row.type}</td>
+                    <td className="px-5 py-3 text-sm text-gray-600 font-medium whitespace-nowrap">{row.id?.substring(0,8)}...</td>
+                    <td className="px-5 py-3 text-sm text-gray-700">{row.activity_type}</td>
                     <td className="px-5 py-3 text-sm text-gray-500">{row.description}</td>
-                    <td className="px-5 py-3 text-sm text-gray-500 whitespace-nowrap">{row.date}</td>
-                    <td className="px-5 py-3 text-sm text-gray-500">{row.performedBy}</td>
+                    <td className="px-5 py-3 text-sm text-gray-500 whitespace-nowrap">{new Date(row.date).toLocaleDateString()}</td>
+                    <td className="px-5 py-3 text-sm text-gray-500">{row.performed_by}</td>
                     <td className="px-5 py-3"><StatusBadge status={row.status} /></td>
                     <td className="px-5 py-3">
                       <ActionMenu
@@ -547,7 +561,7 @@ export default function ChewActivityReports() {
               </tbody>
             </table>
           </div>
-          <Pagination currentPage={page} totalPages={68} onPageChange={setPage} />
+          <Pagination currentPage={page} totalPages={Math.max(1, Math.ceil((activitiesData?.count || 0) / 10))} onPageChange={setPage} />
         </div>
       </div>
     </div>

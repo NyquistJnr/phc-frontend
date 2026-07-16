@@ -126,9 +126,51 @@ const MENU_WIDTH = 288;
 interface PeriodFilterButtonProps {
   label?: string;
   textColor?: string;
+  onChange?: (startDate?: string, endDate?: string) => void;
 }
 
-export function PeriodFilterButton({ label = "This Week", textColor }: PeriodFilterButtonProps) {
+function getDateRangeForPreset(preset: string): [string, string] {
+  const today = new Date();
+  let start = new Date(today);
+  let end = new Date(today);
+
+  switch (preset) {
+    case "This Week":
+      const day = start.getDay();
+      const diff = start.getDate() - day + (day === 0 ? -6 : 1); // Monday start
+      start = new Date(start.setDate(diff));
+      end = new Date(start);
+      end.setDate(end.getDate() + 6);
+      break;
+    case "Last Week":
+      const dayLW = start.getDay();
+      const diffLW = start.getDate() - dayLW + (dayLW === 0 ? -6 : 1) - 7;
+      start = new Date(start.setDate(diffLW));
+      end = new Date(start);
+      end.setDate(end.getDate() + 6);
+      break;
+    case "This Month":
+      start = new Date(today.getFullYear(), today.getMonth(), 1);
+      end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      break;
+    case "Last Month":
+      start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+      end = new Date(today.getFullYear(), today.getMonth(), 0);
+      break;
+    case "This Year":
+      start = new Date(today.getFullYear(), 0, 1);
+      end = new Date(today.getFullYear(), 11, 31);
+      break;
+    case "Last Year":
+      start = new Date(today.getFullYear() - 1, 0, 1);
+      end = new Date(today.getFullYear() - 1, 11, 31);
+      break;
+  }
+  const format = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return [format(start), format(end)];
+}
+
+export function PeriodFilterButton({ label = "This Week", textColor, onChange }: PeriodFilterButtonProps) {
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState(label);
   const [useRange, setUseRange] = useState(false);
@@ -263,7 +305,17 @@ export function PeriodFilterButton({ label = "This Week", textColor }: PeriodFil
 
           <div className="p-4 pt-3">
             <button
-              onClick={() => setOpen(false)}
+              onClick={() => {
+                setOpen(false);
+                if (onChange) {
+                  if (useRange) {
+                    onChange(fromDate || undefined, toDate || undefined);
+                  } else {
+                    const [s, e] = getDateRangeForPreset(selected);
+                    onChange(s, e);
+                  }
+                }
+              }}
               className="w-full py-2.5 text-white text-sm font-semibold rounded-xl"
               style={{ background: "#046C3F" }}
             >
