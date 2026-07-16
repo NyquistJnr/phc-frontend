@@ -334,7 +334,10 @@ export default function DrugStockListing() {
     return () => clearTimeout(handler);
   }, [localSearch, pathname, router, searchParams]);
 
-  const { data: stats, isLoading: isLoadingStats } = useInventoryStats();
+  const { data: stats, isLoading: isLoadingStats } = useInventoryStats({
+    start_date,
+    end_date,
+  });
   const { data: drugsData, isLoading } = useInventoryDrugs({
     page,
     page_size: pageSize,
@@ -443,12 +446,41 @@ export default function DrugStockListing() {
               Drug stock levels, batches and expiry tracking
             </p>
           </div>
-          <button
-            onClick={() => router.push("/pharmacist-dashboard/inventory/new")}
-            className="inline-flex h-12 items-center justify-center gap-3 rounded-xl bg-[#046C3F] px-6 text-white transition-colors hover:bg-[#035a34]"
-          >
-            <Plus size={18} /> Add New Stock
-          </button>
+          <div className="flex flex-wrap items-center gap-4">
+            <DateRangeFilter
+              label="Filter by Date"
+              startDate={start_date}
+              endDate={end_date}
+              onApply={(start, end) => {
+                const params = new URLSearchParams(searchParams.toString());
+                if (start) params.set("start_date", start);
+                else params.delete("start_date");
+
+                if (end) params.set("end_date", end);
+                else params.delete("end_date");
+
+                params.set("page", "1");
+                router.push(`${pathname}?${params.toString()}`, {
+                  scroll: false,
+                });
+              }}
+              onClear={() => {
+                const params = new URLSearchParams(searchParams.toString());
+                params.delete("start_date");
+                params.delete("end_date");
+                params.set("page", "1");
+                router.push(`${pathname}?${params.toString()}`, {
+                  scroll: false,
+                });
+              }}
+            />
+            <button
+              onClick={() => router.push("/pharmacist-dashboard/inventory/new")}
+              className="inline-flex h-12 items-center justify-center gap-3 rounded-xl bg-[#046C3F] px-6 text-white transition-colors hover:bg-[#035a34]"
+            >
+              <Plus size={18} /> Add New Stock
+            </button>
+          </div>
         </div>
 
         <div className="mb-6 grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
@@ -486,34 +518,6 @@ export default function DrugStockListing() {
           }
           toolbarActions={
             <>
-              <DateRangeFilter
-                label="Last Updated"
-                startDate={start_date}
-                endDate={end_date}
-                onApply={(start, end) => {
-                  const params = new URLSearchParams(searchParams.toString());
-                  if (start) params.set("start_date", start);
-                  else params.delete("start_date");
-
-                  if (end) params.set("end_date", end);
-                  else params.delete("end_date");
-
-                  params.set("page", "1");
-                  router.push(`${pathname}?${params.toString()}`, {
-                    scroll: false,
-                  });
-                }}
-                onClear={() => {
-                  const params = new URLSearchParams(searchParams.toString());
-                  params.delete("start_date");
-                  params.delete("end_date");
-                  params.set("page", "1");
-                  router.push(`${pathname}?${params.toString()}`, {
-                    scroll: false,
-                  });
-                }}
-              />
-
               <CustomDropdown
                 options={STATUS_OPTIONS}
                 selected={statusFilter}

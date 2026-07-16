@@ -6,6 +6,7 @@ import { CalendarDays, Loader2, PackagePlus, X } from "lucide-react";
 
 import PharmacistBackButton from "@/src/components/pharmacist-dashboard/generics/PharmacistBackButton";
 import PharmacistDashboardHeader from "@/src/components/pharmacist-dashboard/generics/PharmacistDashboardHeader";
+import { SelectField } from "@/src/components/nurse-dashboard/appointments/form-helpers";
 import type { ScheduleRules } from "./type";
 
 import {
@@ -32,33 +33,6 @@ function FieldShell({
   );
 }
 
-function SelectShell({
-  label,
-  value,
-  onChange,
-  options,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  options: { label: string; value: string }[];
-}) {
-  return (
-    <FieldShell label={label}>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full bg-transparent text-base text-gray-700 outline-none"
-      >
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
-    </FieldShell>
-  );
-}
 
 function SuccessToast({
   message,
@@ -157,9 +131,13 @@ const SCHEDULE_TYPE_OPTIONS = [
 ];
 
 const ITEM_TYPE_OPTIONS = [
-  "Tablets", "Capsules", "Syrup", "Vials", "Ampoules", "Sachets",
-  "Inhalers", "Tubes", "Bottles", "Kits", "Reagents", "Pieces", "Pairs", "Packs",
-];
+  "Ampoules", "Bottles", "Boxes", "Capsules", "Cartons", "Cassettes", "Creams", 
+  "Drops", "Gallons", "Grams (g)", "Inhalers", "Injections", "Kilograms (kg)", 
+  "Kits", "Litres (L)", "Lotions", "Millilitres (ml)", "Needles", "Ointments", 
+  "Packs", "Pairs", "Patches", "Pieces", "Reagents", "Rolls", "Sachets", 
+  "Sprays", "Strips", "Suppositories", "Swabs", "Syringes", "Syrup", 
+  "Tablets", "Tins", "Tubes", "Vials"
+].map((u) => ({ label: u, value: u }));
 
 function buildScheduleRules(form: StockFormState): ScheduleRules | null {
   if (form.scheduleType === "NONE" || form.inventoryCategory !== "DRUG" || form.drugClassification !== "IMMUNIZATION") {
@@ -331,16 +309,18 @@ export default function CreateNewStock() {
               Item Details
             </h3>
             <div className="mb-8 grid grid-cols-1 gap-5 md:grid-cols-2">
-              <SelectShell
+              <SelectField
                 label="Category"
+                placeholder="Select category"
                 value={form.inventoryCategory}
                 onChange={(v) => handleChange("inventoryCategory", v)}
                 options={INVENTORY_CATEGORY_OPTIONS}
               />
 
               {isDrug && (
-                <SelectShell
+                <SelectField
                   label="Drug Classification"
+                  placeholder="Select classification"
                   value={form.drugClassification}
                   onChange={(v) => handleChange("drugClassification", v)}
                   options={DRUG_CLASSIFICATION_OPTIONS}
@@ -356,21 +336,17 @@ export default function CreateNewStock() {
                 />
               </FieldShell>
 
-              <FieldShell label="Item Type / Unit *">
-                <select
-                  value={form.itemType}
-                  onChange={(e) => handleChange("itemType", e.target.value)}
-                  className="w-full bg-transparent text-base text-gray-700 outline-none"
-                >
-                  <option value="" disabled>Select unit type</option>
-                  {ITEM_TYPE_OPTIONS.map((u) => (
-                    <option key={u} value={u}>{u}</option>
-                  ))}
-                </select>
-              </FieldShell>
+              <SelectField
+                label="Item Type / Unit *"
+                placeholder="Select unit type"
+                value={form.itemType}
+                onChange={(v) => handleChange("itemType", v)}
+                options={ITEM_TYPE_OPTIONS}
+              />
 
-              <SelectShell
+              <SelectField
                 label="Threshold Type"
+                placeholder="Select threshold type"
                 value={form.thresholdType}
                 onChange={(v) => handleChange("thresholdType", v)}
                 options={THRESHOLD_TYPE_OPTIONS}
@@ -395,8 +371,9 @@ export default function CreateNewStock() {
                   Dosage Schedule (Optional)
                 </h3>
                 <div className="mb-8 grid grid-cols-1 gap-5 md:grid-cols-2">
-                  <SelectShell
+                  <SelectField
                     label="Schedule Type"
+                    placeholder="Select schedule type"
                     value={form.scheduleType}
                     onChange={(v) => handleChange("scheduleType", v as ScheduleType)}
                     options={SCHEDULE_TYPE_OPTIONS}

@@ -35,15 +35,18 @@ function getCreatedDrugId(response: unknown) {
   return unwrapApiData<Partial<DrugDetail>>(response).id;
 }
 
-export function useInventoryStats() {
+export function useInventoryStats(filters?: { start_date?: string; end_date?: string }) {
   const api = useApi();
 
   return useQuery({
-    queryKey: ["inventory-stats", PHARMACY_INVENTORY_CATEGORY],
+    queryKey: ["inventory-stats", PHARMACY_INVENTORY_CATEGORY, filters],
     queryFn: async () => {
       const params = new URLSearchParams({
         inventory_category: PHARMACY_INVENTORY_CATEGORY,
       });
+      if (filters?.start_date) params.append("start_date", filters.start_date);
+      if (filters?.end_date) params.append("end_date", filters.end_date);
+      
       const res = await api.get<unknown>(
         `/inventory/stats/comprehensive/?${params.toString()}`,
       );
