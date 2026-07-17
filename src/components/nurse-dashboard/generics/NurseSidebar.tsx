@@ -115,7 +115,10 @@ export const NurseSidebar = () => {
         <nav className="grow px-4 space-y-1.5 overflow-y-auto">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = pathname === item.path;
+            const isDashboard = item.path === '/nurse-dashboard';
+            const isActive = isDashboard 
+              ? pathname === item.path 
+              : pathname === item.path || pathname.startsWith(item.path + '/');
 
             return (
               <Link

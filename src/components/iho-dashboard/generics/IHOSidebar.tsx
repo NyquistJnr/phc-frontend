@@ -80,7 +80,10 @@ export const IHOSidebar = () => {
         <nav className="grow px-4 space-y-1.5 overflow-y-auto">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = pathname === item.path || pathname.startsWith(item.path + '/');
+            const isDashboard = item.path === '/iho-dashboard';
+            const isActive = isDashboard 
+              ? pathname === item.path 
+              : pathname === item.path || pathname.startsWith(item.path + '/');
 
             return (
               <Link
