@@ -18,6 +18,7 @@ const ROLE_REDIRECTS: Record<string, string> = {
   NURSE: "/nurse-dashboard",
   CHEW: "/chew-dashboard",
   PATIENT: "/dashboard",
+  IHO: "/iho-dashboard",
 };
 
 async function getFreshSession() {

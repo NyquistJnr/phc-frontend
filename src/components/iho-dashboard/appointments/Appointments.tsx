@@ -6,15 +6,16 @@ import Link from "next/link";
 import { Plus, Eye, Edit, Download, MoreHorizontal } from "lucide-react";
 import { createPortal } from "react-dom";
 
-import NurseDashboardHeader from "@/src/components/nurse-dashboard/generics/NurseDashboardHeader";
-import NurseDateRangeFilter from "@/src/components/nurse-dashboard/generics/NurseDateRangeFilter";
+import NurseDashboardHeader from "@/src/components/iho-dashboard/generics/NurseDashboardHeader";
+import NurseDateRangeFilter from "@/src/components/iho-dashboard/generics/NurseDateRangeFilter";
 import { CustomDropdown } from "@/src/components/generic/ui/CustomDropdown";
 import { ColumnDef, DataTable } from "@/src/components/generic/ui/DataTable";
 import { StatusBadge } from "@/src/components/generic/ui/TableHelpers";
 import {
   useAppointments,
   useUpdateAppointmentStatus,
-  useAwaitingVitals,
+  useAssignVitals,
+  useFacilityStaff,
 } from "@/src/hooks/nurses/use-appointments";
 import { AppointmentResult } from "./type";
 
@@ -53,17 +54,22 @@ function AppointmentActionMenu({ row }: { row: AppointmentResult }) {
   const menuRef = React.useRef<HTMLDivElement>(null);
 
   const [showStatusModal, setShowStatusModal] = useState(false);
+  const [showAssignModal, setShowAssignModal] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState(row.status);
+  const [selectedStaff, setSelectedStaff] = useState("");
 
   const { mutate: updateStatus, isPending: isUpdating } =
     useUpdateAppointmentStatus();
+  
+  const { mutate: assignVitals, isPending: isAssigning } = useAssignVitals();
+  const { data: staffData, isLoading: isLoadingStaff } = useFacilityStaff();
 
   const toggleMenu = () => {
     if (!open && buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
       const top =
-        rect.bottom + 188 > window.innerHeight
-          ? rect.top + window.scrollY - 188 - 4
+        rect.bottom + 230 > window.innerHeight
+          ? rect.top + window.scrollY - 230 - 4
           : rect.bottom + window.scrollY + 4;
       const left = Math.max(
         12 + window.scrollX,
@@ -98,11 +104,19 @@ function AppointmentActionMenu({ row }: { row: AppointmentResult }) {
     );
   };
 
+  const handleAssignVitals = () => {
+    if (!selectedStaff) return;
+    assignVitals(
+      { id: row.id, assigned_for_vitals: selectedStaff },
+      { onSuccess: () => setShowAssignModal(false) },
+    );
+  };
+
   const items = [
     {
       label: "View Detail",
       icon: Eye,
-      onClick: () => router.push(`/nurse-dashboard/appointments/${row.id}`),
+      onClick: () => router.push(`/iho-dashboard/appointments/${row.id}`),
       className: "text-gray-700",
     },
     {
@@ -110,6 +124,12 @@ function AppointmentActionMenu({ row }: { row: AppointmentResult }) {
       icon: Edit,
       onClick: () => setShowStatusModal(true),
       className: "text-gray-700",
+    },
+    {
+      label: "Assign for Vitals",
+      icon: Plus,
+      onClick: () => setShowAssignModal(true),
+      className: "text-[#046C3F]",
     },
   ];
 
@@ -195,6 +215,52 @@ function AppointmentActionMenu({ row }: { row: AppointmentResult }) {
           document.body,
         )}
 
+      {showAssignModal &&
+        createPortal(
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+            <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
+              <h3 className="mb-4 text-lg font-semibold text-gray-900">
+                Assign for Vitals
+              </h3>
+              <p className="mb-4 text-sm text-gray-500">
+                Select a medical staff to take vitals for {row.patient_name}.
+              </p>
+              <select
+                value={selectedStaff}
+                onChange={(e) => setSelectedStaff(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 p-2.5 text-sm focus:border-[#046C3F] focus:outline-none focus:ring-1 focus:ring-[#046C3F]"
+              >
+                <option value="" disabled>Select Staff</option>
+                {isLoadingStaff ? (
+                  <option disabled>Loading staff...</option>
+                ) : (
+                  staffData?.map((staff: any) => (
+                    <option key={staff.id} value={staff.id}>
+                      {staff.first_name} {staff.last_name} ({staff.role.replace("_", " ")})
+                    </option>
+                  ))
+                )}
+              </select>
+              <div className="mt-6 flex justify-end gap-3">
+                <button
+                  onClick={() => setShowAssignModal(false)}
+                  className="rounded-lg px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleAssignVitals}
+                  disabled={isAssigning || !selectedStaff}
+                  className="rounded-lg bg-[#046C3F] px-4 py-2 text-sm font-medium text-white hover:bg-[#035a34] disabled:opacity-70"
+                >
+                  {isAssigning ? "Saving..." : "Assign Staff"}
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
+
     </>
   );
 }
@@ -213,7 +279,6 @@ export default function Appointments() {
 
   const initialSearch = searchParams.get("search") || "";
   const [localSearch, setLocalSearch] = useState(initialSearch);
-  const [activeTab, setActiveTab] = useState<"ALL" | "PENDING_VITALS">("ALL");
 
   useEffect(() => {
     const currentSearch = searchParams.get("search") || "";
@@ -236,7 +301,7 @@ export default function Appointments() {
     return () => clearTimeout(handler);
   }, [localSearch, pathname, router, searchParams]);
 
-  const { data: allAppointments, isLoading: isLoadingAll } = useAppointments({
+  const { data, isLoading } = useAppointments({
     page,
     page_size: pageSize,
     status: statusFilter,
@@ -245,16 +310,6 @@ export default function Appointments() {
     start_date,
     end_date,
   });
-
-  const { data: pendingVitals, isLoading: isLoadingPending } = useAwaitingVitals({
-    page,
-    page_size: pageSize,
-    search: searchParams.get("search") || undefined,
-    assigned_to_me: true,
-  });
-
-  const data = activeTab === "ALL" ? allAppointments : pendingVitals;
-  const isLoading = activeTab === "ALL" ? isLoadingAll : isLoadingPending;
 
   const updateUrlParams = useCallback(
     (key: string, value: string) => {
@@ -332,44 +387,15 @@ export default function Appointments() {
           </div>
 
           <Link
-            href="/nurse-dashboard/appointments/new"
+            href="/iho-dashboard/appointments/new"
             className="inline-flex h-11 items-center justify-center gap-3 rounded-xl bg-[#046C3F] px-7 text-base font-medium text-white transition-colors hover:bg-[#035a34]"
           >
             <Plus size={20} /> New Appointment
           </Link>
         </div>
 
-        <div className="mb-6 flex space-x-4 border-b border-gray-200">
-          <button
-            onClick={() => {
-              setActiveTab("ALL");
-              router.push(pathname, { scroll: false });
-            }}
-            className={`pb-3 text-sm font-medium border-b-2 transition-colors ${
-              activeTab === "ALL"
-                ? "border-[#046C3F] text-[#046C3F]"
-                : "border-transparent text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            All Appointments
-          </button>
-          <button
-            onClick={() => {
-              setActiveTab("PENDING_VITALS");
-              router.push(pathname, { scroll: false });
-            }}
-            className={`pb-3 text-sm font-medium border-b-2 transition-colors ${
-              activeTab === "PENDING_VITALS"
-                ? "border-[#046C3F] text-[#046C3F]"
-                : "border-transparent text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            My Pending Vitals
-          </button>
-        </div>
-
         <DataTable
-          title={activeTab === "ALL" ? "Patient Appointments" : "My Pending Vitals"}
+          title="Patient Appointments"
           data={data?.results || []}
           columns={columns}
           showSearch
@@ -383,48 +409,44 @@ export default function Appointments() {
           }
           toolbarActions={
             <>
-              {activeTab === "ALL" && (
-                <>
-                  <NurseDateRangeFilter
-                    startDate={start_date}
-                    endDate={end_date}
-                    onApply={(start, end) => {
-                      const params = new URLSearchParams(searchParams.toString());
-                      if (start) params.set("start_date", start);
-                      else params.delete("start_date");
+              <NurseDateRangeFilter
+                startDate={start_date}
+                endDate={end_date}
+                onApply={(start, end) => {
+                  const params = new URLSearchParams(searchParams.toString());
+                  if (start) params.set("start_date", start);
+                  else params.delete("start_date");
 
-                      if (end) params.set("end_date", end);
-                      else params.delete("end_date");
+                  if (end) params.set("end_date", end);
+                  else params.delete("end_date");
 
-                      params.set("page", "1");
-                      router.push(`${pathname}?${params.toString()}`, {
-                        scroll: false,
-                      });
-                    }}
-                    onClear={() => {
-                      const params = new URLSearchParams(searchParams.toString());
-                      params.delete("start_date");
-                      params.delete("end_date");
-                      params.set("page", "1");
-                      router.push(`${pathname}?${params.toString()}`, {
-                        scroll: false,
-                      });
-                    }}
-                  />
+                  params.set("page", "1");
+                  router.push(`${pathname}?${params.toString()}`, {
+                    scroll: false,
+                  });
+                }}
+                onClear={() => {
+                  const params = new URLSearchParams(searchParams.toString());
+                  params.delete("start_date");
+                  params.delete("end_date");
+                  params.set("page", "1");
+                  router.push(`${pathname}?${params.toString()}`, {
+                    scroll: false,
+                  });
+                }}
+              />
 
-                  <CustomDropdown
-                    options={["All Visit Type", ...VISIT_TYPES]}
-                    selected={visitFilter}
-                    onSelect={(val) => updateUrlParams("visit_type", val)}
-                  />
+              <CustomDropdown
+                options={["All Visit Type", ...VISIT_TYPES]}
+                selected={visitFilter}
+                onSelect={(val) => updateUrlParams("visit_type", val)}
+              />
 
-                  <CustomDropdown
-                    options={STATUS_OPTIONS}
-                    selected={statusFilter}
-                    onSelect={(val) => updateUrlParams("status", val)}
-                  />
-                </>
-              )}
+              <CustomDropdown
+                options={STATUS_OPTIONS}
+                selected={statusFilter}
+                onSelect={(val) => updateUrlParams("status", val)}
+              />
 
               <CustomDropdown
                 options={PAGE_SIZES}

@@ -37,7 +37,7 @@ const permissionKeys: PermissionKey[] = ['create', 'read', 'update', 'delete', '
 
 const roles = [
   'IT Administrator', 'Officer in charge', 'Doctor', 
-  'Nurse', 'Lab Technician', 'Pharmacist', 'CHEW'
+  'Nurse', 'Lab Technician', 'Pharmacist', 'CHEW', 'IHO'
 ];
 
 const modules = [

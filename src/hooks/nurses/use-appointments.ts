@@ -96,6 +96,26 @@ export function useUpdateAppointmentStatus() {
   });
 }
 
+export function useAssignVitals() {
+  const api = useApi();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, assigned_for_vitals }: { id: string; assigned_for_vitals: string }) => {
+      return await api.patch(
+        `/appointments/appointments/${id}/`,
+        { assigned_for_vitals },
+      );
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      queryClient.invalidateQueries({
+        queryKey: ["appointment", variables.id],
+      });
+    },
+  });
+}
+
 export function useCreateAppointment() {
   const api = useApi();
   const queryClient = useQueryClient();
@@ -275,5 +295,29 @@ export function usePatientChildren(patientId: string) {
       return res.results || [];
     },
     enabled: !!patientId && api.isAuthenticated && !api.isLoading,
+  });
+}
+
+export function useAwaitingVitals(filters: {
+  page?: number;
+  page_size?: number;
+  search?: string;
+  assigned_to_me?: boolean;
+} = {}) {
+  const api = useApi();
+
+  return useQuery({
+    queryKey: ["awaiting-vitals", filters],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (filters.page) params.append("page", String(filters.page));
+      if (filters.page_size) params.append("page_size", String(filters.page_size));
+      if (filters.search) params.append("search", filters.search);
+      if (filters.assigned_to_me) params.append("assigned_to_me", String(filters.assigned_to_me));
+
+      const res = await api.get<any>(`/appointments/appointments/awaiting-vitals/?${params.toString()}`);
+      return res?.data?.data || res?.data || res;
+    },
+    enabled: api.isAuthenticated && !api.isLoading,
   });
 }

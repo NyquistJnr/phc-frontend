@@ -42,6 +42,7 @@ const ROLE_OPTIONS = [
   "Lab Technician",
   "Officer In Charge",
   "Chew",
+  "Information Health Officer",
 ];
 
 const STATUS_OPTIONS = ["All Status", "Active", "Suspended"];
@@ -73,6 +74,7 @@ const mapRoleToApi = (uiRole: string) => {
     Nurse: "NURSE",
     Patient: "PATIENT",
     Staff: "STAFF",
+    "Information Health Officer": "IHO",
   };
   return map[uiRole] || uiRole;
 };

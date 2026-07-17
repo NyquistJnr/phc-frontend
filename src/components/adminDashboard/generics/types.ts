@@ -73,7 +73,8 @@ export type UserRole =
   | 'Nurse' 
   | 'Lab Technician' 
   | 'Pharmacist' 
-  | 'CHEW';
+  | 'CHEW'
+  | 'IHO';
 
 export interface User {
   staffId: string;

@@ -16,6 +16,7 @@ const rolesList = [
   { name: "Facility IT Admin", value: "FACILITY_IT_ADMIN" },
   { name: "Doctor", value: "DOCTOR" },
   { name: "Nurse", value: "NURSE" },
+  { name: "Information Health Officer", value: "IHO" },
   // { name: "CHEW", value: "CHEW" },
 ];
 
