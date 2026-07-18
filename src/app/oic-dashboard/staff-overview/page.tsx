@@ -1,7 +1,12 @@
-import StaffOverviewView from "@/src/components/officerDashboard/staff-overview/staff";
+"use client";
+
+import { Suspense } from "react";
+import UserManagement from "@/src/components/adminDashboard/user-management/Home";
 
 export default function StaffOverviewPage() {
   return (
-      <StaffOverviewView />
+    <Suspense fallback={<div>Loading</div>}>
+      <UserManagement />
+    </Suspense>
   );
 }
