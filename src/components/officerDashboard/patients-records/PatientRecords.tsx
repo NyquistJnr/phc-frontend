@@ -11,6 +11,7 @@ import {
   useClinicalStats,
   useRecentAppointments,
 } from "@/src/hooks/core/use-clinical-analytics";
+import Link from 'next/link';
 
 export default function PatientRecordsSearch() {
   const [startDate, setStartDate] = useState("");
@@ -318,9 +319,9 @@ export default function PatientRecordsSearch() {
                       </span>
                     </td>
                     <td className="py-5 px-6 whitespace-nowrap">
-                      <button className="text-sm font-semibold text-[#2A6543] hover:underline transition-all">
+                      <Link href={`/oic-dashboard/patient-records/${patient.id}`} className="text-sm font-semibold text-[#2A6543] hover:underline transition-all">
                         View
-                      </button>
+                      </Link>
                     </td>
                   </tr>
                 )})}

@@ -432,14 +432,12 @@ export default function OICDashboard() {
                       </span>
                     </td>
                     <td className="py-4 px-6">
-                      <button
-                        onClick={() =>
-                          handleAction(`View Patient: ${patient.first_name}`)
-                        }
+                      <Link
+                        href={`/oic-dashboard/patient-records/${patient.id}`}
                         className="text-sm font-semibold text-[#2A6543] hover:underline"
                       >
                         View
-                      </button>
+                      </Link>
                     </td>
                   </tr>
                 )})}
