@@ -14,9 +14,16 @@ const labelStyles =
   "absolute -top-2.5 left-4 bg-white px-1.5 text-xs text-gray-600 font-bold uppercase tracking-wider z-[2]";
 
 const rolesList = [
+  { name: "State Admin", value: "ADMIN" },
+  { name: "State IT Admin", value: "STATE_IT_ADMIN" },
   { name: "Facility IT Admin", value: "FACILITY_IT_ADMIN" },
+  { name: "Officer In Charge (OIC)", value: "OFFICER_IN_CHARGE" },
   { name: "Doctor", value: "DOCTOR" },
+  { name: "Pharmacist", value: "PHARMACIST" },
+  { name: "Laboratory Technician", value: "LAB_TECHNICIAN" },
   { name: "Nurse", value: "NURSE" },
+  { name: "Community Health Extension Worker", value: "CHEW" },
+  { name: "Information Health Officer (Records Officer)", value: "IHO" },
 ];
 
 function CreateUserForm() {

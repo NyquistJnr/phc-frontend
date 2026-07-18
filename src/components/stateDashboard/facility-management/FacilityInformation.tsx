@@ -35,18 +35,29 @@ import {
 
 const FILTER_ROLE_OPTIONS = [
   "All Roles",
-  "DOCTOR",
-  "NURSE",
-  "PHARMACIST",
-  "LAB_TECHNICIAN",
-  "CHEW",
+  "ADMIN",
+  "STATE_IT_ADMIN",
   "FACILITY_IT_ADMIN",
   "OFFICER_IN_CHARGE",
-  "STAFF",
+  "DOCTOR",
+  "PHARMACIST",
+  "LAB_TECHNICIAN",
+  "NURSE",
+  "CHEW",
+  "IHO",
 ];
-const CREATION_ROLE_OPTIONS = FILTER_ROLE_OPTIONS.filter(
-  (r) => r !== "All Roles" && r !== "STAFF",
-);
+const CREATION_ROLE_OPTIONS = [
+  "ADMIN",
+  "STATE_IT_ADMIN",
+  "FACILITY_IT_ADMIN",
+  "OFFICER_IN_CHARGE",
+  "DOCTOR",
+  "PHARMACIST",
+  "LAB_TECHNICIAN",
+  "NURSE",
+  "CHEW",
+  "IHO",
+];
 const STATUS_OPTIONS = ["All Status", "Active", "Inactive"];
 const PAGE_SIZES = ["10", "20", "50", "100"];
 
@@ -85,8 +96,19 @@ export default function FacilityUsersDetail() {
   });
 
   const formatRoleName = (role: string) => {
-    if (role === "FACILITY_IT_ADMIN") return "Facility IT Admin";
-    if (role === "CHEW") return "CHEW";
+    const roleMapping: Record<string, string> = {
+      ADMIN: "State Admin",
+      STATE_IT_ADMIN: "State IT Admin",
+      FACILITY_IT_ADMIN: "Facility IT Admin",
+      OFFICER_IN_CHARGE: "Officer In Charge (OIC)",
+      DOCTOR: "Doctor",
+      PHARMACIST: "Pharmacist",
+      LAB_TECHNICIAN: "Laboratory Technician",
+      NURSE: "Nurse",
+      CHEW: "Community Health Extension Worker",
+      IHO: "Information Health Officer (Records Officer)",
+    };
+    if (roleMapping[role]) return roleMapping[role];
     return role
       .replace(/_/g, " ")
       .toLowerCase()
@@ -286,8 +308,8 @@ export default function FacilityUsersDetail() {
     {
       header: "Role",
       render: (row) => (
-        <span className="capitalize">
-          {row.role.replace(/_/g, " ").toLowerCase()}
+        <span>
+          {formatRoleName(row.role)}
         </span>
       ),
       sortable: true,

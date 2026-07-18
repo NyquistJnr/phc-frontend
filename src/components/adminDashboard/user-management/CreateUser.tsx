@@ -14,10 +14,13 @@ const labelStyles =
 
 const rolesList = [
   { name: "Facility IT Admin", value: "FACILITY_IT_ADMIN" },
+  { name: "Officer In Charge (OIC)", value: "OFFICER_IN_CHARGE" },
   { name: "Doctor", value: "DOCTOR" },
+  { name: "Pharmacist", value: "PHARMACIST" },
+  { name: "Laboratory Technician", value: "LAB_TECHNICIAN" },
   { name: "Nurse", value: "NURSE" },
-  { name: "Information Health Officer", value: "IHO" },
-  // { name: "CHEW", value: "CHEW" },
+  { name: "Community Health Extension Worker", value: "CHEW" },
+  { name: "Information Health Officer (Records Officer)", value: "IHO" },
 ];
 
 export default function CreateUserPage() {

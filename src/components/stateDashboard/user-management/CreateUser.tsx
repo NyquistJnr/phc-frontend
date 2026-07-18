@@ -9,12 +9,16 @@ import { useStateAdminInviteUser } from "@/src/hooks/useUsers";
 import { useFacilities } from "@/src/hooks/useFacilities";
 
 const rolesList = [
+  { name: "State Admin", value: "ADMIN" },
+  { name: "State IT Admin", value: "STATE_IT_ADMIN" },
   { name: "Facility IT Admin", value: "FACILITY_IT_ADMIN" },
+  { name: "Officer In Charge (OIC)", value: "OFFICER_IN_CHARGE" },
   { name: "Doctor", value: "DOCTOR" },
-  { name: "Nurse", value: "NURSE" },
-  { name: "CHEW", value: "CHEW" },
   { name: "Pharmacist", value: "PHARMACIST" },
-  { name: "Lab Technician", value: "LAB_TECHNICIAN" },
+  { name: "Laboratory Technician", value: "LAB_TECHNICIAN" },
+  { name: "Nurse", value: "NURSE" },
+  { name: "Community Health Extension Worker", value: "CHEW" },
+  { name: "Information Health Officer (Records Officer)", value: "IHO" },
 ];
 
 const generatePassword = () => {
