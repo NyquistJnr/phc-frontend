@@ -8,7 +8,9 @@ import DataTable, {
 } from "@/src/components/adminDashboard/generics/DataTable";
 import Pagination from "@/src/components/adminDashboard/generics/Pagination";
 import FilterDropdown from "@/src/components/adminDashboard/generics/FilterDropdown";
-import { useAuditLogs, AuditLog } from "@/src/hooks/useAuditLogs";
+import { useAuditLogs, AuditLog, AuditLogsResponse } from "@/src/hooks/useAuditLogs";
+import AuditLogDetailsModal from "./AuditLogDetailsModal";
+import { useApi } from "@/src/hooks/use-api";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -41,6 +43,67 @@ export default function AuditLogsPage() {
   const [actionFilter, setActionFilter] = useState("All");
   const [currentPage, setCurrentPage] = useState(1);
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const api = useApi();
+
+  const handleExport = async () => {
+    try {
+      setIsExporting(true);
+      
+      const params = new URLSearchParams({
+        page: "1",
+        page_size: "100000",
+      });
+
+      if (moduleFilter && moduleFilter !== "All") params.append("module", moduleFilter);
+      if (actionFilter && actionFilter !== "All") params.append("action", actionFilter);
+      if (debouncedSearch) params.append("search", debouncedSearch);
+
+      const response = await api.get<any>(`/system/audit-logs/?${params.toString()}`);
+      
+      const allLogs: AuditLog[] = response?.results || response?.data?.results || [];
+      
+      if (allLogs.length === 0) {
+        alert("No data available to export");
+        return;
+      }
+      
+      const headers = ["ID", "Actor Name", "Facility", "Action", "Module", "IP Address", "Endpoint", "Timestamp"];
+      const csvRows = [headers.join(",")];
+      
+      allLogs.forEach((log) => {
+        const row = [
+          log.id,
+          `"${(log.actor_name || "").replace(/"/g, '""')}"`,
+          `"${(log.facility_name || "").replace(/"/g, '""')}"`,
+          log.action,
+          `"${(log.module || "").replace(/"/g, '""')}"`,
+          log.ip_address,
+          `"${(log.endpoint || "").replace(/"/g, '""')}"`,
+          log.timestamp,
+        ];
+        csvRows.push(row.join(","));
+      });
+      
+      const csvString = csvRows.join("\n");
+      const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `audit_logs_${new Date().toISOString().slice(0, 10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error("Failed to export logs", error);
+      alert("Failed to export logs");
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -70,6 +133,7 @@ export default function AuditLogsPage() {
 
   const logs = data?.results || [];
   const totalPages = data?.total_pages || 1;
+  const totalLogs = data?.count || 0;
 
   const columns: Column<AuditLog>[] = [
     {
@@ -122,17 +186,28 @@ export default function AuditLogsPage() {
               Track user actions, logins, role changes, and record access
             </p>
           </div>
-          <button className="bg-[#046C3F] text-white px-5 sm:px-6 py-3 rounded-xl font-semibold flex items-center gap-3 hover:bg-[#035a34] transition-colors shadow-sm self-start">
-            <UploadCloud size={20} />
-            Export
+          <button 
+            onClick={handleExport}
+            disabled={isExporting}
+            className="bg-[#046C3F] text-white px-5 sm:px-6 py-3 rounded-xl font-semibold flex items-center gap-3 hover:bg-[#035a34] transition-colors shadow-sm self-start disabled:opacity-70 disabled:cursor-not-allowed"
+          >
+            {isExporting ? <Loader2 size={20} className="animate-spin" /> : <UploadCloud size={20} />}
+            {isExporting ? "Exporting..." : "Export"}
           </button>
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="p-4 sm:p-6 flex flex-col xl:flex-row xl:items-center justify-between gap-4 border-b border-gray-50">
-            <h3 className="font-bold text-gray-700 text-lg">
-              Recent Audit Logs
-            </h3>
+            <div className="flex items-center gap-2">
+              <h3 className="font-bold text-gray-700 text-lg">
+                Recent Audit Logs
+              </h3>
+              {!isLoading && (
+                <span className="bg-emerald-50 text-[#046C3F] px-2.5 py-0.5 rounded-full text-xs font-bold border border-emerald-100">
+                  {totalLogs} {totalLogs === 1 ? 'Record' : 'Records'}
+                </span>
+              )}
+            </div>
 
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
               <div className="relative">
@@ -188,6 +263,10 @@ export default function AuditLogsPage() {
               <DataTable
                 columns={columns}
                 data={logs}
+                onRowClick={(row) => {
+                  setSelectedLog(row);
+                  setIsModalOpen(true);
+                }}
                 emptyMessage={
                   debouncedSearch
                     ? "No logs match your search criteria."
@@ -203,6 +282,12 @@ export default function AuditLogsPage() {
           )}
         </div>
       </div>
+
+      <AuditLogDetailsModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        log={selectedLog} 
+      />
     </div>
   );
 }

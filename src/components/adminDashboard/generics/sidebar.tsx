@@ -47,8 +47,8 @@ const navItems = [
         path: "/dashboard/facility-management/details",
       },
       {
-        name: "Facility Configuration",
-        path: "/dashboard/facility-management/configurations",
+        name: "Departments",
+        path: "/dashboard/facility-management/departments",
       },
     ],
   },
@@ -57,18 +57,18 @@ const navItems = [
     icon: FileText,
     children: [
       { name: "Audit Logs", path: "/dashboard/system-logs/audit" },
-      { name: "System Logs", path: "/dashboard/system-logs/system" },
-      { name: "Database Logs", path: "/dashboard/system-logs/database" },
+      // { name: "System Logs", path: "/dashboard/system-logs/system" },
+      // { name: "Database Logs", path: "/dashboard/system-logs/database" },
     ],
   },
-  {
-    name: "Security",
-    icon: ShieldCheck,
-    children: [
-      { name: "Role Permission", path: "/dashboard/security/roles" },
-      { name: "Access Control", path: "/dashboard/security/access-control" },
-    ],
-  },
+  // {
+  //   name: "Security",
+  //   icon: ShieldCheck,
+  //   children: [
+  //     { name: "Role Permission", path: "/dashboard/security/roles" },
+  //     { name: "Access Control", path: "/dashboard/security/access-control" },
+  //   ],
+  // },
 ];
 
 export const Sidebar = () => {
@@ -215,7 +215,7 @@ export const Sidebar = () => {
         </nav>
 
         <div className="p-4 space-y-2 border-t border-gray-100 bg-gray-50/50 mt-auto">
-          <Link
+          {/* <Link
             href="/dashboard/system-settings"
             className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
               pathname === "/dashboard/system-settings"
@@ -228,7 +228,7 @@ export const Sidebar = () => {
               className={pathname === "/dashboard/system-settings" ? "text-white" : "text-gray-400"}
             />
             <span className="text-sm font-medium">System Settings</span>
-          </Link>
+          </Link> */}
           <button
             onClick={handleLogout}
             className="w-full flex items-center gap-3 px-4 py-3 text-[#F33131] hover:bg-red-50 hover:text-red-700 rounded-xl transition-all duration-200 group"

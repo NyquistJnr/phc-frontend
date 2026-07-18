@@ -1,158 +1,19 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import {
-  Search,
-  Eye,
-  Edit2,
-  Loader2,
-  Building2,
-  CheckCircle2,
-  XCircle,
-  PowerOff,
-  RotateCcw,
-} from "lucide-react";
-import { toast } from "react-toastify";
+import { useSession } from "next-auth/react";
+import { Users, Loader2, Building2, UserCircle, ActivitySquare, CheckCircle2 } from "lucide-react";
 import Header from "@/src/components/adminDashboard/generics/header";
-import DataTable, {
-  Column,
-} from "@/src/components/adminDashboard/generics/DataTable";
-import Pagination from "@/src/components/adminDashboard/generics/Pagination";
-import ActionMenu from "@/src/components/adminDashboard/generics/ActionMenu";
-import FilterDropdown from "@/src/components/adminDashboard/generics/FilterDropdown";
 import MetricCard from "@/src/components/adminDashboard/generics/MetricCard";
-import {
-  useFacilities,
-  useFacilityStats,
-  useToggleFacilityStatus,
-  Facility,
-} from "@/src/hooks/useFacilities";
-
-const ITEMS_PER_PAGE = 10;
+import { useItAdminFacilityInfo } from "@/src/hooks/useItAdminDashboard";
+import { StatusBadge } from "@/src/components/generic/ui/TableHelpers";
 
 export default function FacilityDetails() {
-  const router = useRouter();
-
-  const [searchInput, setSearchInput] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [stateFilter, setStateFilter] = useState("All");
-  const [lgaFilter, setLgaFilter] = useState("All");
-  const [statusFilter, setStatusFilter] = useState("All");
-  const [currentPage, setCurrentPage] = useState(1);
-
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedSearch(searchInput);
-      setCurrentPage(1);
-    }, 500);
-    return () => clearTimeout(handler);
-  }, [searchInput]);
-
-  const isActiveParam =
-    statusFilter === "Active"
-      ? true
-      : statusFilter === "Inactive"
-        ? false
-        : undefined;
-
-  const { data: statsData } = useFacilityStats();
-  const { data: facilitiesData, isLoading } = useFacilities({
-    page: currentPage,
-    pageSize: ITEMS_PER_PAGE,
-    search: debouncedSearch || undefined,
-    state: stateFilter,
-    lga: lgaFilter,
-    isActive: isActiveParam,
-  });
-
-  const toggleStatusMutation = useToggleFacilityStatus();
-
-  const facilities = facilitiesData?.results || [];
-  const totalPages = facilitiesData?.total_pages || 1;
-
-  const columns: Column<Facility>[] = [
-    { key: "code", label: "Facility Code", render: (row) => row.code || "N/A" },
-    { key: "name", label: "Facility Name", render: (row) => row.name },
-    { key: "state", label: "State", render: (row) => row.state },
-    { key: "lga", label: "LGA", render: (row) => row.lga },
-    {
-      key: "is_active",
-      label: "Status",
-      render: (row) => (
-        <span
-          className={`px-3 py-1 rounded-full text-[11px] font-bold tracking-tight ${
-            row.is_active
-              ? "bg-[#D2F1DF] text-[#046C3F]"
-              : "bg-[#FFE5D3] text-[#FF8433]"
-          }`}
-        >
-          {row.is_active ? "Active" : "Inactive"}
-        </span>
-      ),
-    },
-    {
-      key: "action",
-      label: "Action",
-      render: (row) => (
-        <ActionMenu
-          items={[
-            {
-              label: "View / Edit Details",
-              icon: Eye,
-              onClick: () =>
-                router.push(`/dashboard/facility-management/edit?id=${row.id}`),
-            },
-            row.is_active
-              ? {
-                  label: "Suspend Facility",
-                  icon: PowerOff,
-                  onClick: () => {
-                    toggleStatusMutation.mutate(
-                      { facilityId: row.id, isActive: false },
-                      {
-                        onSuccess: (data: any) =>
-                          toast.success(
-                            data?.message || `${row.name} has been suspended.`,
-                          ),
-                        onError: (error: any) =>
-                          toast.error(
-                            error.message || "Failed to suspend facility.",
-                          ),
-                      },
-                    );
-                  },
-                  variant: "danger" as const,
-                }
-              : {
-                  label: "Reactivate Facility",
-                  icon: RotateCcw,
-                  onClick: () => {
-                    toggleStatusMutation.mutate(
-                      { facilityId: row.id, isActive: true },
-                      {
-                        onSuccess: (data: any) =>
-                          toast.success(
-                            data?.message ||
-                              `${row.name} has been reactivated.`,
-                          ),
-                        onError: (error: any) =>
-                          toast.error(
-                            error.message || "Failed to reactivate facility.",
-                          ),
-                      },
-                    );
-                  },
-                },
-          ]}
-        />
-      ),
-    },
-  ];
+  const { data: session } = useSession();
+  const { data: facility, isLoading } = useItAdminFacilityInfo();
 
   const breadcrumbs = [
     { label: "Facility Management" },
-    { label: "Facility Details", active: true },
+    { label: "My Facility Details", active: true },
   ];
 
   return (
@@ -165,111 +26,116 @@ export default function FacilityDetails() {
             Facility Details
           </h2>
           <p className="text-gray-600 font-medium">
-            View and manage registered health facilities.
+            View detailed information about your assigned facility.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <MetricCard
-            icon={Building2}
-            title="Total Facilities"
-            value={String(statsData?.total_facilities || 0)}
-            colorClass="bg-white border border-gray-100"
-          />
-          <MetricCard
-            icon={CheckCircle2}
-            title="Active Facilities"
-            value={String(statsData?.active_facilities || 0)}
-            colorClass="bg-[#046C3F] text-white"
-          />
-          <MetricCard
-            icon={XCircle}
-            title="Suspended Facilities"
-            value={String(statsData?.suspended_facilities || 0)}
-            colorClass="bg-white border border-gray-100"
-          />
-        </div>
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+            <Loader2 className="animate-spin mb-4 text-[#046C3F]" size={32} />
+            <p className="text-sm font-medium">Fetching facility details...</p>
+          </div>
+        ) : facility ? (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <MetricCard
+                icon={Users}
+                title="Total Patients"
+                value={String(facility.patient_count || 0)}
+                colorClass="bg-[#046C3F] text-white"
+              />
+              <MetricCard
+                icon={UserCircle}
+                title="Total Staff"
+                value={String(facility.staff_count || 0)}
+                colorClass="bg-white border border-gray-100"
+              />
+              <MetricCard
+                icon={ActivitySquare}
+                title="Departments"
+                value={String(facility.department_count || 0)}
+                colorClass="bg-white border border-gray-100"
+              />
+            </div>
 
-        <div className="bg-white rounded-2xl sm:rounded-3xl shadow-sm border border-gray-100">
-          <div className="p-4 sm:p-6 flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-gray-50">
-            <h3 className="font-bold text-gray-700 text-lg shrink-0">
-              Facilities
-            </h3>
-
-            <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3">
-              <div className="relative">
-                <Search
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                  size={16}
-                />
-                <input
-                  type="text"
-                  value={searchInput}
-                  onChange={(e) => setSearchInput(e.target.value)}
-                  placeholder="Search by Code, name, state..."
-                  className="pl-10 pr-4 py-2 bg-[#F9FAFB] border border-gray-200 rounded-lg text-sm w-full sm:w-72 focus:outline-none focus:ring-1 focus:ring-[#1AC073] transition-colors"
+            <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 sm:p-8">
+              <div className="flex items-center justify-between border-b border-gray-100 pb-6 mb-6">
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900">General Information</h3>
+                  <p className="text-sm text-gray-500 mt-1">Key details and identifiers for this facility.</p>
+                </div>
+                <StatusBadge 
+                  label={facility.is_active ? "Active" : "Suspended"} 
+                  bgColorHex={facility.is_active ? "#D2F1DF" : "#FFE5D3"}
+                  textColorHex={facility.is_active ? "#046C3F" : "#FF8433"}
                 />
               </div>
-              <FilterDropdown
-                label="State"
-                options={["All", "Plateau", "Lagos"]}
-                selected={stateFilter}
-                onChange={(v) => {
-                  setStateFilter(v);
-                  setCurrentPage(1);
-                }}
-              />
-              <FilterDropdown
-                label="LGA"
-                options={[
-                  "All",
-                  "Mikang North",
-                  "Mikang West",
-                  "Jos North",
-                  "Jos South",
-                ]}
-                selected={lgaFilter}
-                onChange={(v) => {
-                  setLgaFilter(v);
-                  setCurrentPage(1);
-                }}
-              />
-              <FilterDropdown
-                label="Status"
-                options={["All", "Active", "Inactive"]}
-                selected={statusFilter}
-                onChange={(v) => {
-                  setStatusFilter(v);
-                  setCurrentPage(1);
-                }}
-              />
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                <DetailItem label="Facility Code" value={facility.code} />
+                <DetailItem label="Facility Name" value={facility.name} />
+                <DetailItem label="Facility Type" value={facility.facility_type} />
+                <DetailItem label="Facility Level" value={facility.level} />
+                <DetailItem label="State" value={facility.state} />
+                <DetailItem label="LGA" value={facility.lga} />
+                <DetailItem label="Ward" value={facility.ward} />
+                <DetailItem label="Address" value={facility.address} />
+              </div>
+
+              <div className="mt-8 pt-8 border-t border-gray-100">
+                <h3 className="text-lg font-bold text-gray-900 mb-6">Management Team</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                  <div className="flex items-start gap-4 p-4 rounded-2xl bg-gray-50/50 border border-gray-100">
+                    <div className="w-12 h-12 rounded-full bg-[#EAF7F1] flex items-center justify-center text-[#046C3F] shrink-0">
+                      <UserCircle size={24} />
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-1">Facility Manager</p>
+                      <p className="font-semibold text-gray-900 text-lg">{facility.manager_name || "N/A"}</p>
+                      {(facility as any).manager_email && (
+                        <p className="text-sm text-gray-500 mt-1">{(facility as any).manager_email}</p>
+                      )}
+                      {(facility as any).manager_phone && (
+                        <p className="text-sm text-gray-500">{(facility as any).manager_phone}</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-4 p-4 rounded-2xl bg-gray-50/50 border border-gray-100">
+                    <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 shrink-0">
+                      <CheckCircle2 size={24} />
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-1">IT Admin</p>
+                      <p className="font-semibold text-gray-900 text-lg">{facility.it_admin_name || "N/A"}</p>
+                      {(facility as any).it_admin_email && (
+                        <p className="text-sm text-gray-500 mt-1">{(facility as any).it_admin_email}</p>
+                      )}
+                      {(facility as any).it_admin_phone && (
+                        <p className="text-sm text-gray-500">{(facility as any).it_admin_phone}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
+          </>
+        ) : (
+          <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center">
+            <Building2 className="mx-auto text-gray-300 mb-4" size={48} />
+            <h3 className="text-lg font-bold text-gray-900 mb-2">No Facility Found</h3>
+            <p className="text-gray-500">You are not currently assigned to any facility or the facility data is unavailable.</p>
           </div>
-          {isLoading ? (
-            <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-              <Loader2 className="animate-spin mb-4 text-[#046C3F]" size={32} />
-              <p className="text-sm font-medium">Fetching facilities...</p>
-            </div>
-          ) : (
-            <>
-              <DataTable
-                columns={columns}
-                data={facilities}
-                emptyMessage={
-                  debouncedSearch
-                    ? "No facilities match your search criteria."
-                    : "No facilities found."
-                }
-              />
-              <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={setCurrentPage}
-              />
-            </>
-          )}
-        </div>
+        )}
       </div>
+    </div>
+  );
+}
+
+function DetailItem({ label, value }: { label: string; value?: string | null }) {
+  return (
+    <div>
+      <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-1.5">{label}</p>
+      <p className="font-semibold text-gray-900">{value || "N/A"}</p>
     </div>
   );
 }

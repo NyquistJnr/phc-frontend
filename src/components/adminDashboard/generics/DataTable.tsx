@@ -16,6 +16,7 @@ interface DataTableProps<T> {
   data: T[];
   onSort?: (key: string, direction: "asc" | "desc") => void;
   emptyMessage?: string;
+  onRowClick?: (row: T) => void;
 }
 
 export default function DataTable<T>({
@@ -23,6 +24,7 @@ export default function DataTable<T>({
   data,
   onSort,
   emptyMessage = "No data found.",
+  onRowClick,
 }: DataTableProps<T>) {
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
@@ -74,7 +76,11 @@ export default function DataTable<T>({
             </tr>
           ) : (
             data.map((row, idx) => (
-              <tr key={idx} className="hover:bg-gray-50/80 transition-colors">
+              <tr 
+                key={idx} 
+                className={`hover:bg-gray-50/80 transition-colors ${onRowClick ? "cursor-pointer" : ""}`}
+                onClick={() => onRowClick?.(row)}
+              >
                 {columns.map((col) => (
                   <td
                     key={col.key}

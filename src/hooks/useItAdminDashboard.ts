@@ -102,3 +102,37 @@ export function useItAdminSystemAlerts() {
     enabled: api.isAuthenticated && !api.isLoading,
   });
 }
+
+// 5. Facility Info
+export interface ITAdminFacilityInfo {
+  id: string;
+  code: string;
+  name: string;
+  facility_type: string;
+  state: string;
+  lga: string;
+  ward: string;
+  address: string;
+  level: string;
+  manager_name: string;
+  it_admin_name: string;
+  patient_count: number;
+  staff_count: number;
+  department_count: number;
+  is_active: boolean;
+  suspended_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export function useItAdminFacilityInfo() {
+  const api = useApi();
+
+  return useQuery({
+    queryKey: ["itAdminFacilityInfo"],
+    queryFn: async () => {
+      return await api.get<ITAdminFacilityInfo>("/facilities/it-admin/facility-info/");
+    },
+    enabled: api.isAuthenticated && !api.isLoading,
+  });
+}
