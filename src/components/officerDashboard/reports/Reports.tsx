@@ -97,7 +97,7 @@ export default function ReportsView() {
     return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
-  const handleExportClick = (date: string) => {
+  const handleExportClick = (date: string | null) => {
     setSelectedReportDate(date);
     setSelectedModules(ALL_MODULES); // Reset checkboxes to all checked by default
     setExportModalOpen(true);
@@ -130,36 +130,83 @@ export default function ReportsView() {
       <div className="hidden print:block absolute inset-0 bg-white z-[99999] p-8">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-8 border-b pb-4">
-            <h1 className="text-3xl font-bold mb-2">Facility Daily Activity Report</h1>
+            <h1 className="text-3xl font-bold mb-2">
+              {selectedReportDate ? "Facility Daily Activity Report" : "Facility Period Activity Report"}
+            </h1>
             <p className="text-gray-500 text-lg">
-              Report Date: {selectedReportDate ? formatDisplayDate(selectedReportDate) : ''}
+              {selectedReportDate 
+                ? `Report Date: ${formatDisplayDate(selectedReportDate)}` 
+                : `Period: ${getCustomDateString(startDate, endDate)}`}
             </p>
           </div>
           
           <div className="mb-6">
             <h2 className="text-xl font-semibold mb-4">Exported Modules</h2>
-            <div className="grid grid-cols-2 gap-4">
-              {ALL_MODULES.map(mod => {
-                if (!selectedModules.includes(mod)) return null;
-                
-                // Try to map to the report keys if they exist (rough mapping for the print view)
-                let val: string | number = "N/A";
-                if (currentReportData) {
-                  if (mod === "patients") val = currentReportData.patient_visits;
-                  else if (mod === "appointments") val = currentReportData.appointments;
-                  else if (mod === "prescriptions") val = currentReportData.prescriptions;
-                  else if (mod === "lab tests") val = currentReportData.lab_tests;
-                  else if (mod === "health promotions") val = currentReportData.diagnosis; // mock mapping
-                }
+            
+            {selectedReportDate ? (
+              <div className="grid grid-cols-2 gap-4">
+                {ALL_MODULES.map(mod => {
+                  if (!selectedModules.includes(mod)) return null;
+                  
+                  let val: string | number = "N/A";
+                  if (currentReportData) {
+                    if (mod === "patients") val = currentReportData.patient_visits;
+                    else if (mod === "appointments") val = currentReportData.appointments;
+                    else if (mod === "prescriptions") val = currentReportData.prescriptions;
+                    else if (mod === "lab tests") val = currentReportData.lab_tests;
+                    else if (mod === "health promotions") val = currentReportData.diagnosis; 
+                  }
 
-                return (
-                  <div key={mod} className="flex justify-between items-center p-3 border rounded-lg">
-                    <span className="capitalize font-medium text-gray-700">{mod.replace('_', ' ')}</span>
-                    <span className="font-bold">{val}</span>
-                  </div>
-                );
-              })}
-            </div>
+                  return (
+                    <div key={mod} className="flex justify-between items-center p-3 border rounded-lg">
+                      <span className="capitalize font-medium text-gray-700">{mod.replace('_', ' ')}</span>
+                      <span className="font-bold">{val}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <table className="w-full text-left border-collapse border border-gray-200">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-200">
+                    <th className="p-3 font-semibold text-gray-700 border-r border-gray-200">Date</th>
+                    {ALL_MODULES.map(mod => {
+                      if (!selectedModules.includes(mod)) return null;
+                      return (
+                        <th key={mod} className="p-3 font-semibold text-gray-700 capitalize border-r border-gray-200">
+                          {mod.replace('_', ' ')}
+                        </th>
+                      );
+                    })}
+                  </tr>
+                </thead>
+                <tbody>
+                  {dailyReports.map((r: any, idx: number) => (
+                    <tr key={idx} className="border-b border-gray-200">
+                      <td className="p-3 border-r border-gray-200 font-medium">{formatDisplayDate(r.date)}</td>
+                      {ALL_MODULES.map(mod => {
+                        if (!selectedModules.includes(mod)) return null;
+                        let val: string | number = "N/A";
+                        if (mod === "patients") val = r.patient_visits;
+                        else if (mod === "appointments") val = r.appointments;
+                        else if (mod === "prescriptions") val = r.prescriptions;
+                        else if (mod === "lab tests") val = r.lab_tests;
+                        else if (mod === "health promotions") val = r.diagnosis; 
+                        
+                        return (
+                          <td key={mod} className="p-3 border-r border-gray-200">{val}</td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                  {dailyReports.length === 0 && (
+                    <tr>
+                      <td colSpan={selectedModules.length + 1} className="p-4 text-center text-gray-500">No records found.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
       </div>
@@ -219,15 +266,13 @@ export default function ReportsView() {
                 <h2 className="text-[17px] font-bold text-gray-900">Daily Activity Report</h2>
                 
                 <div className="flex flex-wrap items-center gap-3">
-                  <div className="relative opacity-50 cursor-not-allowed">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-                    <input 
-                      type="text" 
-                      placeholder="Search reports..." 
-                      disabled
-                      className="pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm w-full sm:w-[240px] focus:outline-none transition-all placeholder:text-gray-400 cursor-not-allowed"
-                    />
-                  </div>
+                  <button 
+                    className="flex items-center gap-2 px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-semibold text-gray-600 hover:bg-gray-100 transition-colors"
+                    onClick={() => handleExportClick(null)}
+                  >
+                    <Upload size={16} />
+                    Export Table
+                  </button>
                 </div>
               </div>
 
@@ -312,8 +357,12 @@ export default function ReportsView() {
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg relative z-10 overflow-hidden flex flex-col max-h-[90vh]">
             <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
               <div>
-                <h3 className="text-lg font-bold text-gray-900">Export Report</h3>
-                <p className="text-sm text-gray-500 mt-1">Select modules to include in the exported report for {selectedReportDate ? formatDisplayDate(selectedReportDate) : ''}.</p>
+                <h3 className="text-lg font-bold text-gray-900">
+                  {selectedReportDate ? "Export Daily Report" : "Export Period Report"}
+                </h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  Select modules to include in the exported report for {selectedReportDate ? formatDisplayDate(selectedReportDate) : getCustomDateString(startDate, endDate)}.
+                </p>
               </div>
               <button 
                 onClick={() => setExportModalOpen(false)}
