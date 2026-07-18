@@ -1,36 +1,68 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   ChevronDown, Search,
-  ListFilter, Home, Calendar, Check, Users, Stethoscope, ClipboardList, Folder
+  ListFilter, Home, Check, Users, Stethoscope, ClipboardList, Folder
 } from 'lucide-react';
 import OfficerDashboardHeader from "@/src/components/officerDashboard/generics/OfficerDashboardHeader";
+import DateRangeFilter from "@/src/components/generic/ui/DateRangeFilter";
+import {
+  useClinicalStats,
+  useRecentAppointments,
+} from "@/src/hooks/core/use-clinical-analytics";
 
 export default function PatientRecordsSearch() {
-  // State to manage the open/close of the Module dropdown
-  const [isModuleDropdownOpen, setIsModuleDropdownOpen] = useState(false); // Changed to false so it doesn't open on load
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [page, setPage] = useState(1);
+
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery), 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Status/Module filters are kept for UI purposes as they aren't explicitly requested to be wired to the API in the docs
+  // but if the API supported them, we'd add them to the hook.
+  const [isModuleDropdownOpen, setIsModuleDropdownOpen] = useState(false);
   const [activeModule, setActiveModule] = useState('All Module');
 
-  // State to manage the open/close of the Status dropdown
   const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
   const [activeStatus, setActiveStatus] = useState('All Status');
 
-  const patientsData = [
-    { id: 'PAT-PLT-000234', name: 'Aisha Mohammed', module: 'Consultation', time: '2026-03-08 08:42:15', status: 'Seen', statusStyle: 'bg-[#EBF7F2] text-[#2A6543]' },
-    { id: 'PAT-PLT-000234', name: 'Aisha Mohammed', module: 'Laboratory', time: '2026-03-08 08:31:02', status: 'Waiting', statusStyle: 'bg-[#FFF5EB] text-[#F97316]' },
-    { id: 'PAT-PLT-000234', name: 'Fatima Bello', module: 'Pharmacy', time: '2026-03-08 08:15:44', status: 'Seen', statusStyle: 'bg-[#EBF7F2] text-[#2A6543]' },
-    { id: 'PAT-PLT-000234', name: 'Usman Garba', module: 'Consultation', time: '2026-03-08 07:58:33', status: 'Referred', statusStyle: 'bg-[#FEF2F2] text-[#EF4444]' },
-    { id: 'PAT-PLT-000234', name: 'Halima Sani', module: 'Consultation', time: '2026-03-08 07:44:00', status: 'Seen', statusStyle: 'bg-[#EBF7F2] text-[#2A6543]' },
-    { id: 'PAT-PLT-000234', name: 'Halima Sani', module: 'Consultation', time: '2026-03-08 07:44:00', status: 'Seen', statusStyle: 'bg-[#EBF7F2] text-[#2A6543]' },
-    { id: 'PAT-PLT-000234', name: 'Halima Sani', module: 'Consultation', time: '2026-03-08 07:44:00', status: 'Seen', statusStyle: 'bg-[#EBF7F2] text-[#2A6543]' },
-    { id: 'PAT-PLT-000234', name: 'Halima Sani', module: 'Consultation', time: '2026-03-08 07:44:00', status: 'Seen', statusStyle: 'bg-[#EBF7F2] text-[#2A6543]' },
-    { id: 'PAT-PLT-000234', name: 'Halima Sani', module: 'Consultation', time: '2026-03-08 07:44:00', status: 'Seen', statusStyle: 'bg-[#EBF7F2] text-[#2A6543]' },
-    { id: 'PAT-PLT-000234', name: 'Halima Sani', module: 'Consultation', time: '2026-03-08 07:44:00', status: 'Seen', statusStyle: 'bg-[#EBF7F2] text-[#2A6543]' },
-  ];
+  const { data: clinicalStats, isLoading: isLoadingStats } = useClinicalStats({
+    start_date: startDate,
+    end_date: endDate,
+  });
+
+  const { data: recentPatientsData, isLoading: isLoadingPatients } = useRecentAppointments({
+    search: debouncedSearch,
+    page: page,
+    page_size: 5,
+  });
 
   const modules = ['All Module', 'Consultations', 'Laboratory', 'Pharmacy'];
   const statusOptions = ['All Status', 'Seen', 'Waiting', 'Referred'];
+
+  const recentPatients = recentPatientsData?.results || [];
+  const totalCount = recentPatientsData?.count || 0;
+  const totalPages = Math.ceil(totalCount / 5) || 1;
+
+  const handleNextPage = () => {
+    if (page < totalPages) setPage(p => p + 1);
+  };
+
+  const handlePrevPage = () => {
+    if (page > 1) setPage(p => p - 1);
+  };
+
+  const formatDate = (dateString: string) => {
+    if (!dateString) return "-";
+    return new Date(dateString).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
 
   return (
     <div className="flex-1 flex flex-col h-full min-h-screen bg-[#F8FAFC] font-sans min-w-0 overflow-hidden">
@@ -42,13 +74,28 @@ export default function PatientRecordsSearch() {
       {/* Scrollable Page Content */}
       <div className="flex-1 overflow-auto p-6 sm:p-8">
         
-        {/* Breadcrumbs */}
-        <div className="flex items-center gap-2 text-sm text-gray-400 mb-6 font-medium">
-          <Home size={14} className="text-[#2A6543]" />
-          <span>/</span>
-          <span>Patient Records</span>
-          <span>/</span>
-          <span className="text-gray-500">Search Patient</span>
+        {/* Breadcrumbs & Date Range Filter Row */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+          <div className="flex items-center gap-2 text-sm text-gray-400 font-medium">
+            <Home size={14} className="text-[#2A6543]" />
+            <span>/</span>
+            <span>Patient Records</span>
+            <span>/</span>
+            <span className="text-gray-500">Search Patient</span>
+          </div>
+
+          <DateRangeFilter
+            startDate={startDate}
+            endDate={endDate}
+            onApply={(start, end) => {
+              setStartDate(start);
+              setEndDate(end);
+            }}
+            onClear={() => {
+              setStartDate("");
+              setEndDate("");
+            }}
+          />
         </div>
 
         {/* TOP METRICS GRID */}
@@ -59,24 +106,21 @@ export default function PatientRecordsSearch() {
               <div className="p-2 bg-white/10 rounded-lg">
                 <Users size={18} className="text-white" />
               </div>
-              <button className="flex items-center gap-1 text-xs text-white/80 hover:text-white transition-colors font-medium">
-                This Week <ChevronDown size={14} />
-              </button>
             </div>
             <div>
               <p className="text-[13px] font-medium mb-2.5">Today&apos;s Patients</p>
               <div className="flex justify-between items-end">
                 <div>
                   <p className="text-[11px] text-[#F59E0B] font-medium mb-0.5">Waiting</p>
-                  <p className="text-2xl font-bold leading-none">34</p>
+                  <p className="text-2xl font-bold leading-none">{isLoadingStats ? "..." : clinicalStats?.todays_patients?.waiting_patients || 0}</p>
                 </div>
                 <div>
                   <p className="text-[11px] text-[#4ADE80] font-medium mb-0.5">Seen</p>
-                  <p className="text-2xl font-bold leading-none">67</p>
+                  <p className="text-2xl font-bold leading-none">{isLoadingStats ? "..." : clinicalStats?.todays_patients?.seen_attended_to_patient || 0}</p>
                 </div>
                 <div>
                   <p className="text-[11px] text-[#60A5FA] font-medium mb-0.5">Referred</p>
-                  <p className="text-2xl font-bold leading-none">12</p>
+                  <p className="text-2xl font-bold leading-none">{isLoadingStats ? "..." : clinicalStats?.todays_patients?.referred_patients?.total || 0}</p>
                 </div>
               </div>
             </div>
@@ -84,8 +128,8 @@ export default function PatientRecordsSearch() {
 
           {/* Standard Metric Cards */}
           {[
-            { title: 'Consultations', value: '60', icon: Stethoscope },
-            { title: 'Lab Tests', value: '45', icon: ClipboardList },
+            { title: 'Consultations', value: isLoadingStats ? "..." : clinicalStats?.consultations || 0, icon: Stethoscope },
+            { title: 'Lab Tests', value: isLoadingStats ? "..." : clinicalStats?.lab_tests || 0, icon: ClipboardList },
             { title: 'Pending Reports', value: '10', icon: Folder }
           ].map((card, idx) => (
             <div key={idx} className="bg-white rounded-[20px] p-5 shadow-sm border border-gray-100 flex flex-col justify-between h-[140px]">
@@ -93,9 +137,6 @@ export default function PatientRecordsSearch() {
                 <div className="p-2 bg-gray-50 rounded-lg">
                   <card.icon size={18} className="text-gray-600" />
                 </div>
-                <button className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 font-medium transition-colors">
-                  This Week <ChevronDown size={14} />
-                </button>
               </div>
               <div>
                 <p className="text-[13px] font-medium text-gray-500 mb-1">{card.title}</p>
@@ -118,16 +159,15 @@ export default function PatientRecordsSearch() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                 <input 
                   type="text" 
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setPage(1); // reset to page 1 on search
+                  }}
                   placeholder="Search patient by name or ID..." 
                   className="pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm w-full sm:w-[240px] focus:outline-none focus:border-[#2A6543] focus:ring-1 focus:ring-[#2A6543] transition-all placeholder:text-gray-400"
                 />
               </div>
-              
-              {/* Date Range Button */}
-              <button className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-                <Calendar size={16} className="text-gray-400" />
-                Date Range
-              </button>
 
               {/* Module Dropdown Container */}
               <div className="relative">
@@ -226,24 +266,55 @@ export default function PatientRecordsSearch() {
             <table className="w-full text-left border-collapse min-w-[900px]">
               <thead>
                 <tr className="border-b border-gray-50">
-                  <th className="py-4 px-6 font-semibold text-gray-500 text-xs whitespace-nowrap"><div className="flex items-center gap-2">Patient ID <ListFilter size={14} className="text-gray-400"/></div></th>
                   <th className="py-4 px-6 font-semibold text-gray-500 text-xs whitespace-nowrap"><div className="flex items-center gap-2">Patient Name <ListFilter size={14} className="text-gray-400"/></div></th>
-                  <th className="py-4 px-6 font-semibold text-gray-500 text-xs whitespace-nowrap"><div className="flex items-center gap-2">Module <ListFilter size={14} className="text-gray-400"/></div></th>
+                  <th className="py-4 px-6 font-semibold text-gray-500 text-xs whitespace-nowrap"><div className="flex items-center gap-2">Phone Number <ListFilter size={14} className="text-gray-400"/></div></th>
+                  <th className="py-4 px-6 font-semibold text-gray-500 text-xs whitespace-nowrap"><div className="flex items-center gap-2">Email <ListFilter size={14} className="text-gray-400"/></div></th>
                   <th className="py-4 px-6 font-semibold text-gray-500 text-xs whitespace-nowrap"><div className="flex items-center gap-2">Timestamp <ListFilter size={14} className="text-gray-400"/></div></th>
                   <th className="py-4 px-6 font-semibold text-gray-500 text-xs whitespace-nowrap"><div className="flex items-center gap-2">Status <ListFilter size={14} className="text-gray-400"/></div></th>
                   <th className="py-4 px-6 font-semibold text-gray-500 text-xs whitespace-nowrap"><div className="flex items-center gap-2">Action <ListFilter size={14} className="text-gray-400"/></div></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {patientsData.map((patient, index) => (
+                {isLoadingPatients ? (
+                   <tr>
+                     <td colSpan={6} className="py-8 px-6 text-[13px] text-gray-400 text-center">Loading patients...</td>
+                   </tr>
+                ) : recentPatients.length === 0 ? (
+                   <tr>
+                     <td colSpan={6} className="py-8 px-6 text-[13px] text-gray-400 text-center">No recent patients found.</td>
+                   </tr>
+                ) : recentPatients.map((patient: any, index: number) => {
+                   const status = patient.recent_appointment_status;
+                   const statusStyle = 
+                     status === "Seen" ? "bg-[#EBF7F2] text-[#2A6543]" :
+                     status === "Referred" ? "bg-red-50 text-red-600" :
+                     "bg-orange-50 text-orange-600"; // Waiting
+                     
+                   return (
                   <tr key={index} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="py-5 px-6 text-[13px] text-gray-500 font-medium whitespace-nowrap">{patient.id}</td>
-                    <td className="py-5 px-6 text-[13px] text-gray-600 font-medium whitespace-nowrap">{patient.name}</td>
-                    <td className="py-5 px-6 text-[13px] text-gray-500 whitespace-nowrap">{patient.module}</td>
-                    <td className="py-5 px-6 text-[13px] text-gray-500 whitespace-nowrap font-mono">{patient.time}</td>
+                    <td className="py-5 px-6 text-[13px] text-gray-600 font-medium whitespace-nowrap">{patient.first_name} {patient.last_name}</td>
+                    <td className="py-5 px-6 text-[13px] text-gray-500 whitespace-nowrap">
+                      {patient.phone_number ? (
+                        patient.phone_number
+                      ) : (
+                        <span className="px-2 py-0.5 bg-gray-100 text-gray-500 rounded text-[11px] italic">
+                          Not Applicable (Minor)
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-5 px-6 text-[13px] text-gray-500 whitespace-nowrap">
+                      {patient.email ? (
+                        patient.email
+                      ) : (
+                        <span className="px-2 py-0.5 bg-gray-100 text-gray-500 rounded text-[11px] italic">
+                          Not Applicable (Minor)
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-5 px-6 text-[13px] text-gray-500 whitespace-nowrap font-mono">{formatDate(patient.recent_appointment_date)}</td>
                     <td className="py-5 px-6 whitespace-nowrap">
-                      <span className={`px-3 py-1 rounded-full text-[11px] font-bold ${patient.statusStyle}`}>
-                        {patient.status}
+                      <span className={`px-3 py-1 rounded-full text-[11px] font-bold ${statusStyle}`}>
+                        {status || "Unknown"}
                       </span>
                     </td>
                     <td className="py-5 px-6 whitespace-nowrap">
@@ -252,36 +323,33 @@ export default function PatientRecordsSearch() {
                       </button>
                     </td>
                   </tr>
-                ))}
+                )})}
               </tbody>
             </table>
           </div>
 
           {/* Pagination Controls */}
-          <div className="p-6 border-t border-gray-50 flex justify-center items-center gap-2 mt-auto">
-            <button className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-400 hover:text-gray-600 transition-colors mr-2">
-              &larr; Previous
-            </button>
-            <button className="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-900 text-white text-sm font-medium shadow-sm">
-              1
-            </button>
-            <button className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100 text-sm font-medium transition-colors">
-              2
-            </button>
-            <button className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100 text-sm font-medium transition-colors">
-              3
-            </button>
-            <span className="text-gray-400 tracking-widest px-1">...</span>
-            <button className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100 text-sm font-medium transition-colors">
-              67
-            </button>
-            <button className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100 text-sm font-medium transition-colors">
-              68
-            </button>
-            <button className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-900 hover:text-gray-600 transition-colors ml-2">
-              Next &rarr;
-            </button>
-          </div>
+          {recentPatients.length > 0 && (
+            <div className="p-6 border-t border-gray-50 flex justify-center items-center gap-2 mt-auto">
+              <button 
+                onClick={handlePrevPage}
+                disabled={page <= 1}
+                className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-400 hover:text-gray-600 disabled:opacity-50 transition-colors mr-2"
+              >
+                &larr; Previous
+              </button>
+              
+              <span className="text-sm text-gray-500 font-medium">Page {page} of {totalPages}</span>
+
+              <button 
+                onClick={handleNextPage}
+                disabled={page >= totalPages}
+                className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-900 hover:text-gray-600 disabled:opacity-50 transition-colors ml-2"
+              >
+                Next &rarr;
+              </button>
+            </div>
+          )}
 
         </div>
       </div>
