@@ -14,6 +14,7 @@ import {
   ReceiptText,
   Users,
   X,
+  BarChart3,
 } from "lucide-react";
 import { useSidebar } from "@/src/components/adminDashboard/generics/sidebar";
 
@@ -32,6 +33,7 @@ const navItems = [
     icon: AlertOctagon,
     path: "/pharmacist-dashboard/adverse-events",
   },
+  { name: "Reports", icon: BarChart3, path: "/pharmacist-dashboard/reports" },
 ];
 
 export default function PharmacistSidebar() {

@@ -17,6 +17,7 @@ import {
   CalendarDays,
   Shapes,
   Blocks,
+  BarChart3,
 } from "lucide-react";
 import { useSidebar } from "@/src/components/adminDashboard/generics/sidebar";
 
@@ -59,6 +60,7 @@ const navItems = [
     path: "/nurse-dashboard/immunization",
   },
   { name: "Referrals", icon: Share2, path: "/nurse-dashboard/referrals" },
+  { name: "Reports", icon: BarChart3, path: "/nurse-dashboard/reports" },
 ];
 
 export const NurseSidebar = () => {

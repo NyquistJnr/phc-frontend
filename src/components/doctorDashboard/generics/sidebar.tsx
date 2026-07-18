@@ -22,6 +22,7 @@ import {
   Shapes,
   Blocks,
   Baby,
+  BarChart3,
 } from "lucide-react";
 import { useSidebar } from "@/src/components/adminDashboard/generics/sidebar";
 
@@ -75,6 +76,7 @@ const navItems = [
     path: "/doctor-dashboard/immunization",
   },
   { name: "Referrals", icon: Share2, path: "/doctor-dashboard/referrals" },
+  { name: "Reports", icon: BarChart3, path: "/doctor-dashboard/reports" },
 ];
 
 export const DoctorSidebar = () => {

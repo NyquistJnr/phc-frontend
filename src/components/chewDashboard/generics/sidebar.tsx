@@ -18,6 +18,7 @@ import {
   Shapes,
   Blocks,
   Baby,
+  BarChart3,
 } from "lucide-react";
 import { useSidebar } from "@/src/components/adminDashboard/generics/sidebar";
 
@@ -64,6 +65,7 @@ const navItems = [
     icon: BarChart2,
     path: "/chew-dashboard/activity-reports",
   },
+  { name: "Reports", icon: BarChart3, path: "/chew-dashboard/reports" },
 ];
 
 export const ChewSidebar = () => {

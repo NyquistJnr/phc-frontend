@@ -50,6 +50,7 @@ export function useComprehensiveModules(params?: {
 export function useModuleCompletionPercentages(params?: {
   start_date?: string;
   end_date?: string;
+  modules?: string;
 }) {
   const api = useApi();
 
@@ -59,6 +60,7 @@ export function useModuleCompletionPercentages(params?: {
       const searchParams = new URLSearchParams();
       if (params?.start_date) searchParams.append("start_date", params.start_date);
       if (params?.end_date) searchParams.append("end_date", params.end_date);
+      if (params?.modules) searchParams.append("modules", params.modules);
 
       const qs = searchParams.toString();
       const res = await api.get<any>(`/reports/module-completion-percentages/${qs ? `?${qs}` : ""}`);

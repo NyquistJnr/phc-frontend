@@ -12,6 +12,7 @@ import {
   LogOut,
   Users,
   X,
+  BarChart3,
 } from "lucide-react";
 import { useSidebar } from "@/src/components/adminDashboard/generics/sidebar";
 
@@ -20,6 +21,7 @@ const navItems = [
   { name: "Laboratory", icon: Beaker, path: "/lab-dashboard/laboratory" },
   { name: "Patients", icon: Users, path: "/lab-dashboard/patients" },
   { name: "Lab Inventory", icon: Box, path: "/lab-dashboard/lab-inventory" },
+  { name: "Reports", icon: BarChart3, path: "/lab-dashboard/reports" },
 ];
 
 export default function LabSidebar() {
