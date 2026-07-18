@@ -31,6 +31,7 @@ import {
   useToggleUserStatus,
   User,
 } from "@/src/hooks/useUsers";
+import { useForgotPassword } from "@/src/hooks/useAuth";
 
 const ROLE_OPTIONS = [
   "All Roles",
@@ -107,6 +108,7 @@ function UserActionMenu({
   const [showResetModal, setShowResetModal] = useState(false);
 
   const { mutate: toggleStatus, isPending: isToggling } = useToggleUserStatus();
+  const { mutate: forgotPassword, isPending: isResetting } = useForgotPassword();
 
   const toggleMenu = () => {
     if (!open && buttonRef.current) {
@@ -165,14 +167,27 @@ function UserActionMenu({
     );
   };
 
+  const handleResetPassword = () => {
+    forgotPassword(row.email, {
+      onSuccess: () => {
+        setShowResetModal(false);
+        showToast(
+          "Email Sent",
+          `Password reset instructions have been sent to ${row.email}`,
+          "success",
+        );
+      },
+      onError: (error: any) => {
+        showToast(
+          "Action Failed",
+          error.message || "Failed to send reset email",
+          "error",
+        );
+      },
+    });
+  };
+
   const items = [
-    {
-      label: "Modify",
-      icon: Edit2,
-      onClick: () =>
-        router.push(`/dashboard/user-management/modify-user?id=${row.id}`),
-      className: "text-gray-700",
-    },
     {
       label: "Reset Password",
       icon: KeyRound,
@@ -275,10 +290,8 @@ function UserActionMenu({
       <ResetPasswordModal
         isOpen={showResetModal}
         onClose={() => setShowResetModal(false)}
-        onContinue={() => {
-          setShowResetModal(false);
-          router.push(`/dashboard/user-management/reset-password?id=${row.id}`);
-        }}
+        onContinue={handleResetPassword}
+        isPending={isResetting}
         userName={`${row.first_name} ${row.last_name}`}
         staffId={row.staff_id || "N/A"}
       />

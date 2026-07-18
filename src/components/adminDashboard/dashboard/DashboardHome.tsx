@@ -21,8 +21,16 @@ import MetricCard from "@/src/components/adminDashboard/generics/MetricCard";
 import StatusRow from "@/src/components/adminDashboard/generics/StatusRow";
 import AlertRow from "@/src/components/adminDashboard/generics/AlertRow";
 import { useAuditLogs, AuditLog } from "@/src/hooks/useAuditLogs";
+import {
+  useItAdminDashboardStats,
+  useItAdminSystemStatus,
+  useItAdminUserActivity,
+  useItAdminSystemAlerts,
+} from "@/src/hooks/useItAdminDashboard";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
+import { useState } from "react";
+import DateRangeFilter from "@/src/components/generic/ui/DateRangeFilter";
 
 const formatTimestamp = (isoString: string) => {
   const date = new Date(isoString);
@@ -52,6 +60,15 @@ export default function Dashboard() {
   const { data: session } = useSession();
   const firstName = session?.user?.first_name || "User";
 
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
+
+  const { data: statsData } = useItAdminDashboardStats(startDate, endDate);
+  const { data: systemStatus } = useItAdminSystemStatus();
+  const { data: userActivity } = useItAdminUserActivity(startDate, endDate);
+  const { data: alertsData, isLoading: isAlertsLoading } =
+    useItAdminSystemAlerts();
+
   const { data: auditData, isLoading: isAuditLoading } = useAuditLogs({
     page: 1,
     pageSize: 4,
@@ -73,21 +90,35 @@ export default function Dashboard() {
             </p>
           </div>
 
-          <div className="bg-white px-5 py-3 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4 w-full sm:w-auto">
-            <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 shrink-0">
-              <Calendar size={20} />
-            </div>
-            <div>
-              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-0.5">
-                Today&apos;s Date
-              </p>
-              <p className="text-sm font-bold text-gray-800">
-                {new Date().toLocaleDateString("en-GB", {
-                  day: "numeric",
-                  month: "long",
-                  year: "numeric",
-                })}
-              </p>
+          <div className="flex items-center gap-4 flex-wrap sm:flex-nowrap">
+            <DateRangeFilter
+              startDate={startDate}
+              endDate={endDate}
+              onApply={(start, end) => {
+                setStartDate(start);
+                setEndDate(end);
+              }}
+              onClear={() => {
+                setStartDate("");
+                setEndDate("");
+              }}
+            />
+            <div className="bg-white px-5 py-3 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4 w-full sm:w-auto">
+              <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 shrink-0">
+                <Calendar size={20} />
+              </div>
+              <div>
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-0.5">
+                  Today&apos;s Date
+                </p>
+                <p className="text-sm font-bold text-gray-800">
+                  {new Date().toLocaleDateString("en-GB", {
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
+                  })}
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -96,20 +127,20 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           <MetricCard
             icon={Users}
-            title="Total User"
-            value="0"
+            title="Total Users"
+            value={statsData?.total_users?.toString() || "0"}
             colorClass="bg-[#046C3F]"
           />
           <MetricCard
             icon={AlertTriangle}
             title="System Alert"
-            value="0"
+            value={statsData?.system_alert_count?.toString() || "0"}
             colorClass="bg-white border border-gray-100"
           />
           <MetricCard
             icon={Activity}
             title="System Uptime"
-            value="0.00"
+            value={statsData?.system_uptime?.replace("%", "") || "0.00"}
             subValue="%"
             colorClass="bg-white border border-gray-100"
           />
@@ -131,30 +162,42 @@ export default function Dashboard() {
               <StatusRow
                 icon={Server}
                 label="Server health"
-                status="Online"
-                badgeColor="bg-emerald-50 text-emerald-600"
-                subText="0.00%"
+                status={systemStatus?.server_health?.status || "Checking..."}
+                badgeColor={
+                  systemStatus?.server_health?.status === "Online"
+                    ? "bg-emerald-50 text-emerald-600"
+                    : "bg-orange-50 text-orange-600"
+                }
+                subText={`${systemStatus?.server_health?.percentage || "0.00"}%`}
               />
               <StatusRow
                 icon={Database}
                 label="Database status"
-                status="Connected"
-                badgeColor="bg-emerald-50 text-emerald-600"
-                subText="0.00%"
+                status={systemStatus?.database_status?.status || "Checking..."}
+                badgeColor={
+                  systemStatus?.database_status?.status === "Connected"
+                    ? "bg-emerald-50 text-emerald-600"
+                    : "bg-orange-50 text-orange-600"
+                }
+                subText={`${systemStatus?.database_status?.percentage || "0.00"}%`}
               />
               <StatusRow
                 icon={AlertCircle}
                 label="Error alerts"
-                status="0 Active"
-                badgeColor="bg-red-50 text-red-400"
-                subText="0.00%"
+                status={`${systemStatus?.error_alerts?.count || "0"} Active`}
+                badgeColor={
+                  parseInt(systemStatus?.error_alerts?.count || "0") > 0
+                    ? "bg-red-50 text-red-400"
+                    : "bg-emerald-50 text-emerald-600"
+                }
+                subText={`${systemStatus?.error_alerts?.percentage || "0.00"}%`}
               />
               <StatusRow
                 icon={Clock}
                 label="System Uptime"
-                status="00d 00h 00m"
+                status={systemStatus?.system_uptime?.uptime || "00d 00h 00m"}
                 badgeColor="bg-emerald-50 text-emerald-600"
-                subText="0.00%"
+                subText={`${systemStatus?.system_uptime?.percentage || "0.00"}%`}
               />
             </div>
           </div>
@@ -170,15 +213,25 @@ export default function Dashboard() {
                   Real-time User Activity
                 </p>
               </div>
-              <div className="text-[10px] text-gray-400 font-bold flex items-center gap-1 cursor-pointer bg-gray-50 px-2 py-1 rounded-md hover:bg-gray-100 transition-colors">
-                This Week <ChevronDown size={12} />
-              </div>
+              <div className="hidden"></div>
             </div>
             <div className="space-y-6 flex-1 flex flex-col justify-center">
               {[
-                { label: "Active Users", icon: UserCheck, val: "0" },
-                { label: "Login Attempts", icon: LogIn, val: "0" },
-                { label: "Failed Logins", icon: UserX, val: "0" },
+                {
+                  label: "Active Users",
+                  icon: UserCheck,
+                  val: userActivity?.active_users?.toString() || "0",
+                },
+                {
+                  label: "Login Attempts",
+                  icon: LogIn,
+                  val: userActivity?.login_attempts?.toString() || "0",
+                },
+                {
+                  label: "Failed Logins",
+                  icon: UserX,
+                  val: userActivity?.failed_logins?.toString() || "0",
+                },
               ].map((item) => (
                 <div
                   key={item.label}
@@ -324,36 +377,59 @@ export default function Dashboard() {
                 Security and operational warnings
               </p>
             </div>
-            <button className="flex items-center gap-2 text-[#046C3F] text-sm font-bold hover:underline self-start sm:self-auto">
+            {/** <button className="flex items-center gap-2 text-[#046C3F] text-sm font-bold hover:underline self-start sm:self-auto">
               View all <ArrowRight size={16} />
-            </button>
+            </button> */}
           </div>
 
           <div className="space-y-4">
-            <AlertRow
-              title="Multiple Failed Login Attempts"
-              desc="Repeated failed logins from IP 10.0.0.45 detected."
-              time="1hr ago"
-              borderColor="border-red-400"
-              bgColor="bg-red-50/30"
-              titleColor="text-red-600"
-            />
-            <AlertRow
-              title="High Memory Usage"
-              desc="Application server memory at 82% capacity"
-              time="1hr ago"
-              borderColor="border-orange-400"
-              bgColor="bg-orange-50/30"
-              titleColor="text-orange-600"
-            />
-            <AlertRow
-              title="Database Sync Delay"
-              desc="Data synchronization with backup server delayed by 30 minutes"
-              time="1hr ago"
-              borderColor="border-[#FFD66B]"
-              bgColor="bg-[#FFD66B]/10"
-              titleColor="text-orange-800"
-            />
+            {isAlertsLoading ? (
+              <p className="text-sm text-gray-500">Loading alerts...</p>
+            ) : alertsData?.alerts && alertsData.alerts.length > 0 ? (
+              alertsData.alerts.map((alert, idx) => {
+                let borderColor = "border-gray-200";
+                let bgColor = "bg-gray-50";
+                let titleColor = "text-gray-700";
+
+                const titleLower = alert.title.toLowerCase();
+                if (
+                  titleLower.includes("failed login") ||
+                  titleLower.includes("error")
+                ) {
+                  borderColor = "border-red-400";
+                  bgColor = "bg-red-50/30";
+                  titleColor = "text-red-600";
+                } else if (
+                  titleLower.includes("memory") ||
+                  titleLower.includes("capacity")
+                ) {
+                  borderColor = "border-orange-400";
+                  bgColor = "bg-orange-50/30";
+                  titleColor = "text-orange-600";
+                } else if (
+                  titleLower.includes("database") ||
+                  titleLower.includes("sync")
+                ) {
+                  borderColor = "border-[#FFD66B]";
+                  bgColor = "bg-[#FFD66B]/10";
+                  titleColor = "text-orange-800";
+                }
+
+                return (
+                  <AlertRow
+                    key={idx}
+                    title={alert.title}
+                    desc={alert.description}
+                    time="" // Time can be added later if API provides it
+                    borderColor={borderColor}
+                    bgColor={bgColor}
+                    titleColor={titleColor}
+                  />
+                );
+              })
+            ) : (
+              <p className="text-sm text-gray-500">No active system alerts.</p>
+            )}
           </div>
         </div>
       </div>

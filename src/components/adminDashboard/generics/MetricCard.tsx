@@ -17,9 +17,6 @@ export default function MetricCard({ icon: Icon, title, value, colorClass, subVa
         <div className={`p-2 rounded-lg ${isLight ? 'bg-gray-100 text-gray-600' : 'bg-white/20 text-white'}`}>
           <Icon size={24} />
         </div>
-        <div className={`flex items-center gap-1 text-[10px] font-medium ${isLight ? 'text-gray-400' : 'text-white/80'}`}>
-          This Week <ChevronDown size={12} />
-        </div>
       </div>
       <div className="space-y-1">
         <p className={`text-sm font-medium ${isLight ? 'text-gray-500' : 'text-white/90'}`}>{title}</p>

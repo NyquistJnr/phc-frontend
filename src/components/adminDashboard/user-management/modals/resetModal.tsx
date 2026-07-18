@@ -6,6 +6,7 @@ interface ResetPasswordModalProps {
   isOpen?: boolean;
   onClose: () => void;
   onContinue?: () => void;
+  isPending?: boolean;
   userName?: string;
   staffId?: string;
 }
@@ -14,6 +15,7 @@ export default function ResetPasswordModal({
   isOpen = true,
   onClose,
   onContinue,
+  isPending = false,
   userName = "N/A",
   staffId = "N/A",
 }: ResetPasswordModalProps) {
@@ -60,9 +62,14 @@ export default function ResetPasswordModal({
             </button>
             <button
               onClick={onContinue}
-              className="flex-1 py-3.5 px-4 bg-[#046C3F] hover:bg-[#035a34] text-white font-semibold rounded-xl transition-colors shadow-sm"
+              disabled={isPending}
+              className={`flex-1 py-3.5 px-4 font-semibold rounded-xl transition-colors shadow-sm ${
+                isPending
+                  ? "bg-gray-400 text-white cursor-not-allowed"
+                  : "bg-[#046C3F] hover:bg-[#035a34] text-white"
+              }`}
             >
-              Continue
+              {isPending ? "Sending..." : "Continue"}
             </button>
           </div>
 
