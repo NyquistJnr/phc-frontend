@@ -430,13 +430,15 @@ export default function UserManagement() {
               Manage all user accounts across your facilities.
             </p>
           </div>
-          <Link
-            href="/dashboard/user-management/create-user"
-            className="inline-flex items-center gap-2 px-5 py-3 bg-[#046C3F] text-white rounded-xl font-semibold shadow-md hover:bg-[#035a34] transition-colors text-sm"
-          >
-            <Plus size={18} />
-            Create New User
-          </Link>
+          {!pathname.includes("oic-dashboard") && (
+            <Link
+              href="/dashboard/user-management/create-user"
+              className="inline-flex items-center gap-2 px-5 py-3 bg-[#046C3F] text-white rounded-xl font-semibold shadow-md hover:bg-[#035a34] transition-colors text-sm"
+            >
+              <Plus size={18} />
+              Create New User
+            </Link>
+          )}
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <MetricCard

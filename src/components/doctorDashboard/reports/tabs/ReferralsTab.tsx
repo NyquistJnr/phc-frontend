@@ -3,7 +3,6 @@
 import { useState } from "react";
 import DataTable, { Column } from "@/src/components/adminDashboard/generics/DataTable";
 import Pagination from "@/src/components/adminDashboard/generics/Pagination";
-import { StatusBadge } from "@/src/components/stateDashboard/reports/shared/Badges";
 import { LoadingBlock, EmptyBlock } from "@/src/components/stateDashboard/reports/shared/QueryState";
 import { useReferralReport, ReferralReportRow } from "@/src/hooks/doctors/use-reports";
 
@@ -35,7 +34,17 @@ export default function ReferralsTab({ startDate, endDate }: { startDate?: strin
         {row.urgency}
       </span>
     ) },
-    { key: "status", label: "Status", render: (row) => <StatusBadge status={row.status} /> },
+    { key: "status", label: "Status", render: (row) => (
+      <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold ${
+        row.status === 'PENDING' ? 'bg-[#FFF4E5] text-[#B45309]' :
+        row.status === 'ACCEPTED' ? 'bg-[#E0F2FE] text-[#0284C7]' :
+        row.status === 'REJECTED' ? 'bg-[#FEE2E2] text-[#DC2626]' :
+        row.status === 'CALL_CREATED' ? 'bg-[#E8F7F0] text-[#046C3F]' :
+        'bg-gray-100 text-gray-500' // COMPLETED
+      }`}>
+        {row.status_label}
+      </span>
+    ) },
   ];
 
   return (

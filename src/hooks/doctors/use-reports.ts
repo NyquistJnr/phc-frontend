@@ -6,6 +6,8 @@ export interface DoctorReportDateParams {
   endDate?: string;
 }
 
+import { AdverseSeverity, AdverseStatus } from "@/src/hooks/state/use-reports";
+
 export interface DoctorPaginatedReportParams extends DoctorReportDateParams {
   page?: number;
   pageSize?: number;
@@ -137,10 +139,10 @@ export interface AdverseEventRow {
   encounter_date: string;
   medicine_treatment: string;
   adverse_event: string;
-  severity: string;
+  severity: AdverseSeverity;
   action_taken: string | null;
   reported_by: string;
-  status: string;
+  status: AdverseStatus;
 }
 
 export interface AdverseEventsResponse {
