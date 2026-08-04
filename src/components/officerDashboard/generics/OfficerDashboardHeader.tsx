@@ -14,13 +14,15 @@ export default function OfficerDashboardHeader({
   breadcrumbs = [],
 }: OfficerDashboardHeaderProps) {
   return (
-    <DashboardHeader
-      title={title}
-      breadcrumbs={breadcrumbs}
-      notificationHref="/oic-dashboard/notifications"
-      profileHref="/oic-dashboard/profile"
-      fallbackName="Nobert"
-      fallbackRole="OIC"
-    />
+    <div className="print:hidden">
+      <DashboardHeader
+        title={title}
+        breadcrumbs={breadcrumbs}
+        notificationHref="/oic-dashboard/notifications"
+        profileHref="/oic-dashboard/profile"
+        fallbackName="Nobert"
+        fallbackRole="OIC"
+      />
+    </div>
   );
 }
