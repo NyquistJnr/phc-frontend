@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import useApi from "@/src/hooks/useApi";
+import { useApi } from "../use-api";
 
 export interface NurseReportDateParams {
   startDate?: string;
