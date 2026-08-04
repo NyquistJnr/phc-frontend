@@ -102,7 +102,7 @@ export default function Header({ title, breadcrumbs }: HeaderProps) {
   const profilePic = user?.profile_picture || "/images/profile.jpg";
 
   return (
-    <div className="flex flex-col sticky top-0 z-[9999] w-full">
+    <div className="flex flex-col sticky top-0 z-[9999] w-full print:hidden">
       <header className="bg-white border-b border-gray-100 px-4 sm:px-8 py-4 flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <button
