@@ -100,7 +100,7 @@ export default function PostnatalCareTab({ startDate, endDate }: { startDate?: s
         {summary && (
           <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-4">
             <StatCard icon={Baby} label="Total PNC Visits" value={summary.total_pnc_visits} tone="blue" />
-            <StatCard icon={UserCheck} label="Mothers Reviewed" value={summary.mothers_reviewed} tone="purple" />
+            <StatCard icon={UserCheck} label="Mothers Reviewed" value={summary.mothers_reviewed} tone="neutral" />
             <StatCard icon={Stethoscope} label="Babies Reviewed" value={summary.babies_reviewed} tone="green" />
             <StatCard icon={AlertTriangle} label="Complications Identified" value={summary.complications_identified} tone="red" />
             <StatCard icon={ListTodo} label="Follow-ups Due" value={summary.follow_ups_due} tone="amber" subLabel="Currently due/overdue" />

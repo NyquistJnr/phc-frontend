@@ -94,7 +94,7 @@ export default function HealthEducationTab({ startDate, endDate }: { startDate?:
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="col-span-1 space-y-4">
               <StatCard icon={BookOpen} label="Sessions Conducted" value={summary.sessions_conducted} tone="blue" subLabel="Completed sessions only" />
-              <StatCard icon={Users} label="Total Participants" value={summary.total_participants} tone="purple" subLabel="Actual or estimated" />
+              <StatCard icon={Users} label="Total Participants" value={summary.total_participants} tone="neutral" subLabel="Actual or estimated" />
             </div>
 
             <div className="col-span-1 lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 p-5 sm:p-6">

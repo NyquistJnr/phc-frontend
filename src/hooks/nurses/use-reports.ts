@@ -57,8 +57,8 @@ export const useVitalSignsReport = (params: NursePaginatedReportParams) => {
       if (params.page) searchParams.append("page", params.page.toString());
       if (params.pageSize) searchParams.append("page_size", params.pageSize.toString());
 
-      const { data } = await api.get(`/api/v1/reports/nurse/vital-signs/?${searchParams.toString()}`);
-      return data.data as VitalSignsResponse;
+      const data = await api.get<VitalSignsResponse>(`/api/v1/reports/nurse/vital-signs/?${searchParams.toString()}`);
+      return data;
     },
     staleTime: 5 * 60 * 1000,
   });
@@ -95,8 +95,8 @@ export const useImmunizationReport = (params: NursePaginatedReportParams) => {
       if (params.page) searchParams.append("page", params.page.toString());
       if (params.pageSize) searchParams.append("page_size", params.pageSize.toString());
 
-      const { data } = await api.get(`/api/v1/reports/nurse/immunization/?${searchParams.toString()}`);
-      return data.data as ImmunizationResponse;
+      const data = await api.get<ImmunizationResponse>(`/api/v1/reports/nurse/immunization/?${searchParams.toString()}`);
+      return data;
     },
     staleTime: 5 * 60 * 1000,
   });
@@ -134,8 +134,8 @@ export const usePncReport = (params: NursePaginatedReportParams) => {
       if (params.page) searchParams.append("page", params.page.toString());
       if (params.pageSize) searchParams.append("page_size", params.pageSize.toString());
 
-      const { data } = await api.get(`/api/v1/reports/nurse/postnatal-care/?${searchParams.toString()}`);
-      return data.data as PNCReportResponse;
+      const data = await api.get<PNCReportResponse>(`/api/v1/reports/nurse/postnatal-care/?${searchParams.toString()}`);
+      return data;
     },
     staleTime: 5 * 60 * 1000,
   });
@@ -174,8 +174,8 @@ export const useMaternalCareReport = (params: NursePaginatedReportParams) => {
       if (params.page) searchParams.append("page", params.page.toString());
       if (params.pageSize) searchParams.append("page_size", params.pageSize.toString());
 
-      const { data } = await api.get(`/api/v1/reports/nurse/maternal-care/?${searchParams.toString()}`);
-      return data.data as MaternalCareResponse;
+      const data = await api.get<MaternalCareResponse>(`/api/v1/reports/nurse/maternal-care/?${searchParams.toString()}`);
+      return data;
     },
     staleTime: 5 * 60 * 1000,
   });
@@ -211,8 +211,8 @@ export const useFollowUpsReport = (params: NursePaginatedReportParams) => {
       if (params.page) searchParams.append("page", params.page.toString());
       if (params.pageSize) searchParams.append("page_size", params.pageSize.toString());
 
-      const { data } = await api.get(`/api/v1/reports/nurse/follow-ups/?${searchParams.toString()}`);
-      return data.data as FollowUpsResponse;
+      const data = await api.get<FollowUpsResponse>(`/api/v1/reports/nurse/follow-ups/?${searchParams.toString()}`);
+      return data;
     },
     staleTime: 5 * 60 * 1000,
   });
@@ -249,9 +249,8 @@ export const useHealthEducationReport = (params: NursePaginatedReportParams) => 
       if (params.page) searchParams.append("page", params.page.toString());
       if (params.pageSize) searchParams.append("page_size", params.pageSize.toString());
 
-      const { data } = await api.get(`/api/v1/reports/nurse/health-education/?${searchParams.toString()}`);
-      // Patch the most_covered_topics typing if necessary, but we'll cast.
-      return data.data as HealthEducationResponse;
+      const data = await api.get<HealthEducationResponse>(`/api/v1/reports/nurse/health-education/?${searchParams.toString()}`);
+      return data;
     },
     staleTime: 5 * 60 * 1000,
   });

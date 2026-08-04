@@ -96,7 +96,7 @@ export default function VitalSignsTab({ startDate, endDate }: { startDate?: stri
             <StatCard icon={Activity} label="Total Assessments" value={summary.total_vital_assessments} tone="blue" />
             <StatCard icon={HeartPulse} label="High BP Cases" value={summary.high_blood_pressure_cases} tone="red" />
             <StatCard icon={Thermometer} label="Fever Cases" value={summary.fever_cases} tone="amber" />
-            <StatCard icon={Beaker} label="Abnormal Pulse" value={summary.abnormal_pulse_cases} tone="purple" />
+            <StatCard icon={Beaker} label="Abnormal Pulse" value={summary.abnormal_pulse_cases} tone="neutral" />
             <StatCard icon={Wind} label="Abnormal Resp Rate" value={summary.abnormal_respiratory_rate_cases} tone="neutral" />
           </div>
         )}

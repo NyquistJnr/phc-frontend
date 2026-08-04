@@ -97,7 +97,7 @@ export default function MaternalCareTab({ startDate, endDate }: { startDate?: st
         {summary && (
           <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-4">
             <StatCard icon={Heart} label="ANC 1 Visits" value={summary.anc_1_visits} tone="blue" />
-            <StatCard icon={Users} label="Repeat ANC Visits" value={summary.repeat_anc_visits} tone="purple" />
+            <StatCard icon={Users} label="Repeat ANC Visits" value={summary.repeat_anc_visits} tone="neutral" />
             <StatCard icon={AlertCircle} label="High Risk Pregnancies" value={summary.high_risk_pregnancies} tone="red" subLabel="Based on recorded risk factors" />
             <StatCard icon={ShieldPlus} label="IPTp Coverage" value={`${summary.iptp_coverage.toFixed(1)}%`} tone="green" />
             <StatCard icon={TestTube} label="HIV Tests Conducted" value={summary.hiv_tests_conducted} tone="amber" />
