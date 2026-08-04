@@ -1,16 +1,7 @@
 "use client";
 
-import ComprehensiveReportsView from "@/src/components/generic/reports/ComprehensiveReportsView";
-import NurseDashboardHeader from "@/src/components/nurse-dashboard/generics/NurseDashboardHeader";
+import NurseReports from "@/src/components/nurseDashboard/reports/NurseReports";
 
 export default function NurseReportsPage() {
-  const breadcrumbs = [
-    { label: "Reports", active: true },
-  ];
-
-  return (
-    <ComprehensiveReportsView
-      HeaderComponent={<NurseDashboardHeader title="Reports" breadcrumbs={breadcrumbs} />}
-    />
-  );
+  return <NurseReports />;
 }
