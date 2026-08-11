@@ -159,18 +159,12 @@ export default function DeliveryVisitsPage() {
       accessorKey: "mother_name",
     },
     {
-      header: "Delivery Mode",
-      accessorKey: "delivery_mode",
+      header: "Month",
+      accessorKey: "month",
     },
     {
-      header: "Birth Status",
-      render: (row) => (
-        <StatusBadge
-          label={row.birth_status}
-          bgColorHex={row.birth_status === "ALIVE" ? "#DFF3EA" : "#FEE2E2"}
-          textColorHex={row.birth_status === "ALIVE" ? "#039855" : "#991B1B"}
-        />
-      ),
+      header: "Episode ID",
+      accessorKey: "episode_id",
     },
     {
       header: "Sex",
